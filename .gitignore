@@ -1,0 +1,54 @@
+# Environment variables - NEVER COMMIT!
+api/.env
+
+# Sensitive configuration
+api/config.local.php
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+api/logs/
+error_log
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Backup files
+*.bak
+*.backup
+*.sql.gz
+
+# Node modules (if you add any build tools later)
+node_modules/
+
+# PHP composer (if you add later)
+vendor/
+composer.lock
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Test files
+test/
+tests/
+phpunit.xml
+
+# Database dumps (keep in separate secure location)
+*.sql.dump
+backup/*.sql
+
+# Uploaded files (should be stored outside web root in production)
+uploads/
+api/uploads/

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalonLyft - Customer Suite</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        salon: {
+                            primary: '#8b5cf6',
+                            secondary: '#ec4899',
+                            accent: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom styles for signature canvas */
+        .signature-canvas {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        /* Loading spinner animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Smooth transitions */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tab active state */
+        .tab-active {
+            background: linear-gradient(to right, #8b5cf6, #ec4899);
+            color: white;
+        }
+
+        /* Image preview styles */
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+        }
+
+        /* Drop zone styles */
+        .drop-zone {
+            border: 3px dashed #d1d5db;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #8b5cf6;
+            background-color: #f3e8ff;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-6">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                SalonLyft
+            </h1>
+            <p class="text-gray-600 mt-1">Complete Salon Customer Experience Suite</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container mx-auto px-4 py-8 max-w-4xl">
+
+        <!-- Tab Navigation -->
+        <div class="bg-white rounded-lg shadow-lg p-2 mb-6">
+            <div class="flex flex-wrap gap-2">
+                <button onclick="switchTab('onboarding')" id="tab-onboarding" class="tab-active flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200">
+                    Customer Onboarding
+                </button>
+                <button onclick="switchTab('qrcode')" id="tab-qrcode" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100">
+                    QR Code Generator
+                </button>
+                <button onclick="switchTab('ai-consultation')" id="tab-ai-consultation" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100">
+                    AI Hairstyle Consultation
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab Content Containers -->
+        <div id="content-container">
+
+            <!-- ==================== CUSTOMER ONBOARDING TAB ==================== -->
+            <div id="onboarding-content" class="tab-content">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Customer Onboarding Form</h2>
+
+                    <form id="onboarding-form" class="space-y-6">
+
+                        <!-- Personal Information -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Personal Information</h3>
+
+                            <div>
+                                <label for="full_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Full Name <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="full_name" name="full_name" required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            </div>
+
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Email Address <span class="text-red-500">*</span>
+                                </label>
+                                <input type="email" id="email" name="email" required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            </div>
+
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Phone Number <span class="text-red-500">*</span>
+                                </label>
+                                <input type="tel" id="phone" name="phone" required placeholder="+1234567890"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            </div>
+                        </div>
+
+                        <!-- GDPR Compliance -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Privacy & Consent</h3>
+
+                            <!-- GDPR Notice -->
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                                <p class="text-sm text-gray-700">
+                                    <strong>Data Processing Notice:</strong> Your personal data will be processed for appointment management,
+                                    service delivery, and customer relationship management. We store your data securely and will not share it
+                                    with third parties without your consent. You have the right to access, modify, or delete your data at any time.
+                                    Data will be retained for 3 years unless you request earlier deletion.
+                                </p>
+                            </div>
+
+                            <!-- Consent Checkboxes -->
+                            <div class="space-y-3">
+                                <div class="flex items-start">
+                                    <input type="checkbox" id="consent_data_processing" name="consent_data_processing" required
+                                        class="mt-1 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                    <label for="consent_data_processing" class="ml-3 text-sm text-gray-700">
+                                        <span class="font-semibold">I consent to data processing</span> <span class="text-red-500">*</span><br>
+                                        I agree to the processing of my personal data for the purposes described above.
+                                    </label>
+                                </div>
+
+                                <div class="flex items-start">
+                                    <input type="checkbox" id="consent_cancellation_policy" name="consent_cancellation_policy" required
+                                        class="mt-1 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                    <label for="consent_cancellation_policy" class="ml-3 text-sm text-gray-700">
+                                        <span class="font-semibold">I accept the cancellation policy</span> <span class="text-red-500">*</span><br>
+                                        Cancellations must be made at least 24 hours in advance. Late cancellations may incur a 50% service fee.
+                                    </label>
+                                </div>
+
+                                <div class="flex items-start">
+                                    <input type="checkbox" id="consent_marketing" name="consent_marketing"
+                                        class="mt-1 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                    <label for="consent_marketing" class="ml-3 text-sm text-gray-700">
+                                        I would like to receive promotional offers and updates (optional)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Signature -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Digital Signature</h3>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Please sign below with your finger or mouse
+                                </label>
+                                <canvas id="signature-canvas" class="signature-canvas w-full h-48 bg-white"></canvas>
+                                <button type="button" onclick="clearSignature()" class="mt-2 px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
+                                    Clear Signature
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="pt-4">
+                            <button type="submit" id="onboarding-submit-btn"
+                                class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg">
+                                Submit Registration
+                            </button>
+                        </div>
+
+                        <!-- Response Message -->
+                        <div id="onboarding-message" class="hidden mt-4"></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ==================== QR CODE GENERATOR TAB ==================== -->
+            <div id="qrcode-content" class="tab-content hidden">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">QR Code Generator</h2>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Input Section -->
+                        <div>
+                            <form id="qrcode-form" class="space-y-6">
+                                <div>
+                                    <label for="qr_type" class="block text-sm font-medium text-gray-700 mb-1">
+                                        QR Code Type <span class="text-red-500">*</span>
+                                    </label>
+                                    <select id="qr_type" name="qr_type" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                        <option value="">Select type...</option>
+                                        <option value="google_reviews">Google Reviews</option>
+                                        <option value="facebook">Facebook Page</option>
+                                        <option value="instagram">Instagram Profile</option>
+                                        <option value="custom">Custom URL</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="target_url" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Target URL <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="url" id="target_url" name="target_url" required
+                                        placeholder="https://example.com"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Enter your Google Reviews, Facebook page, or Instagram profile URL
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label for="qr_notes" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Notes (Optional)
+                                    </label>
+                                    <textarea id="qr_notes" name="qr_notes" rows="3"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        placeholder="Internal notes about this QR code..."></textarea>
+                                </div>
+
+                                <button type="submit" id="qrcode-submit-btn"
+                                    class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg">
+                                    Generate QR Code
+                                </button>
+
+                                <div id="qrcode-message" class="hidden mt-4"></div>
+                            </form>
+                        </div>
+
+                        <!-- QR Code Display Section -->
+                        <div>
+                            <div class="bg-gray-50 rounded-lg p-6 text-center">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-4">QR Code Preview</h3>
+                                <div id="qrcode-display" class="flex items-center justify-center min-h-[256px] bg-white rounded-lg p-4">
+                                    <p class="text-gray-400">QR code will appear here</p>
+                                </div>
+                                <div id="qrcode-instructions" class="hidden mt-6 text-left space-y-2">
+                                    <h4 class="font-semibold text-gray-700">Staff Instructions:</h4>
+                                    <ol class="list-decimal list-inside text-sm text-gray-600 space-y-1">
+                                        <li>Show this QR code to the customer on your tablet</li>
+                                        <li>Customer scans with their phone camera</li>
+                                        <li>They'll be redirected to leave a review or follow your page</li>
+                                        <li>Thank them for their support!</li>
+                                    </ol>
+                                    <button onclick="downloadQRCode()" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                        Download QR Code
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== AI CONSULTATION TAB ==================== -->
+            <div id="ai-consultation-content" class="tab-content hidden">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">AI Virtual Hairstyle Consultation</h2>
+
+                    <div class="space-y-6">
+                        <!-- Upload Section -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Upload Your Photo</h3>
+
+                            <!-- Drop Zone -->
+                            <div id="drop-zone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
+                                <input type="file" id="image-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    <span class="font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p class="text-xs text-gray-500">PNG, JPG, WEBP up to 5MB</p>
+                            </div>
+
+                            <!-- Image Preview -->
+                            <div id="image-preview-container" class="hidden mt-4">
+                                <img id="image-preview" class="image-preview mx-auto rounded-lg shadow-md" alt="Preview">
+                                <button onclick="clearImage()" class="mt-2 px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
+                                    Remove Image
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Style Prompt -->
+                        <div>
+                            <label for="style_prompt" class="block text-sm font-medium text-gray-700 mb-1">
+                                Describe the Hairstyle <span class="text-red-500">*</span>
+                            </label>
+                            <textarea id="style_prompt" name="style_prompt" rows="4" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                placeholder="Examples:&#10;- Long wavy hair with highlights&#10;- Short pixie cut&#10;- Bob with bangs&#10;- Celebrity hairstyle like Jennifer Aniston"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Be specific about length, style, color, and any celebrity inspirations
+                            </p>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button onclick="submitAIConsultation()" id="ai-submit-btn"
+                            class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            Generate AI Hairstyle Preview
+                        </button>
+
+                        <!-- Loading State -->
+                        <div id="ai-loading" class="hidden text-center py-8">
+                            <svg class="spinner mx-auto h-12 w-12 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="mt-4 text-gray-600 font-semibold">Generating your hairstyle preview...</p>
+                            <p class="text-sm text-gray-500">This may take 10-30 seconds</p>
+                        </div>
+
+                        <!-- Results -->
+                        <div id="ai-results" class="hidden space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-700">AI Response</h3>
+                            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                                <div id="ai-response-text" class="text-sm text-gray-700"></div>
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                Note: This AI provides professional hairstyle analysis and recommendations. For visual generation,
+                                consider upgrading to image generation models.
+                            </p>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div id="ai-message" class="hidden mt-4"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white mt-12 py-6 shadow-md">
+        <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
+            <p>&copy; 2025 SalonLyft. All rights reserved. | GDPR Compliant | Secure & Private</p>
+        </div>
+    </footer>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const API_BASE_URL = 'https://clouedo.com/coiffure/api';
+        const POLICY_VERSION = '1.0';
+
+        // ==================== TAB SWITCHING ====================
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Remove active class from all tabs
+            document.querySelectorAll('[id^="tab-"]').forEach(tab => {
+                tab.classList.remove('tab-active');
+                tab.classList.add('hover:bg-gray-100');
+            });
+
+            // Show selected tab content
+            document.getElementById(`${tabName}-content`).classList.remove('hidden');
+
+            // Add active class to selected tab
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            activeTab.classList.add('tab-active');
+            activeTab.classList.remove('hover:bg-gray-100');
+        }
+
+        // ==================== SIGNATURE CANVAS ====================
+        const canvas = document.getElementById('signature-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        // Set canvas size
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function clearSignature() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // ==================== CUSTOMER ONBOARDING ====================
+        document.getElementById('onboarding-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('onboarding-submit-btn');
+            const messageDiv = document.getElementById('onboarding-message');
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<svg class="spinner inline h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Submitting...';
+
+            // Get form data
+            const formData = {
+                full_name: document.getElementById('full_name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                consent_marketing: document.getElementById('consent_marketing').checked,
+                consent_data_processing: document.getElementById('consent_data_processing').checked,
+                consent_cancellation_policy: document.getElementById('consent_cancellation_policy').checked,
+                policy_version: POLICY_VERSION,
+                signature_data: canvas.toDataURL('image/png')
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/customer.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(messageDiv, result.message, 'success');
+                    document.getElementById('onboarding-form').reset();
+                    clearSignature();
+                } else {
+                    showMessage(messageDiv, result.error || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Network error. Please try again.', 'error');
+                console.error('Error:', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Registration';
+            }
+        });
+
+        // ==================== QR CODE GENERATOR ====================
+        let currentQRCode = null;
+
+        document.getElementById('qrcode-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('qrcode-submit-btn');
+            const messageDiv = document.getElementById('qrcode-message');
+            const qrcodeDisplay = document.getElementById('qrcode-display');
+            const qrcodeInstructions = document.getElementById('qrcode-instructions');
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<svg class="spinner inline h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating...';
+
+            // Get form data
+            const formData = {
+                target_url: document.getElementById('target_url').value,
+                qr_type: document.getElementById('qr_type').value,
+                notes: document.getElementById('qr_notes').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/qr-generate.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Clear previous QR code
+                    qrcodeDisplay.innerHTML = '';
+
+                    // Generate new QR code
+                    currentQRCode = new QRCode(qrcodeDisplay, {
+                        text: formData.target_url,
+                        width: 256,
+                        height: 256,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    // Show instructions
+                    qrcodeInstructions.classList.remove('hidden');
+
+                    showMessage(messageDiv, result.message, 'success');
+                } else {
+                    showMessage(messageDiv, result.error || 'QR generation failed', 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Network error. Please try again.', 'error');
+                console.error('Error:', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Generate QR Code';
+            }
+        });
+
+        function downloadQRCode() {
+            const qrcodeDisplay = document.getElementById('qrcode-display');
+            const canvas = qrcodeDisplay.querySelector('canvas');
+
+            if (canvas) {
+                const url = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'salon-qrcode.png';
+                a.click();
+            }
+        }
+
+        // ==================== AI CONSULTATION ====================
+        let uploadedImage = null;
+
+        // Drop zone functionality
+        const dropZone = document.getElementById('drop-zone');
+        const imageInput = document.getElementById('image-input');
+
+        dropZone.addEventListener('click', () => imageInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageFile(files[0]);
+            }
+        });
+
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleImageFile(file);
+            }
+        }
+
+        function handleImageFile(file) {
+            // Validate file type
+            if (!file.type.match('image.*')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Validate file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image size must be less than 5MB');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedImage = e.target.result;
+
+                // Show preview
+                document.getElementById('image-preview').src = uploadedImage;
+                document.getElementById('image-preview-container').classList.remove('hidden');
+                dropZone.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            uploadedImage = null;
+            imageInput.value = '';
+            document.getElementById('image-preview-container').classList.add('hidden');
+            dropZone.style.display = 'block';
+        }
+
+        async function submitAIConsultation() {
+            const stylePrompt = document.getElementById('style_prompt').value;
+            const submitBtn = document.getElementById('ai-submit-btn');
+            const loadingDiv = document.getElementById('ai-loading');
+            const resultsDiv = document.getElementById('ai-results');
+            const messageDiv = document.getElementById('ai-message');
+
+            // Validate inputs
+            if (!uploadedImage) {
+                showMessage(messageDiv, 'Please upload an image first', 'error');
+                return;
+            }
+
+            if (!stylePrompt.trim()) {
+                showMessage(messageDiv, 'Please describe the hairstyle you want', 'error');
+                return;
+            }
+
+            // Hide previous results
+            resultsDiv.classList.add('hidden');
+            messageDiv.classList.add('hidden');
+
+            // Show loading
+            submitBtn.disabled = true;
+            loadingDiv.classList.remove('hidden');
+
+            // Prepare request data
+            const requestData = {
+                image_base64: uploadedImage,
+                style_prompt: stylePrompt
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Show results
+                    document.getElementById('ai-response-text').innerHTML = `
+                        <p class="font-semibold mb-2">AI Stylist Recommendation:</p>
+                        <p>${result.ai_response || 'Analysis completed successfully.'}</p>
+                        <p class="mt-4 text-xs text-gray-600">
+                            Processing time: ${result.processing_time_ms}ms |
+                            Model: ${result.model_used}
+                        </p>
+                    `;
+                    resultsDiv.classList.remove('hidden');
+                } else {
+                    showMessage(messageDiv, result.error || 'AI consultation failed', 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Network error. Please try again.', 'error');
+                console.error('Error:', error);
+            } finally {
+                submitBtn.disabled = false;
+                loadingDiv.classList.add('hidden');
+            }
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function showMessage(element, message, type) {
+            element.classList.remove('hidden', 'bg-green-50', 'border-green-500', 'text-green-700', 'bg-red-50', 'border-red-500', 'text-red-700');
+
+            if (type === 'success') {
+                element.classList.add('bg-green-50', 'border-l-4', 'border-green-500', 'text-green-700', 'p-4', 'rounded');
+            } else {
+                element.classList.add('bg-red-50', 'border-l-4', 'border-red-500', 'text-red-700', 'p-4', 'rounded');
+            }
+
+            element.textContent = message;
+            element.classList.add('fade-in');
+        }
+
+        // ==================== INITIALIZATION ====================
+        console.log('SalonLyft Customer Suite loaded successfully');
+    </script>
+</body>
+</html>
