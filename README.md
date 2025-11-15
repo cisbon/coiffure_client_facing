@@ -382,6 +382,40 @@ if (!$conn) {
 }
 ```
 
+### Internal Server Error 500 (Audit Log)
+If you're experiencing 500 errors, the `coiffure_audit_log` table may be missing:
+
+1. **Verify the table exists**:
+   ```sql
+   USE salonlyft;
+   SHOW TABLES LIKE 'coiffure_audit_log';
+   ```
+
+2. **If missing, import the schema**:
+   ```bash
+   mysql -u your_username -p salonlyft < mysql_schema.sql
+   ```
+
+3. **Or create the table manually**:
+   ```sql
+   CREATE TABLE IF NOT EXISTS coiffure_audit_log (
+       log_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+       entity_type ENUM('customer', 'salon', 'qr_code', 'ai_consultation') NOT NULL,
+       entity_id INT UNSIGNED NOT NULL,
+       action ENUM('create', 'read', 'update', 'delete', 'consent_given', 'consent_withdrawn', 'data_export', 'data_deletion') NOT NULL,
+       action_details TEXT,
+       performed_by VARCHAR(255),
+       ip_address VARCHAR(45),
+       user_agent TEXT,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       INDEX idx_audit_entity (entity_type, entity_id),
+       INDEX idx_audit_action (action),
+       INDEX idx_audit_created (created_at)
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+   ```
+
+**Note**: The audit logging system now fails gracefully - if the table is missing, operations will continue without logging (check error logs for details).
+
 ### CORS Errors
 - Ensure your GitHub Pages URL is in `ALLOWED_ORIGINS`
 - Check browser console for specific CORS errors

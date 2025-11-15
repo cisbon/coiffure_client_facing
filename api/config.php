@@ -268,39 +268,55 @@ function getUserAgent() {
  * @return bool Success status
  */
 function logAudit($conn, $entityType, $entityId, $action, $details = null, $performedBy = 'system') {
-    $stmt = $conn->prepare(
-        "INSERT INTO coiffure_audit_log
-        (entity_type, entity_id, action, action_details, performed_by, ip_address, user_agent)
-        VALUES (?, ?, ?, ?, ?, ?, ?)"
-    );
+    try {
+        // Validate connection
+        if (!$conn || !($conn instanceof mysqli) || !$conn->ping()) {
+            error_log("Invalid database connection for audit log");
+            return false;
+        }
 
-    if (!$stmt) {
-        error_log("Failed to prepare audit log statement: " . $conn->error);
+        $stmt = $conn->prepare(
+            "INSERT INTO coiffure_audit_log
+            (entity_type, entity_id, action, action_details, performed_by, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+
+        if (!$stmt) {
+            error_log("Failed to prepare audit log statement: " . $conn->error);
+            return false;
+        }
+
+        $ip = getClientIp();
+        $userAgent = getUserAgent();
+
+        $stmt->bind_param(
+            "sissss",
+            $entityType,
+            $entityId,
+            $action,
+            $details,
+            $performedBy,
+            $ip,
+            $userAgent
+        );
+
+        $result = $stmt->execute();
+
+        if (!$result) {
+            error_log("Failed to log audit: " . $stmt->error);
+        }
+
+        $stmt->close();
+        return $result;
+    } catch (Exception $e) {
+        // Catch any exceptions and log them, but don't let audit logging break the application
+        error_log("Audit log exception: " . $e->getMessage());
+        return false;
+    } catch (Error $e) {
+        // Catch PHP 7+ errors as well
+        error_log("Audit log error: " . $e->getMessage());
         return false;
     }
-
-    $ip = getClientIp();
-    $userAgent = getUserAgent();
-
-    $stmt->bind_param(
-        "sissss",
-        $entityType,
-        $entityId,
-        $action,
-        $details,
-        $performedBy,
-        $ip,
-        $userAgent
-    );
-
-    $result = $stmt->execute();
-
-    if (!$result) {
-        error_log("Failed to log audit: " . $stmt->error);
-    }
-
-    $stmt->close();
-    return $result;
 }
 
 /**
