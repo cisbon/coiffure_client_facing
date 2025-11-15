@@ -290,7 +290,7 @@ function logAudit($conn, $entityType, $entityId, $action, $details = null, $perf
         $userAgent = getUserAgent();
 
         $stmt->bind_param(
-            "sissss",
+            "sisssss",
             $entityType,
             $entityId,
             $action,
