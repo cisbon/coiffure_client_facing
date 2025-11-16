@@ -804,14 +804,22 @@
                 gridDiv.classList.add('hidden');
                 noLinksDiv.classList.add('hidden');
 
-                // Use the user's assigned salon ID
-                const salonParam = userSalonId ? `salon_id=${userSalonId}` : '';
+                // Use the user's assigned salon ID directly from currentUser
+                const salonId = currentUser.assigned_salons && currentUser.assigned_salons.length > 0
+                    ? currentUser.assigned_salons[0].salon_id
+                    : (currentUser.salon_id || userSalonId);
+
+                const salonParam = salonId ? `salon_id=${salonId}` : '';
+                console.log('Loading social links for salon_id:', salonId);
+
                 const response = await fetch(`${API_BASE_URL}/social-links.php?${salonParam}&include_inactive=false`, {
                     headers: {
                         'Authorization': `Bearer ${sessionToken}`
                     }
                 });
                 const result = await response.json();
+
+                console.log('Social links API response:', result);
 
                 if (result.success && result.data && result.data.length > 0) {
                     socialLinksData = result.data;
