@@ -15,22 +15,36 @@ if (!$conn) {
     sendErrorResponse('Database connection failed', 500);
 }
 
-// Get request method
+// Require authentication for write operations
+$currentUser = null;
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Authentication required for POST, PUT, DELETE
+if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
+    $currentUser = requireAuth($conn);
+    // Only admin and customer_admin roles can modify social links
+    requireRole($currentUser, ['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate']);
+}
+
+// For GET, check if user is authenticated (optional but recommended for data filtering)
+$token = getSessionToken();
+if ($token) {
+    $currentUser = validateSession($conn, $token);
+}
 
 // Route the request
 switch ($method) {
     case 'GET':
-        handleGet($conn);
+        handleGet($conn, $currentUser);
         break;
     case 'POST':
-        handlePost($conn);
+        handlePost($conn, $currentUser);
         break;
     case 'PUT':
-        handlePut($conn);
+        handlePut($conn, $currentUser);
         break;
     case 'DELETE':
-        handleDelete($conn);
+        handleDelete($conn, $currentUser);
         break;
     default:
         sendErrorResponse('Method not allowed', 405);
@@ -39,10 +53,13 @@ switch ($method) {
 /**
  * Handle GET request - List social links
  */
-function handleGet($conn) {
+function handleGet($conn, $currentUser) {
     // Check if requesting for specific salon
     $salonId = isset($_GET['salon_id']) ? intval($_GET['salon_id']) : null;
     $includeInactive = isset($_GET['include_inactive']) && $_GET['include_inactive'] === 'true';
+
+    // Check if user is customer_admin or customer_admin_delegate
+    $isCustomerRole = $currentUser && in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate', 'customer_facing_tablet_user']);
 
     // Build query
     $query = "SELECT
@@ -63,6 +80,17 @@ function handleGet($conn) {
     $conditions = [];
     $params = [];
     $types = '';
+
+    // If customer role, only show links for their assigned salons
+    if ($isCustomerRole) {
+        $conditions[] = "EXISTS (
+            SELECT 1 FROM coiffure_user_salons us
+            WHERE us.salon_id = coiffure_social_links.salon_id
+            AND us.user_id = ?
+        )";
+        $params[] = $currentUser['user_id'];
+        $types .= 'i';
+    }
 
     if ($salonId) {
         $conditions[] = "salon_id = ?";
@@ -113,7 +141,7 @@ function handleGet($conn) {
 /**
  * Handle POST request - Create new social link
  */
-function handlePost($conn) {
+function handlePost($conn, $currentUser) {
     // Get JSON input
     $input = file_get_contents('php://input');
     $data = json_decode($input, true);
@@ -138,6 +166,13 @@ function handlePost($conn) {
     $description = isset($data['description']) ? trim($data['description']) : null;
     $iconName = isset($data['icon_name']) ? trim($data['icon_name']) : $linkType;
     $displayOrder = isset($data['display_order']) ? intval($data['display_order']) : 0;
+
+    // Check if customer_admin has access to this salon
+    if (in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'])) {
+        if (!canManageSalon($currentUser, $salonId, $conn)) {
+            sendErrorResponse('You do not have access to manage this salon', 403);
+        }
+    }
 
     // Validate URL
     if (!filter_var($linkUrl, FILTER_VALIDATE_URL)) {
@@ -198,7 +233,7 @@ function handlePost($conn) {
 /**
  * Handle PUT request - Update social link
  */
-function handlePut($conn) {
+function handlePut($conn, $currentUser) {
     // Get JSON input
     $input = file_get_contents('php://input');
     $data = json_decode($input, true);
@@ -213,6 +248,26 @@ function handlePut($conn) {
     }
 
     $linkId = intval($data['link_id']);
+
+    // Check if customer_admin has access to this link's salon
+    if (in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'])) {
+        $checkStmt = $conn->prepare("SELECT salon_id FROM coiffure_social_links WHERE link_id = ?");
+        $checkStmt->bind_param("i", $linkId);
+        $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
+
+        if ($checkResult->num_rows === 0) {
+            $checkStmt->close();
+            sendErrorResponse('Social link not found', 404);
+        }
+
+        $link = $checkResult->fetch_assoc();
+        $checkStmt->close();
+
+        if (!canManageSalon($currentUser, $link['salon_id'], $conn)) {
+            sendErrorResponse('You do not have access to manage this salon', 403);
+        }
+    }
 
     // Build update query dynamically
     $updates = [];
@@ -331,13 +386,33 @@ function handlePut($conn) {
 /**
  * Handle DELETE request - Delete social link
  */
-function handleDelete($conn) {
+function handleDelete($conn, $currentUser) {
     // Get link_id from query parameter
     if (!isset($_GET['link_id'])) {
         sendErrorResponse('link_id parameter is required');
     }
 
     $linkId = intval($_GET['link_id']);
+
+    // Check if customer_admin has access to this link's salon
+    if (in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'])) {
+        $checkStmt = $conn->prepare("SELECT salon_id FROM coiffure_social_links WHERE link_id = ?");
+        $checkStmt->bind_param("i", $linkId);
+        $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
+
+        if ($checkResult->num_rows === 0) {
+            $checkStmt->close();
+            sendErrorResponse('Social link not found', 404);
+        }
+
+        $link = $checkResult->fetch_assoc();
+        $checkStmt->close();
+
+        if (!canManageSalon($currentUser, $link['salon_id'], $conn)) {
+            sendErrorResponse('You do not have access to manage this salon', 403);
+        }
+    }
 
     // Delete from database
     $stmt = $conn->prepare("DELETE FROM coiffure_social_links WHERE link_id = ?");

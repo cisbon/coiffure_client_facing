@@ -397,7 +397,7 @@ function getRoleLabel(role) {
         'admin_delegate': 'Admin Delegate',
         'customer_admin': 'Customer Admin',
         'customer_admin_delegate': 'Customer Admin Delegate',
-        'customer_user': 'Customer User'
+        'customer_facing_tablet_user': 'Tablet User'
     };
     return labels[role] || role;
 }
