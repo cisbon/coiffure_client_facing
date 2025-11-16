@@ -6,6 +6,8 @@ let currentUser = null;
 let sessionToken = null;
 let salons = [];
 let users = [];
+let socialLinks = [];
+let customerEntries = [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -41,6 +43,8 @@ async function init() {
     // Load initial data
     await loadSalons();
     await loadUsers();
+    await loadSocialLinks();
+    await loadCustomerEntries();
 
     // Populate salon dropdown for user form
     populateSalonDropdown();
@@ -98,6 +102,17 @@ function setupEventListeners() {
     // Profile
     document.getElementById('profileForm').addEventListener('submit', updateProfile);
     document.getElementById('passwordForm').addEventListener('submit', changePassword);
+
+    // Social Links
+    document.getElementById('addSocialLinkButton').addEventListener('click', () => openSocialLinkModal());
+    document.getElementById('closeSocialLinkModal').addEventListener('click', closeSocialLinkModal);
+    document.getElementById('socialLinkForm').addEventListener('submit', saveSocialLink);
+    document.getElementById('socialLinkSalonFilter').addEventListener('change', loadSocialLinks);
+    document.getElementById('closeQrCodeModal').addEventListener('click', closeQrCodeModal);
+
+    // Customer Entries
+    document.getElementById('customerSearchInput').addEventListener('input', debounce(loadCustomerEntries, 300));
+    document.getElementById('customerSalonFilter').addEventListener('change', loadCustomerEntries);
 }
 
 function switchTab(tabName) {
@@ -536,4 +551,323 @@ async function logout() {
 
 function redirectToLogin() {
     window.location.href = 'login.html';
+}
+
+// ============================================================
+// SOCIAL LINKS MANAGEMENT
+// ============================================================
+
+async function loadSocialLinks() {
+    const salonFilter = document.getElementById('socialLinkSalonFilter').value;
+    let endpoint = 'social-links.php?include_inactive=true';
+
+    if (salonFilter) {
+        endpoint += `&salon_id=${salonFilter}`;
+    }
+
+    const data = await apiRequest(endpoint);
+    if (data && data.success) {
+        socialLinks = data.data;
+        renderSocialLinksGrid();
+        populateSocialLinkSalonDropdowns();
+    }
+}
+
+function renderSocialLinksGrid() {
+    const container = document.getElementById('socialLinksContainer');
+
+    if (socialLinks.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">No social links found. Click "Add Link" to create one.</div>';
+        return;
+    }
+
+    container.innerHTML = socialLinks.map(link => {
+        const iconClass = getSocialIconClass(link.link_type);
+        const iconColor = getSocialIconColor(link.link_type);
+
+        return `
+            <div class="bg-white border-2 ${link.is_active ? 'border-gray-200' : 'border-red-200'} rounded-lg p-4 hover:shadow-lg transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 ${iconColor} rounded-full flex items-center justify-center text-white text-2xl mr-3">
+                            ${iconClass}
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">${escapeHtml(link.display_name)}</h3>
+                            <p class="text-xs text-gray-500">${getLinkTypeLabel(link.link_type)}</p>
+                        </div>
+                    </div>
+                    <span class="px-2 py-1 text-xs rounded-full ${link.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${link.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                </div>
+                <p class="text-xs text-gray-600 mb-2 truncate">${escapeHtml(link.link_url)}</p>
+                ${link.description ? `<p class="text-xs text-gray-500 mb-3">${escapeHtml(link.description)}</p>` : ''}
+                <div class="flex gap-2">
+                    <button onclick="viewQRCode(${link.link_id})" class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                        View QR Code
+                    </button>
+                    <button onclick="editSocialLink(${link.link_id})" class="px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700">
+                        Edit
+                    </button>
+                    <button onclick="deleteSocialLink(${link.link_id})" class="px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getSocialIconClass(type) {
+    const icons = {
+        'instagram': '📷',
+        'facebook': 'f',
+        'tiktok': '🎵',
+        'google_reviews': '⭐',
+        'yelp': '🌟',
+        'twitter': '🐦',
+        'linkedin': '💼',
+        'youtube': '▶',
+        'pinterest': '📌',
+        'custom': '🌐'
+    };
+    return icons[type] || '🔗';
+}
+
+function getSocialIconColor(type) {
+    const colors = {
+        'instagram': 'bg-gradient-to-br from-purple-600 to-pink-500',
+        'facebook': 'bg-blue-600',
+        'tiktok': 'bg-black',
+        'google_reviews': 'bg-red-600',
+        'yelp': 'bg-red-600',
+        'twitter': 'bg-blue-400',
+        'linkedin': 'bg-blue-700',
+        'youtube': 'bg-red-600',
+        'pinterest': 'bg-red-600',
+        'custom': 'bg-gray-600'
+    };
+    return colors[type] || 'bg-gray-600';
+}
+
+function getLinkTypeLabel(type) {
+    const labels = {
+        'instagram': 'Instagram',
+        'facebook': 'Facebook',
+        'tiktok': 'TikTok',
+        'google_reviews': 'Google Reviews',
+        'yelp': 'Yelp',
+        'twitter': 'Twitter / X',
+        'linkedin': 'LinkedIn',
+        'youtube': 'YouTube',
+        'pinterest': 'Pinterest',
+        'custom': 'Custom Link'
+    };
+    return labels[type] || type;
+}
+
+function openSocialLinkModal(linkId = null) {
+    const modal = document.getElementById('socialLinkModal');
+    const title = document.getElementById('socialLinkModalTitle');
+    const form = document.getElementById('socialLinkForm');
+
+    form.reset();
+    document.getElementById('linkId').value = '';
+
+    if (linkId) {
+        const link = socialLinks.find(l => l.link_id == linkId);
+        if (link) {
+            title.textContent = 'Edit Social Link';
+            document.getElementById('linkId').value = link.link_id;
+            document.getElementById('linkSalonId').value = link.salon_id;
+            document.getElementById('linkType').value = link.link_type;
+            document.getElementById('linkDisplayName').value = link.display_name;
+            document.getElementById('linkUrl').value = link.link_url;
+            document.getElementById('linkDescription').value = link.description || '';
+            document.getElementById('linkDisplayOrder').value = link.display_order;
+        }
+    } else {
+        title.textContent = 'Add Social Link';
+    }
+
+    modal.classList.add('active');
+}
+
+function closeSocialLinkModal() {
+    document.getElementById('socialLinkModal').classList.remove('active');
+}
+
+async function saveSocialLink(e) {
+    e.preventDefault();
+
+    const linkId = document.getElementById('linkId').value;
+    const formData = {
+        salon_id: parseInt(document.getElementById('linkSalonId').value),
+        link_type: document.getElementById('linkType').value,
+        display_name: document.getElementById('linkDisplayName').value,
+        link_url: document.getElementById('linkUrl').value,
+        description: document.getElementById('linkDescription').value,
+        display_order: parseInt(document.getElementById('linkDisplayOrder').value)
+    };
+
+    let endpoint = 'social-links.php';
+    let method = 'POST';
+
+    if (linkId) {
+        formData.link_id = parseInt(linkId);
+        method = 'PUT';
+    }
+
+    const data = await apiRequest(endpoint, {
+        method,
+        body: JSON.stringify(formData)
+    });
+
+    if (data && data.success) {
+        alert(linkId ? 'Social link updated successfully' : 'Social link created successfully');
+        closeSocialLinkModal();
+        await loadSocialLinks();
+    }
+}
+
+function editSocialLink(linkId) {
+    openSocialLinkModal(linkId);
+}
+
+async function deleteSocialLink(linkId) {
+    if (!confirm('Are you sure you want to delete this social link?')) {
+        return;
+    }
+
+    const data = await apiRequest(`social-links.php?link_id=${linkId}`, {
+        method: 'DELETE'
+    });
+
+    if (data && data.success) {
+        alert('Social link deleted successfully');
+        await loadSocialLinks();
+    }
+}
+
+function viewQRCode(linkId) {
+    const link = socialLinks.find(l => l.link_id == linkId);
+    if (!link) return;
+
+    const modal = document.getElementById('qrCodeViewModal');
+    const title = document.getElementById('qrCodeViewTitle');
+    const display = document.getElementById('qrCodeDisplay');
+    const urlElement = document.getElementById('qrCodeUrl');
+
+    title.textContent = link.display_name;
+    urlElement.textContent = link.link_url;
+
+    // Display QR code
+    if (link.qr_code_data) {
+        display.innerHTML = `<img src="${link.qr_code_data}" alt="QR Code" class="max-w-full max-h-[300px]" />`;
+    } else {
+        display.innerHTML = '<p class="text-gray-500">QR Code not available</p>';
+    }
+
+    modal.classList.add('active');
+}
+
+function closeQrCodeModal() {
+    document.getElementById('qrCodeViewModal').classList.remove('active');
+}
+
+function populateSocialLinkSalonDropdowns() {
+    const salonSelects = [
+        document.getElementById('linkSalonId'),
+        document.getElementById('socialLinkSalonFilter'),
+        document.getElementById('customerSalonFilter')
+    ];
+
+    salonSelects.forEach(select => {
+        if (!select) return;
+
+        const currentValue = select.value;
+        const isFilter = select.id.includes('Filter');
+
+        select.innerHTML = isFilter ? '<option value="">All Salons</option>' : '<option value="">Select Salon</option>';
+
+        salons.filter(s => s.is_active).forEach(salon => {
+            const option = document.createElement('option');
+            option.value = salon.salon_id;
+            option.textContent = salon.salon_name;
+            select.appendChild(option);
+        });
+
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    });
+}
+
+// ============================================================
+// CUSTOMER ENTRIES MANAGEMENT
+// ============================================================
+
+async function loadCustomerEntries() {
+    const searchQuery = document.getElementById('customerSearchInput').value;
+    const salonFilter = document.getElementById('customerSalonFilter').value;
+
+    let endpoint = 'customer-entries.php?';
+
+    if (salonFilter) {
+        endpoint += `salon_id=${salonFilter}&`;
+    }
+
+    if (searchQuery) {
+        endpoint += `search=${encodeURIComponent(searchQuery)}&`;
+    }
+
+    const data = await apiRequest(endpoint);
+    if (data && data.success) {
+        customerEntries = data.data;
+        renderCustomerEntriesTable();
+    }
+}
+
+function renderCustomerEntriesTable() {
+    const tbody = document.getElementById('customerEntriesTableBody');
+
+    if (customerEntries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No customer entries found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = customerEntries.map(customer => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${escapeHtml(customer.full_name)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-500">${escapeHtml(customer.email)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-500">${escapeHtml(customer.phone)}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${customer.consent_marketing ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                    ${customer.consent_marketing ? 'Yes' : 'No'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${formatDate(customer.created_at)}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// Debounce helper for search input
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }

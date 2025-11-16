@@ -102,8 +102,8 @@
                 <button onclick="switchTab('onboarding')" id="tab-onboarding" class="tab-active flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200">
                     Customer Onboarding
                 </button>
-                <button onclick="switchTab('qrcode')" id="tab-qrcode" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100">
-                    QR Code Generator
+                <button onclick="switchTab('social')" id="tab-social" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100">
+                    Social
                 </button>
                 <button onclick="switchTab('ai-consultation')" id="tab-ai-consultation" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100">
                     AI Hairstyle Consultation
@@ -223,80 +223,29 @@
                 </div>
             </div>
 
-            <!-- ==================== QR CODE GENERATOR TAB ==================== -->
-            <div id="qrcode-content" class="tab-content hidden">
+            <!-- ==================== SOCIAL TAB ==================== -->
+            <div id="social-content" class="tab-content hidden">
                 <div class="bg-white rounded-lg shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">QR Code Generator</h2>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Connect With Us</h2>
+                    <p class="text-gray-600 text-center mb-8">Follow us on social media or leave us a review!</p>
 
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <!-- Input Section -->
-                        <div>
-                            <form id="qrcode-form" class="space-y-6">
-                                <div>
-                                    <label for="qr_type" class="block text-sm font-medium text-gray-700 mb-1">
-                                        QR Code Type <span class="text-red-500">*</span>
-                                    </label>
-                                    <select id="qr_type" name="qr_type" required
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                        <option value="">Select type...</option>
-                                        <option value="google_reviews">Google Reviews</option>
-                                        <option value="facebook">Facebook Page</option>
-                                        <option value="instagram">Instagram Profile</option>
-                                        <option value="custom">Custom URL</option>
-                                    </select>
-                                </div>
+                    <!-- Loading State -->
+                    <div id="social-loading" class="text-center py-12">
+                        <svg class="spinner mx-auto h-12 w-12 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="mt-4 text-gray-600">Loading social links...</p>
+                    </div>
 
-                                <div>
-                                    <label for="target_url" class="block text-sm font-medium text-gray-700 mb-1">
-                                        Target URL <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="url" id="target_url" name="target_url" required
-                                        placeholder="https://example.com"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        Enter your Google Reviews, Facebook page, or Instagram profile URL
-                                    </p>
-                                </div>
+                    <!-- Social Links Grid -->
+                    <div id="social-links-grid" class="hidden grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <!-- Social links will be populated here -->
+                    </div>
 
-                                <div>
-                                    <label for="qr_notes" class="block text-sm font-medium text-gray-700 mb-1">
-                                        Notes (Optional)
-                                    </label>
-                                    <textarea id="qr_notes" name="qr_notes" rows="3"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        placeholder="Internal notes about this QR code..."></textarea>
-                                </div>
-
-                                <button type="submit" id="qrcode-submit-btn"
-                                    class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg">
-                                    Generate QR Code
-                                </button>
-
-                                <div id="qrcode-message" class="hidden mt-4"></div>
-                            </form>
-                        </div>
-
-                        <!-- QR Code Display Section -->
-                        <div>
-                            <div class="bg-gray-50 rounded-lg p-6 text-center">
-                                <h3 class="text-lg font-semibold text-gray-700 mb-4">QR Code Preview</h3>
-                                <div id="qrcode-display" class="flex items-center justify-center min-h-[256px] bg-white rounded-lg p-4">
-                                    <p class="text-gray-400">QR code will appear here</p>
-                                </div>
-                                <div id="qrcode-instructions" class="hidden mt-6 text-left space-y-2">
-                                    <h4 class="font-semibold text-gray-700">Staff Instructions:</h4>
-                                    <ol class="list-decimal list-inside text-sm text-gray-600 space-y-1">
-                                        <li>Show this QR code to the customer on your tablet</li>
-                                        <li>Customer scans with their phone camera</li>
-                                        <li>They'll be redirected to leave a review or follow your page</li>
-                                        <li>Thank them for their support!</li>
-                                    </ol>
-                                    <button onclick="downloadQRCode()" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                        Download QR Code
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- No Links Message -->
+                    <div id="social-no-links" class="hidden text-center py-12">
+                        <p class="text-gray-500">No social links available at this time.</p>
                     </div>
                 </div>
             </div>
@@ -381,6 +330,25 @@
 
         </div>
     </main>
+
+    <!-- QR Code Modal -->
+    <div id="social-qr-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full relative">
+            <button onclick="closeSocialQRModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold">
+                &times;
+            </button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center" id="qr-modal-title">Scan QR Code</h3>
+            <p class="text-sm text-gray-600 text-center mb-6" id="qr-modal-description">Point your camera at the QR code to open the link</p>
+            <div id="qr-modal-display" class="bg-gray-50 p-6 rounded-lg flex items-center justify-center min-h-[300px]">
+                <!-- QR Code will be displayed here -->
+            </div>
+            <div class="mt-6 text-center">
+                <button onclick="closeSocialQRModal()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="bg-white mt-12 py-6 shadow-md">
@@ -746,6 +714,128 @@
 
             element.textContent = message;
             element.classList.add('fade-in');
+        }
+
+        // ==================== SOCIAL LINKS ====================
+        let socialLinksData = [];
+
+        // Load social links when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSocialLinks();
+        });
+
+        async function loadSocialLinks() {
+            const loadingDiv = document.getElementById('social-loading');
+            const gridDiv = document.getElementById('social-links-grid');
+            const noLinksDiv = document.getElementById('social-no-links');
+
+            try {
+                loadingDiv.classList.remove('hidden');
+                gridDiv.classList.add('hidden');
+                noLinksDiv.classList.add('hidden');
+
+                const response = await fetch(`${API_BASE_URL}/social-links.php?salon_id=1&include_inactive=false`);
+                const result = await response.json();
+
+                if (result.success && result.data && result.data.length > 0) {
+                    socialLinksData = result.data;
+                    renderSocialLinks(result.data);
+                    gridDiv.classList.remove('hidden');
+                } else {
+                    noLinksDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading social links:', error);
+                noLinksDiv.classList.remove('hidden');
+            } finally {
+                loadingDiv.classList.add('hidden');
+            }
+        }
+
+        function renderSocialLinks(links) {
+            const grid = document.getElementById('social-links-grid');
+
+            grid.innerHTML = links.map(link => {
+                const icon = getSocialIcon(link.link_type);
+                const color = getSocialColor(link.link_type);
+
+                return `
+                    <button onclick="openSocialQRModal(${link.link_id})" class="group bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-xl hover:border-purple-400 transition-all duration-200 cursor-pointer">
+                        <div class="flex flex-col items-center text-center">
+                            <div class="w-16 h-16 ${color} rounded-full flex items-center justify-center text-white text-3xl mb-3 group-hover:scale-110 transition-transform">
+                                ${icon}
+                            </div>
+                            <h3 class="font-semibold text-gray-800 mb-1">${escapeHtml(link.display_name)}</h3>
+                            ${link.description ? `<p class="text-xs text-gray-500 mt-2">${escapeHtml(link.description)}</p>` : ''}
+                            <p class="text-xs text-purple-600 mt-2 font-medium">Tap to scan QR</p>
+                        </div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function getSocialIcon(type) {
+            const icons = {
+                'instagram': '📷',
+                'facebook': 'f',
+                'tiktok': '🎵',
+                'google_reviews': '⭐',
+                'yelp': '🌟',
+                'twitter': '🐦',
+                'linkedin': '💼',
+                'youtube': '▶',
+                'pinterest': '📌',
+                'custom': '🌐'
+            };
+            return icons[type] || '🔗';
+        }
+
+        function getSocialColor(type) {
+            const colors = {
+                'instagram': 'bg-gradient-to-br from-purple-600 to-pink-500',
+                'facebook': 'bg-blue-600',
+                'tiktok': 'bg-black',
+                'google_reviews': 'bg-red-600',
+                'yelp': 'bg-red-600',
+                'twitter': 'bg-blue-400',
+                'linkedin': 'bg-blue-700',
+                'youtube': 'bg-red-600',
+                'pinterest': 'bg-red-600',
+                'custom': 'bg-gray-600'
+            };
+            return colors[type] || 'bg-gray-600';
+        }
+
+        function openSocialQRModal(linkId) {
+            const link = socialLinksData.find(l => l.link_id === linkId);
+            if (!link) return;
+
+            const modal = document.getElementById('social-qr-modal');
+            const title = document.getElementById('qr-modal-title');
+            const description = document.getElementById('qr-modal-description');
+            const display = document.getElementById('qr-modal-display');
+
+            title.textContent = link.display_name;
+            description.textContent = link.description || 'Point your camera at the QR code to open the link';
+
+            // Display QR code
+            if (link.qr_code_data) {
+                display.innerHTML = `<img src="${link.qr_code_data}" alt="QR Code" class="max-w-full max-h-[300px] mx-auto" />`;
+            } else {
+                display.innerHTML = '<p class="text-gray-500">QR Code not available</p>';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeSocialQRModal() {
+            document.getElementById('social-qr-modal').classList.add('hidden');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // ==================== INITIALIZATION ====================
