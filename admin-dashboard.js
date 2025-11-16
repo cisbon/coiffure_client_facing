@@ -171,6 +171,58 @@ async function loadSalons() {
     if (data && data.success) {
         salons = data.salons;
         renderSalonsTable();
+
+        // Handle single salon auto-selection for customer_admin roles
+        handleSingleSalonAutoSelection();
+    }
+}
+
+function handleSingleSalonAutoSelection() {
+    const isCustomerRole = ['customer_admin', 'customer_admin_delegate'].includes(currentUser.role);
+
+    if (isCustomerRole && salons.length === 1) {
+        // Auto-select the single salon
+        const singleSalon = salons[0];
+
+        // Hide and auto-select for all salon filter dropdowns
+        const salonFilters = [
+            { id: 'socialLinkSalonFilter', label: document.querySelector('label[for="socialLinkSalonFilter"]')?.closest('div') },
+            { id: 'customerSalonFilter', label: document.querySelector('label[for="customerSalonFilter"]')?.closest('div') },
+            { id: 'linkSalonId', label: document.querySelector('label[for="linkSalonId"]')?.closest('div') }
+        ];
+
+        salonFilters.forEach(filter => {
+            const select = document.getElementById(filter.id);
+            if (select) {
+                // Set value to the single salon
+                select.value = singleSalon.salon_id;
+
+                // Hide the entire filter container
+                if (filter.label) {
+                    filter.label.style.display = 'none';
+                }
+
+                // Or replace with a display-only element showing salon name
+                if (filter.label && filter.id.includes('Filter')) {
+                    const displayDiv = document.createElement('div');
+                    displayDiv.className = 'mb-6';
+                    displayDiv.innerHTML = `
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
+                            <span class="text-sm font-medium text-gray-700">Salon: </span>
+                            <span class="font-semibold text-purple-700">${escapeHtml(singleSalon.salon_name)}</span>
+                        </div>
+                    `;
+                    filter.label.parentNode.insertBefore(displayDiv, filter.label);
+                    filter.label.style.display = 'none';
+                }
+            }
+        });
+
+        // For the link creation modal, hide the salon selector and auto-fill
+        const linkSalonField = document.querySelector('label[for="linkSalonId"]')?.closest('div');
+        if (linkSalonField) {
+            linkSalonField.style.display = 'none';
+        }
     }
 }
 
@@ -689,6 +741,12 @@ function openSocialLinkModal(linkId = null) {
         }
     } else {
         title.textContent = 'Add Social Link';
+
+        // Auto-select salon for customer_admin with single salon
+        const isCustomerRole = ['customer_admin', 'customer_admin_delegate'].includes(currentUser.role);
+        if (isCustomerRole && salons.length === 1) {
+            document.getElementById('linkSalonId').value = salons[0].salon_id;
+        }
     }
 
     modal.classList.add('active');
