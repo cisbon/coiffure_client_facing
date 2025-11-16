@@ -56,7 +56,6 @@ $consentDataProcessing = (bool)$requestData['consent_data_processing'];
 $consentCancellationPolicy = (bool)$requestData['consent_cancellation_policy'];
 $policyVersion = sanitizeInput($requestData['policy_version']);
 $signatureData = $requestData['signature_data'] ?? null;
-$salonId = $requestData['salon_id'] ?? DEFAULT_SALON_ID;
 
 // Validate email
 if (!validateEmail($email)) {
@@ -95,6 +94,34 @@ if ($signatureData !== null && !empty($signatureData)) {
 $conn = getDbConnection();
 if (!$conn) {
     sendErrorResponse('Database connection failed', 500);
+}
+
+// Get salon_id from authenticated user if logged in
+$salonId = null;
+$token = getSessionToken();
+if ($token) {
+    $currentUser = validateSession($conn, $token);
+    if ($currentUser) {
+        // Get user's first assigned salon from junction table
+        $salonStmt = $conn->prepare(
+            "SELECT salon_id FROM coiffure_user_salons WHERE user_id = ? LIMIT 1"
+        );
+        if ($salonStmt) {
+            $salonStmt->bind_param("i", $currentUser['user_id']);
+            $salonStmt->execute();
+            $salonResult = $salonStmt->get_result();
+            if ($salonResult->num_rows > 0) {
+                $salonRow = $salonResult->fetch_assoc();
+                $salonId = $salonRow['salon_id'];
+            }
+            $salonStmt->close();
+        }
+    }
+}
+
+// Fallback to salon_id from request or default
+if ($salonId === null) {
+    $salonId = $requestData['salon_id'] ?? DEFAULT_SALON_ID;
 }
 
 // Check if customer already exists (by email)

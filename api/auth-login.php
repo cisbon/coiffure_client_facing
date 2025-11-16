@@ -43,15 +43,9 @@ if ($validation !== null) {
 $username = trim($data['username']);
 $password = $data['password'];
 
-// Check if account is locked
-if (isAccountLocked($conn, $username)) {
-    logAudit($conn, 'login', 0, 'login_failed', "Account locked: $username", 'system');
-    sendErrorResponse('Account is temporarily locked due to multiple failed login attempts. Please try again in 15 minutes.', 403);
-}
-
 // Get user from database
 $stmt = $conn->prepare(
-    "SELECT user_id, username, email, password_hash, full_name, role, salon_id, is_active, email_verified
+    "SELECT user_id, username, email, password_hash, full_name, role, is_active, email_verified
     FROM coiffure_users
     WHERE (username = ? OR email = ?) AND is_active = 1"
 );
@@ -72,7 +66,6 @@ $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
     $stmt->close();
-    recordFailedLogin($conn, $username);
     logAudit($conn, 'login', 0, 'login_failed', "User not found: $username", 'system');
     sendErrorResponse('Invalid username or password', 401);
 }
@@ -82,7 +75,6 @@ $stmt->close();
 
 // Verify password
 if (!verifyPassword($password, $user['password_hash'])) {
-    recordFailedLogin($conn, $username);
     logAudit($conn, 'login', $user['user_id'], 'login_failed', 'Invalid password', $user['username']);
     sendErrorResponse('Invalid username or password', 401);
 }
@@ -104,21 +96,28 @@ if (!$session) {
 // Log successful login
 logAudit($conn, 'login', $user['user_id'], 'login', 'Successful login', $user['username']);
 
-// Get salon name if applicable
-$salonName = null;
-if ($user['salon_id']) {
-    $salonStmt = $conn->prepare("SELECT salon_name FROM coiffure_salons WHERE salon_id = ?");
-    if ($salonStmt) {
-        $salonStmt->bind_param("i", $user['salon_id']);
-        $salonStmt->execute();
-        $salonResult = $salonStmt->get_result();
-        if ($salonResult->num_rows > 0) {
-            $salon = $salonResult->fetch_assoc();
-            $salonName = $salon['salon_name'];
-        }
-        $salonStmt->close();
+// Get user's assigned salons from junction table
+$salonsStmt = $conn->prepare(
+    "SELECT s.salon_id, s.salon_name
+    FROM coiffure_user_salons us
+    JOIN coiffure_salons s ON us.salon_id = s.salon_id
+    WHERE us.user_id = ? AND s.is_active = 1"
+);
+
+$assignedSalons = [];
+if ($salonsStmt) {
+    $salonsStmt->bind_param("i", $user['user_id']);
+    $salonsStmt->execute();
+    $salonsResult = $salonsStmt->get_result();
+    while ($salonRow = $salonsResult->fetch_assoc()) {
+        $assignedSalons[] = $salonRow;
     }
+    $salonsStmt->close();
 }
+
+// For backward compatibility, set salon_id and salon_name to first assigned salon
+$salonId = !empty($assignedSalons) ? $assignedSalons[0]['salon_id'] : null;
+$salonName = !empty($assignedSalons) ? $assignedSalons[0]['salon_name'] : null;
 
 // Return success with session token and user data
 sendJsonResponse([
@@ -132,8 +131,9 @@ sendJsonResponse([
         'email' => $user['email'],
         'full_name' => $user['full_name'],
         'role' => $user['role'],
-        'salon_id' => $user['salon_id'],
+        'salon_id' => $salonId,
         'salon_name' => $salonName,
+        'assigned_salons' => $assignedSalons,  // All assigned salons
         'email_verified' => (bool)$user['email_verified']
     ]
 ]);
