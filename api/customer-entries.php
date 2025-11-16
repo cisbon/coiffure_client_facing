@@ -15,6 +15,13 @@ if (!$conn) {
     sendErrorResponse('Database connection failed', 500);
 }
 
+// Check authentication (optional but recommended for filtering)
+$currentUser = null;
+$token = getSessionToken();
+if ($token) {
+    $currentUser = validateSession($conn, $token);
+}
+
 // Only allow GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendErrorResponse('Method not allowed', 405);
@@ -24,6 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $salonId = isset($_GET['salon_id']) ? intval($_GET['salon_id']) : null;
 $searchQuery = isset($_GET['search']) ? trim($_GET['search']) : '';
 $includeDeleted = isset($_GET['include_deleted']) && $_GET['include_deleted'] === 'true';
+
+// Check if user is customer_admin or customer_admin_delegate or customer_facing_tablet_user
+$isCustomerRole = $currentUser && in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate', 'customer_facing_tablet_user']);
 
 // Build the SQL query
 $query = "SELECT
@@ -45,6 +55,17 @@ FROM coiffure_customers";
 $conditions = [];
 $params = [];
 $types = '';
+
+// If customer role, only show entries for their assigned salons
+if ($isCustomerRole) {
+    $conditions[] = "EXISTS (
+        SELECT 1 FROM coiffure_user_salons us
+        WHERE us.salon_id = coiffure_customers.salon_id
+        AND us.user_id = ?
+    )";
+    $params[] = $currentUser['user_id'];
+    $types .= 'i';
+}
 
 // Filter by salon_id if provided
 if ($salonId) {

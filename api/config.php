@@ -660,17 +660,34 @@ function requireRole($user, $allowedRoles) {
  * Check if user can manage salon (for customer_admin and customer_admin_delegate)
  * @param array $user User data from session
  * @param int $salonId Salon ID to check
+ * @param mysqli|null $conn Optional database connection for checking junction table
  * @return bool True if user can manage this salon
  */
-function canManageSalon($user, $salonId) {
+function canManageSalon($user, $salonId, $conn = null) {
     // Admin and admin_delegate can manage all salons
     if (in_array($user['role'], ['admin', 'admin_delegate'])) {
         return true;
     }
 
-    // Customer admins can only manage their own salon
+    // Customer admins can only manage their assigned salons
     if (in_array($user['role'], ['customer_admin', 'customer_admin_delegate'])) {
-        return $user['salon_id'] == $salonId;
+        // If we have a connection, check the junction table
+        if ($conn && $conn instanceof mysqli && $conn->ping()) {
+            $stmt = $conn->prepare(
+                "SELECT 1 FROM coiffure_user_salons WHERE user_id = ? AND salon_id = ? LIMIT 1"
+            );
+            if ($stmt) {
+                $stmt->bind_param("ii", $user['user_id'], $salonId);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $hasAccess = $result->num_rows > 0;
+                $stmt->close();
+                return $hasAccess;
+            }
+        }
+
+        // Fallback to old salon_id column for backward compatibility
+        return isset($user['salon_id']) && $user['salon_id'] == $salonId;
     }
 
     return false;
