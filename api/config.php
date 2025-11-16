@@ -458,7 +458,7 @@ function createUserSession($conn, $userId, $expiryHours = 24) {
 
         // Update user's last login
         $updateStmt = $conn->prepare(
-            "UPDATE coiffure_users SET last_login = NOW(), last_login_ip = ?, failed_login_attempts = 0 WHERE user_id = ?"
+            "UPDATE coiffure_users SET last_login = NOW(), last_login_ip = ? WHERE user_id = ?"
         );
         if ($updateStmt) {
             $updateStmt->bind_param("si", $ip, $userId);
@@ -693,59 +693,3 @@ function canManageSalon($user, $salonId, $conn = null) {
     return false;
 }
 
-/**
- * Record failed login attempt
- * @param mysqli $conn Database connection
- * @param string $username Username that failed login
- */
-function recordFailedLogin($conn, $username) {
-    try {
-        $stmt = $conn->prepare(
-            "UPDATE coiffure_users
-            SET failed_login_attempts = failed_login_attempts + 1,
-                locked_until = CASE
-                    WHEN failed_login_attempts >= 4 THEN DATE_ADD(NOW(), INTERVAL 15 MINUTE)
-                    ELSE locked_until
-                END
-            WHERE username = ? OR email = ?"
-        );
-
-        if ($stmt) {
-            $stmt->bind_param("ss", $username, $username);
-            $stmt->execute();
-            $stmt->close();
-        }
-    } catch (Exception $e) {
-        error_log("Failed login recording exception: " . $e->getMessage());
-    }
-}
-
-/**
- * Check if account is locked
- * @param mysqli $conn Database connection
- * @param string $username Username to check
- * @return bool True if account is locked
- */
-function isAccountLocked($conn, $username) {
-    try {
-        $stmt = $conn->prepare(
-            "SELECT locked_until FROM coiffure_users
-            WHERE (username = ? OR email = ?) AND locked_until > NOW()"
-        );
-
-        if (!$stmt) {
-            return false;
-        }
-
-        $stmt->bind_param("ss", $username, $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $isLocked = $result->num_rows > 0;
-        $stmt->close();
-
-        return $isLocked;
-    } catch (Exception $e) {
-        error_log("Account lock check exception: " . $e->getMessage());
-        return false;
-    }
-}
