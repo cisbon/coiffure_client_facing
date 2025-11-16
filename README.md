@@ -29,6 +29,21 @@ A complete, GDPR-compliant customer experience suite for hairdressing salons, fe
 - Session tracking and history
 - Mobile-optimized interface
 
+### 4. Authentication & Admin Dashboard
+- **Role-Based Access Control** with 5 user levels:
+  - **admin**: Full system access (manages all salons and users)
+  - **admin_delegate**: Super admin (manages customers, cannot assign admin_delegates)
+  - **customer_admin**: Salon Owner/Admin (manages their salon's users)
+  - **customer_admin_delegate**: Salon staff with admin rights (manages their salon only)
+  - **customer_user**: iPad webapp user (no admin access)
+- **Session Management**: Secure token-based authentication with 24-hour expiry
+- **Account Security**: Login attempt tracking with automatic lockout (15 minutes after 5 failed attempts)
+- **Admin Dashboard**: Modern, responsive interface for managing salons and users
+- **User Management**: Create, edit, delete users with role-based permissions
+- **Salon Management**: Full CRUD operations for salon data (admin only)
+- **Profile Management**: Users can update their own profile and password
+- **Audit Logging**: Complete tracking of all login and administrative actions
+
 ## Tech Stack
 
 ### Frontend
@@ -51,20 +66,29 @@ A complete, GDPR-compliant customer experience suite for hairdressing salons, fe
   - `coiffure_customers` - GDPR-compliant customer data
   - `coiffure_qr_codes` - QR code generation tracking
   - `coiffure_ai_consultations` - AI consultation sessions
-  - `coiffure_audit_log` - GDPR compliance audit trail
+  - `coiffure_users` - User accounts with role-based access control
+  - `coiffure_sessions` - Active user sessions
+  - `coiffure_audit_log` - GDPR compliance and security audit trail
 
 ## File Structure
 
 ```
 coiffure/
-├── index.html                  # Frontend (deploy to GitHub Pages)
+├── index.html                  # Main webapp (deploy to GitHub Pages)
+├── login.html                  # Login page
+├── admin-dashboard.html        # Admin dashboard UI
+├── admin-dashboard.js          # Dashboard functionality
 ├── api/                        # Backend (deploy to clouedo.com/coiffure/api/)
 │   ├── .env                   # Environment variables (DO NOT COMMIT!)
 │   ├── .env.example           # Environment template
-│   ├── config.php             # Database connection & utilities
+│   ├── config.php             # Database, auth & utility functions
 │   ├── customer.php           # Customer onboarding endpoint
 │   ├── qr-generate.php        # QR code generation endpoint
-│   └── ai-consultation.php    # AI consultation endpoint
+│   ├── ai-consultation.php    # AI consultation endpoint
+│   ├── auth-login.php         # User login endpoint
+│   ├── auth-logout.php        # User logout endpoint
+│   ├── user-management.php    # User CRUD operations
+│   └── salon-management.php   # Salon CRUD operations
 ├── mysql_schema.sql           # Database schema
 └── README.md                  # This file
 ```
@@ -236,6 +260,83 @@ WHERE salon_id = 1;
 
 ## API Endpoints
 
+### Authentication
+
+#### Login
+**Endpoint**: `POST /api/auth-login.php`
+
+**Request**:
+```json
+{
+    "username": "admin",
+    "password": "admin123"
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Login successful",
+    "session_token": "abc123...",
+    "expires_at": "2025-01-16 12:00:00",
+    "user": {
+        "user_id": 1,
+        "username": "admin",
+        "email": "admin@salonlyft.com",
+        "full_name": "System Administrator",
+        "role": "admin",
+        "salon_id": null,
+        "salon_name": null
+    }
+}
+```
+
+**Authentication for Protected Endpoints**:
+Include the session token in one of these ways:
+- Header: `Authorization: Bearer {session_token}`
+- Header: `X-Session-Token: {session_token}`
+- Cookie: `session_token={session_token}`
+
+#### Logout
+**Endpoint**: `POST /api/auth-logout.php`
+
+**Headers**: Requires authentication
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Logout successful"
+}
+```
+
+### User Management
+
+**Endpoints**:
+- `GET /api/user-management.php` - List users (with filters)
+- `GET /api/user-management.php?user_id=123` - Get specific user
+- `POST /api/user-management.php` - Create new user
+- `PUT /api/user-management.php?user_id=123` - Update user
+- `DELETE /api/user-management.php?user_id=123` - Delete user
+
+**Permissions**:
+- admin: Full access
+- admin_delegate: Cannot manage admin users
+- customer_admin: Can only manage users from their salon
+- customer_admin_delegate: Can only edit themselves
+
+### Salon Management
+
+**Endpoints**:
+- `GET /api/salon-management.php` - List all salons
+- `GET /api/salon-management.php?salon_id=1` - Get specific salon
+- `POST /api/salon-management.php` - Create new salon
+- `PUT /api/salon-management.php?salon_id=1` - Update salon
+- `DELETE /api/salon-management.php?salon_id=1` - Delete salon
+
+**Permissions**: Admin and admin_delegate only
+
 ### 1. Customer Onboarding
 **Endpoint**: `POST /api/customer.php`
 
@@ -330,12 +431,58 @@ WHERE salon_id = 1;
 - ✅ MySQLi prepared statements (SQL injection protection)
 - ✅ Input validation and sanitization (XSS protection)
 - ✅ CORS configuration
-- ✅ Secure password storage (not storing passwords)
+- ✅ Password hashing with bcrypt (cost 12)
+- ✅ Session-based authentication with token validation
+- ✅ Role-based access control (RBAC)
+- ✅ Account lockout after failed login attempts
 - ✅ Environment variable protection (.env not in version control)
 - ✅ File upload validation
-- ✅ Rate limiting ready (configurable)
+- ✅ Comprehensive audit logging
 
 ## Usage
+
+### Admin Access
+
+#### Default Admin Credentials
+**⚠️ CHANGE THESE IMMEDIATELY AFTER FIRST LOGIN!**
+- Username: `admin`
+- Password: `admin123`
+
+#### Accessing the Admin Dashboard
+1. Navigate to `login.html` (e.g., `https://yourdomain.com/login.html`)
+2. Enter your credentials
+3. Click "Sign In"
+4. You'll be redirected to the admin dashboard
+
+#### Admin Dashboard Features
+- **Salon Management** (admin/admin_delegate only):
+  - Create, edit, and delete salons
+  - View user count and customer count per salon
+  - Manage salon contact information and policies
+
+- **User Management**:
+  - Create new users with specific roles
+  - Edit user information and permissions
+  - Deactivate/delete users
+  - Filter users by salon, role, or status
+
+- **My Profile**:
+  - Update personal information
+  - Change password
+  - View account details
+
+#### Role Permissions
+
+| Feature | admin | admin_delegate | customer_admin | customer_admin_delegate | customer_user |
+|---------|-------|----------------|----------------|-------------------------|---------------|
+| Manage all salons | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Create admin users | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage all users | ✅ | ✅* | ❌ | ❌ | ❌ |
+| Manage own salon users | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Edit own profile | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Access admin dashboard | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+*Cannot manage admin users
 
 ### For Salon Staff
 
