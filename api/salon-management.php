@@ -18,8 +18,10 @@ if (!$conn) {
 // Require authentication
 $currentUser = requireAuth($conn);
 
-// Only admin and admin_delegate can manage salons
-requireRole($currentUser, ['admin', 'admin_delegate']);
+// Allow admin, admin_delegate, customer_admin, and customer_admin_delegate to access salons
+// customer_admin roles can only view their assigned salons (read-only for them)
+$allowedRoles = ['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate'];
+requireRole($currentUser, $allowedRoles);
 
 // Get request method and parse input
 $method = $_SERVER['REQUEST_METHOD'];
@@ -39,18 +41,24 @@ if (in_array($method, ['POST', 'PUT'])) {
 // Route based on HTTP method
 switch ($method) {
     case 'GET':
-        handleGetSalons($conn, $salonId);
+        handleGetSalons($conn, $currentUser, $salonId);
         break;
 
     case 'POST':
+        // Only admin and admin_delegate can create salons
+        requireRole($currentUser, ['admin', 'admin_delegate']);
         handleCreateSalon($conn, $currentUser, $requestData);
         break;
 
     case 'PUT':
+        // Only admin and admin_delegate can update salons
+        requireRole($currentUser, ['admin', 'admin_delegate']);
         handleUpdateSalon($conn, $currentUser, $salonId, $requestData);
         break;
 
     case 'DELETE':
+        // Only admin and admin_delegate can delete salons
+        requireRole($currentUser, ['admin', 'admin_delegate']);
         handleDeleteSalon($conn, $currentUser, $salonId);
         break;
 
@@ -61,22 +69,37 @@ switch ($method) {
 /**
  * Get salons
  */
-function handleGetSalons($conn, $salonId) {
+function handleGetSalons($conn, $currentUser, $salonId) {
+    // Determine if user is customer_admin or customer_admin_delegate
+    $isCustomerRole = in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate']);
+
     if ($salonId) {
         // Get single salon
-        $stmt = $conn->prepare(
-            "SELECT s.*,
-                    (SELECT COUNT(*) FROM coiffure_users WHERE salon_id = s.salon_id AND is_active = 1) as user_count,
-                    (SELECT COUNT(*) FROM coiffure_customers WHERE salon_id = s.salon_id AND is_deleted = 0) as customer_count
-             FROM coiffure_salons s
-             WHERE salon_id = ?"
-        );
+        $query = "SELECT s.*,
+                        (SELECT COUNT(*) FROM coiffure_users WHERE salon_id = s.salon_id AND is_active = 1) as user_count,
+                        (SELECT COUNT(*) FROM coiffure_customers WHERE salon_id = s.salon_id AND is_deleted = 0) as customer_count
+                 FROM coiffure_salons s
+                 WHERE salon_id = ?";
+
+        // If customer role, verify they have access to this salon
+        if ($isCustomerRole) {
+            $query .= " AND EXISTS (
+                SELECT 1 FROM coiffure_user_salons us
+                WHERE us.salon_id = s.salon_id AND us.user_id = ?
+            )";
+        }
+
+        $stmt = $conn->prepare($query);
 
         if (!$stmt) {
             sendErrorResponse('Failed to fetch salon', 500);
         }
 
-        $stmt->bind_param("i", $salonId);
+        if ($isCustomerRole) {
+            $stmt->bind_param("ii", $salonId, $currentUser['user_id']);
+        } else {
+            $stmt->bind_param("i", $salonId);
+        }
 
         if (!$stmt->execute()) {
             sendErrorResponse('Failed to fetch salon', 500);
@@ -86,7 +109,7 @@ function handleGetSalons($conn, $salonId) {
 
         if ($result->num_rows === 0) {
             $stmt->close();
-            sendErrorResponse('Salon not found', 404);
+            sendErrorResponse('Salon not found or access denied', 404);
         }
 
         $salon = $result->fetch_assoc();
@@ -97,7 +120,7 @@ function handleGetSalons($conn, $salonId) {
             'salon' => $salon
         ]);
     } else {
-        // Get all salons
+        // Get all salons (filtered by user's assignments for customer roles)
         $query = "SELECT s.*,
                         (SELECT COUNT(*) FROM coiffure_users WHERE salon_id = s.salon_id AND is_active = 1) as user_count,
                         (SELECT COUNT(*) FROM coiffure_customers WHERE salon_id = s.salon_id AND is_deleted = 0) as customer_count
@@ -107,6 +130,16 @@ function handleGetSalons($conn, $salonId) {
         $conditions = [];
         $params = [];
         $types = '';
+
+        // If customer role, only show salons they're assigned to
+        if ($isCustomerRole) {
+            $conditions[] = "EXISTS (
+                SELECT 1 FROM coiffure_user_salons us
+                WHERE us.salon_id = s.salon_id AND us.user_id = ?
+            )";
+            $params[] = $currentUser['user_id'];
+            $types .= 'i';
+        }
 
         if (isset($_GET['is_active'])) {
             $conditions[] = "s.is_active = ?";
