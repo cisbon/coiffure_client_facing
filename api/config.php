@@ -268,39 +268,55 @@ function getUserAgent() {
  * @return bool Success status
  */
 function logAudit($conn, $entityType, $entityId, $action, $details = null, $performedBy = 'system') {
-    $stmt = $conn->prepare(
-        "INSERT INTO coiffure_audit_log
-        (entity_type, entity_id, action, action_details, performed_by, ip_address, user_agent)
-        VALUES (?, ?, ?, ?, ?, ?, ?)"
-    );
+    try {
+        // Validate connection
+        if (!$conn || !($conn instanceof mysqli) || !$conn->ping()) {
+            error_log("Invalid database connection for audit log");
+            return false;
+        }
 
-    if (!$stmt) {
-        error_log("Failed to prepare audit log statement: " . $conn->error);
+        $stmt = $conn->prepare(
+            "INSERT INTO coiffure_audit_log
+            (entity_type, entity_id, action, action_details, performed_by, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+
+        if (!$stmt) {
+            error_log("Failed to prepare audit log statement: " . $conn->error);
+            return false;
+        }
+
+        $ip = getClientIp();
+        $userAgent = getUserAgent();
+
+        $stmt->bind_param(
+            "sisssss",
+            $entityType,
+            $entityId,
+            $action,
+            $details,
+            $performedBy,
+            $ip,
+            $userAgent
+        );
+
+        $result = $stmt->execute();
+
+        if (!$result) {
+            error_log("Failed to log audit: " . $stmt->error);
+        }
+
+        $stmt->close();
+        return $result;
+    } catch (Exception $e) {
+        // Catch any exceptions and log them, but don't let audit logging break the application
+        error_log("Audit log exception: " . $e->getMessage());
+        return false;
+    } catch (Error $e) {
+        // Catch PHP 7+ errors as well
+        error_log("Audit log error: " . $e->getMessage());
         return false;
     }
-
-    $ip = getClientIp();
-    $userAgent = getUserAgent();
-
-    $stmt->bind_param(
-        "sissss",
-        $entityType,
-        $entityId,
-        $action,
-        $details,
-        $performedBy,
-        $ip,
-        $userAgent
-    );
-
-    $result = $stmt->execute();
-
-    if (!$result) {
-        error_log("Failed to log audit: " . $stmt->error);
-    }
-
-    $stmt->close();
-    return $result;
 }
 
 /**
@@ -370,4 +386,349 @@ function generateSessionId() {
  */
 function calculateRetentionDate($years = 3) {
     return date('Y-m-d', strtotime("+$years years"));
+}
+
+// ============================================================
+// AUTHENTICATION & SESSION MANAGEMENT
+// ============================================================
+
+/**
+ * Hash password using bcrypt
+ * @param string $password Plain text password
+ * @return string Hashed password
+ */
+function hashPassword($password) {
+    return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+}
+
+/**
+ * Verify password against hash
+ * @param string $password Plain text password
+ * @param string $hash Hashed password
+ * @return bool True if password matches
+ */
+function verifyPassword($password, $hash) {
+    return password_verify($password, $hash);
+}
+
+/**
+ * Generate secure random session token
+ * @return string Session token
+ */
+function generateSessionToken() {
+    return bin2hex(random_bytes(64)); // 128 character hex string
+}
+
+/**
+ * Create user session
+ * @param mysqli $conn Database connection
+ * @param int $userId User ID
+ * @param int $expiryHours Hours until session expires (default 24)
+ * @return array|null Session data or null on failure
+ */
+function createUserSession($conn, $userId, $expiryHours = 24) {
+    try {
+        // Generate session token
+        $token = generateSessionToken();
+        $expiresAt = date('Y-m-d H:i:s', strtotime("+$expiryHours hours"));
+        $ip = getClientIp();
+        $userAgent = getUserAgent();
+
+        // Insert session
+        $stmt = $conn->prepare(
+            "INSERT INTO coiffure_sessions (user_id, session_token, ip_address, user_agent, expires_at)
+            VALUES (?, ?, ?, ?, ?)"
+        );
+
+        if (!$stmt) {
+            error_log("Failed to prepare session insert: " . $conn->error);
+            return null;
+        }
+
+        $stmt->bind_param("issss", $userId, $token, $ip, $userAgent, $expiresAt);
+
+        if (!$stmt->execute()) {
+            error_log("Failed to create session: " . $stmt->error);
+            $stmt->close();
+            return null;
+        }
+
+        $sessionId = $stmt->insert_id;
+        $stmt->close();
+
+        // Update user's last login
+        $updateStmt = $conn->prepare(
+            "UPDATE coiffure_users SET last_login = NOW(), last_login_ip = ?, failed_login_attempts = 0 WHERE user_id = ?"
+        );
+        if ($updateStmt) {
+            $updateStmt->bind_param("si", $ip, $userId);
+            $updateStmt->execute();
+            $updateStmt->close();
+        }
+
+        return [
+            'session_id' => $sessionId,
+            'session_token' => $token,
+            'expires_at' => $expiresAt
+        ];
+    } catch (Exception $e) {
+        error_log("Session creation exception: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Validate session token and return user data
+ * @param mysqli $conn Database connection
+ * @param string $token Session token
+ * @return array|null User data if valid, null otherwise
+ */
+function validateSession($conn, $token) {
+    try {
+        if (empty($token)) {
+            return null;
+        }
+
+        // Get session and user data
+        $stmt = $conn->prepare(
+            "SELECT s.session_id, s.user_id, s.expires_at, s.ip_address,
+                    u.username, u.email, u.full_name, u.role, u.salon_id, u.is_active
+            FROM coiffure_sessions s
+            JOIN coiffure_users u ON s.user_id = u.user_id
+            WHERE s.session_token = ? AND s.expires_at > NOW()"
+        );
+
+        if (!$stmt) {
+            error_log("Failed to prepare session validation: " . $conn->error);
+            return null;
+        }
+
+        $stmt->bind_param("s", $token);
+
+        if (!$stmt->execute()) {
+            error_log("Failed to validate session: " . $stmt->error);
+            $stmt->close();
+            return null;
+        }
+
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            $stmt->close();
+            return null;
+        }
+
+        $session = $result->fetch_assoc();
+        $stmt->close();
+
+        // Check if user is active
+        if (!$session['is_active']) {
+            return null;
+        }
+
+        // Optional: Check if IP matches (can be disabled for mobile users)
+        // if ($session['ip_address'] !== getClientIp()) {
+        //     error_log("Session IP mismatch for user " . $session['user_id']);
+        //     return null;
+        // }
+
+        return $session;
+    } catch (Exception $e) {
+        error_log("Session validation exception: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Destroy user session
+ * @param mysqli $conn Database connection
+ * @param string $token Session token
+ * @return bool Success status
+ */
+function destroySession($conn, $token) {
+    try {
+        $stmt = $conn->prepare("DELETE FROM coiffure_sessions WHERE session_token = ?");
+
+        if (!$stmt) {
+            return false;
+        }
+
+        $stmt->bind_param("s", $token);
+        $result = $stmt->execute();
+        $stmt->close();
+
+        return $result;
+    } catch (Exception $e) {
+        error_log("Session destruction exception: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Clean up expired sessions
+ * @param mysqli $conn Database connection
+ * @return int Number of sessions deleted
+ */
+function cleanExpiredSessions($conn) {
+    try {
+        $stmt = $conn->prepare("DELETE FROM coiffure_sessions WHERE expires_at < NOW()");
+
+        if (!$stmt) {
+            return 0;
+        }
+
+        $stmt->execute();
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+
+        return $affected;
+    } catch (Exception $e) {
+        error_log("Session cleanup exception: " . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Get session token from request headers or cookie
+ * @return string|null Session token or null
+ */
+function getSessionToken() {
+    // Check Authorization header first (Bearer token)
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+            return $matches[1];
+        }
+    }
+
+    // Check custom X-Session-Token header
+    if (isset($_SERVER['HTTP_X_SESSION_TOKEN'])) {
+        return $_SERVER['HTTP_X_SESSION_TOKEN'];
+    }
+
+    // Check cookie
+    if (isset($_COOKIE['session_token'])) {
+        return $_COOKIE['session_token'];
+    }
+
+    return null;
+}
+
+/**
+ * Require authentication - validates session and returns user data
+ * Sends error response and exits if not authenticated
+ * @param mysqli $conn Database connection
+ * @return array User data
+ */
+function requireAuth($conn) {
+    $token = getSessionToken();
+    $user = validateSession($conn, $token);
+
+    if (!$user) {
+        sendErrorResponse('Unauthorized. Please login.', 401);
+    }
+
+    return $user;
+}
+
+/**
+ * Check if user has required role
+ * @param array $user User data from session
+ * @param array $allowedRoles Array of allowed role names
+ * @return bool True if user has required role
+ */
+function hasRole($user, $allowedRoles) {
+    if (!is_array($allowedRoles)) {
+        $allowedRoles = [$allowedRoles];
+    }
+
+    return in_array($user['role'], $allowedRoles);
+}
+
+/**
+ * Require specific role(s) - sends error and exits if user doesn't have role
+ * @param array $user User data from session
+ * @param array|string $allowedRoles Role name(s) required
+ */
+function requireRole($user, $allowedRoles) {
+    if (!hasRole($user, $allowedRoles)) {
+        sendErrorResponse('Forbidden. Insufficient permissions.', 403);
+    }
+}
+
+/**
+ * Check if user can manage salon (for customer_admin and customer_admin_delegate)
+ * @param array $user User data from session
+ * @param int $salonId Salon ID to check
+ * @return bool True if user can manage this salon
+ */
+function canManageSalon($user, $salonId) {
+    // Admin and admin_delegate can manage all salons
+    if (in_array($user['role'], ['admin', 'admin_delegate'])) {
+        return true;
+    }
+
+    // Customer admins can only manage their own salon
+    if (in_array($user['role'], ['customer_admin', 'customer_admin_delegate'])) {
+        return $user['salon_id'] == $salonId;
+    }
+
+    return false;
+}
+
+/**
+ * Record failed login attempt
+ * @param mysqli $conn Database connection
+ * @param string $username Username that failed login
+ */
+function recordFailedLogin($conn, $username) {
+    try {
+        $stmt = $conn->prepare(
+            "UPDATE coiffure_users
+            SET failed_login_attempts = failed_login_attempts + 1,
+                locked_until = CASE
+                    WHEN failed_login_attempts >= 4 THEN DATE_ADD(NOW(), INTERVAL 15 MINUTE)
+                    ELSE locked_until
+                END
+            WHERE username = ? OR email = ?"
+        );
+
+        if ($stmt) {
+            $stmt->bind_param("ss", $username, $username);
+            $stmt->execute();
+            $stmt->close();
+        }
+    } catch (Exception $e) {
+        error_log("Failed login recording exception: " . $e->getMessage());
+    }
+}
+
+/**
+ * Check if account is locked
+ * @param mysqli $conn Database connection
+ * @param string $username Username to check
+ * @return bool True if account is locked
+ */
+function isAccountLocked($conn, $username) {
+    try {
+        $stmt = $conn->prepare(
+            "SELECT locked_until FROM coiffure_users
+            WHERE (username = ? OR email = ?) AND locked_until > NOW()"
+        );
+
+        if (!$stmt) {
+            return false;
+        }
+
+        $stmt->bind_param("ss", $username, $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $isLocked = $result->num_rows > 0;
+        $stmt->close();
+
+        return $isLocked;
+    } catch (Exception $e) {
+        error_log("Account lock check exception: " . $e->getMessage());
+        return false;
+    }
 }

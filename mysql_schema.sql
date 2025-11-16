@@ -179,11 +179,11 @@ CREATE TABLE IF NOT EXISTS coiffure_audit_log (
     log_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
     -- Entity Information
-    entity_type ENUM('customer', 'salon', 'qr_code', 'ai_consultation') NOT NULL,
+    entity_type ENUM('customer', 'salon', 'qr_code', 'ai_consultation', 'user', 'login') NOT NULL,
     entity_id INT UNSIGNED NOT NULL,
 
     -- Action Details
-    action ENUM('create', 'read', 'update', 'delete', 'consent_given', 'consent_withdrawn', 'data_export', 'data_deletion') NOT NULL,
+    action ENUM('create', 'read', 'update', 'delete', 'consent_given', 'consent_withdrawn', 'data_export', 'data_deletion', 'login', 'logout', 'login_failed') NOT NULL,
     action_details TEXT,
 
     -- User Information
@@ -198,6 +198,85 @@ CREATE TABLE IF NOT EXISTS coiffure_audit_log (
     INDEX idx_audit_entity (entity_type, entity_id),
     INDEX idx_audit_action (action),
     INDEX idx_audit_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Table: coiffure_users
+-- Description: User accounts with role-based access control
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_users (
+    user_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    salon_id INT UNSIGNED NULL,  -- NULL for admin and admin_delegate
+
+    -- Authentication
+    username VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+
+    -- User Information
+    full_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+
+    -- Role-based Access Control
+    role ENUM('admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate', 'customer_user') NOT NULL,
+
+    -- Account Status
+    is_active TINYINT(1) DEFAULT 1,
+    email_verified TINYINT(1) DEFAULT 0,
+
+    -- Account Management
+    created_by INT UNSIGNED NULL,  -- User ID who created this account
+    last_login TIMESTAMP NULL,
+    last_login_ip VARCHAR(45),
+    failed_login_attempts INT UNSIGNED DEFAULT 0,
+    locked_until TIMESTAMP NULL,  -- Account lockout after too many failed attempts
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    -- Foreign Keys
+    FOREIGN KEY (salon_id) REFERENCES coiffure_salons(salon_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES coiffure_users(user_id) ON DELETE SET NULL,
+
+    -- Indexes
+    INDEX idx_user_username (username),
+    INDEX idx_user_email (email),
+    INDEX idx_user_salon (salon_id),
+    INDEX idx_user_role (role),
+    INDEX idx_user_active (is_active),
+    INDEX idx_user_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Table: coiffure_sessions
+-- Description: User session management for authentication
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_sessions (
+    session_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+
+    -- Session Token
+    session_token VARCHAR(128) UNIQUE NOT NULL,
+
+    -- Session Information
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+
+    -- Session Expiry
+    expires_at TIMESTAMP NOT NULL,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Foreign Keys
+    FOREIGN KEY (user_id) REFERENCES coiffure_users(user_id) ON DELETE CASCADE,
+
+    -- Indexes
+    INDEX idx_session_token (session_token),
+    INDEX idx_session_user (user_id),
+    INDEX idx_session_expires (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -218,6 +297,30 @@ INSERT INTO coiffure_salons (
     'Cancellations must be made at least 24 hours in advance. Late cancellations may incur a fee of 50% of the service cost.',
     'Your personal data will be processed for appointment management, service delivery, and customer relationship management. Data is stored securely and will not be shared with third parties without your consent.'
 ) ON DUPLICATE KEY UPDATE salon_name=salon_name;
+
+-- ============================================================
+-- Insert Default Admin User (for initial setup)
+-- ============================================================
+-- Default admin credentials:
+-- Username: admin
+-- Password: admin123 (CHANGE THIS IMMEDIATELY AFTER FIRST LOGIN!)
+INSERT INTO coiffure_users (
+    username,
+    email,
+    password_hash,
+    full_name,
+    role,
+    is_active,
+    email_verified
+) VALUES (
+    'admin',
+    'admin@salonlyft.com',
+    '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',  -- Password: admin123
+    'System Administrator',
+    'admin',
+    1,
+    1
+) ON DUPLICATE KEY UPDATE username=username;
 
 -- ============================================================
 -- Stored Procedures (Optional - for GDPR compliance)
