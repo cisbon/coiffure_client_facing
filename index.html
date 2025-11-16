@@ -519,7 +519,8 @@
                 const response = await fetch(`${API_BASE_URL}/customer.php`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionToken}`
                     },
                     body: JSON.stringify(formData)
                 });
@@ -789,7 +790,11 @@
 
                 // Use the user's assigned salon ID
                 const salonParam = userSalonId ? `salon_id=${userSalonId}` : '';
-                const response = await fetch(`${API_BASE_URL}/social-links.php?${salonParam}&include_inactive=false`);
+                const response = await fetch(`${API_BASE_URL}/social-links.php?${salonParam}&include_inactive=false`, {
+                    headers: {
+                        'Authorization': `Bearer ${sessionToken}`
+                    }
+                });
                 const result = await response.json();
 
                 if (result.success && result.data && result.data.length > 0) {
