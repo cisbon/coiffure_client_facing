@@ -495,6 +495,9 @@
                 saveSalonLanguageBtn.addEventListener('click', async function() {
                     const selectedLanguage = document.getElementById('salonLanguageSelector').value;
 
+                    console.log('Attempting to save language:', selectedLanguage);
+                    console.log('Current salon:', window.currentSalon);
+
                     if (!window.currentSalon || !window.currentSalon.salon_id) {
                         alert('No salon selected. Please ensure you are assigned to a salon.');
                         return;
@@ -502,18 +505,24 @@
 
                     try {
                         const sessionToken = localStorage.getItem('session_token');
-                        const response = await fetch(`${API_BASE_URL}/salon-management.php?salon_id=${window.currentSalon.salon_id}`, {
+                        const url = `${API_BASE_URL}/salon-management.php?salon_id=${window.currentSalon.salon_id}`;
+                        const payload = { default_language: selectedLanguage };
+
+                        console.log('Request URL:', url);
+                        console.log('Request payload:', payload);
+
+                        const response = await fetch(url, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${sessionToken}`
                             },
-                            body: JSON.stringify({
-                                default_language: selectedLanguage
-                            })
+                            body: JSON.stringify(payload)
                         });
 
+                        console.log('Response status:', response.status);
                         const result = await response.json();
+                        console.log('Response data:', result);
 
                         if (result.success) {
                             // Update current salon language

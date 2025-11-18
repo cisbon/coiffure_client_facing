@@ -378,8 +378,12 @@ function handleUpdateSalon($conn, $currentUser, $salonId, $data) {
     $updateStmt->bind_param($types, ...$params);
 
     if (!$updateStmt->execute()) {
-        error_log("Failed to update salon: " . $updateStmt->error);
-        sendErrorResponse('Failed to update salon', 500);
+        $error_msg = "Failed to update salon: " . $updateStmt->error;
+        error_log($error_msg);
+        error_log("Query: " . $query);
+        error_log("Params: " . json_encode($params));
+        error_log("Types: " . $types);
+        sendErrorResponse('Failed to update salon: ' . $updateStmt->error, 500);
     }
 
     $updateStmt->close();
