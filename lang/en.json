@@ -1,0 +1,168 @@
+{
+  "app": {
+    "title": "SalonLyft",
+    "subtitle": "Your Digital Salon Assistant"
+  },
+  "tabs": {
+    "onboarding": "Customer Form",
+    "qr_generator": "QR Generator",
+    "social": "Social"
+  },
+  "onboarding": {
+    "title": "Customer Registration",
+    "description": "Please fill out the form to register",
+    "full_name": "Full Name",
+    "full_name_placeholder": "John Doe",
+    "email": "Email Address",
+    "email_placeholder": "john@example.com",
+    "phone": "Phone Number",
+    "phone_placeholder": "+1 234 567890",
+    "gdpr_title": "Privacy & Consent",
+    "consent_data_processing": "I consent to the processing of my personal data according to GDPR",
+    "consent_cancellation": "I have read and accept the cancellation policy",
+    "consent_marketing": "I want to receive promotional emails and updates (optional)",
+    "signature_title": "Signature",
+    "signature_description": "Please sign here",
+    "signature_clear": "Clear",
+    "submit_button": "Submit",
+    "submitting": "Submitting..."
+  },
+  "qr_generator": {
+    "title": "QR Code Generator",
+    "description": "Create custom QR codes",
+    "url_label": "URL or Text",
+    "url_placeholder": "https://example.com",
+    "generate_button": "Generate QR Code",
+    "generating": "Generating...",
+    "download_button": "Download QR Code"
+  },
+  "social": {
+    "title": "Social Media",
+    "description": "Follow us on our social media channels",
+    "loading": "Loading social links...",
+    "no_links": "No social links available",
+    "tap_to_scan": "Tap to scan QR"
+  },
+  "social_qr_modal": {
+    "title": "Scan QR Code",
+    "description": "Point your camera at the QR code to open the link",
+    "close": "Close"
+  },
+  "messages": {
+    "success": "Success!",
+    "error": "Error!",
+    "required_fields": "Please fill out all required fields",
+    "invalid_email": "Please enter a valid email address",
+    "invalid_phone": "Please enter a valid phone number",
+    "consent_required": "Privacy consent is required",
+    "signature_required": "Signature is required"
+  },
+  "admin": {
+    "dashboard": "Admin Dashboard",
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "settings": "Settings",
+    "language": "Language",
+    "language_german": "Deutsch",
+    "language_english": "English",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "actions": "Actions",
+    "loading": "Loading...",
+    "no_data": "No data available"
+  },
+  "admin_tabs": {
+    "user_management": "User Management",
+    "salon_management": "Salon Management",
+    "social_links": "Social Links",
+    "customer_entries": "Customer Entries"
+  },
+  "user_management": {
+    "title": "User Management",
+    "add_user": "Add User",
+    "edit_user": "Edit User",
+    "username": "Username",
+    "email": "Email",
+    "full_name": "Full Name",
+    "role": "Role",
+    "salon": "Salon",
+    "salons": "Salons",
+    "is_active": "Active",
+    "password": "Password",
+    "email_verified": "Email Verified",
+    "last_login": "Last Login",
+    "created_at": "Created At",
+    "select_salon": "Select Salon",
+    "select_salons": "Select Salons",
+    "assign_salons": "Assign Salons"
+  },
+  "salon_management": {
+    "title": "Salon Management",
+    "add_salon": "Add Salon",
+    "edit_salon": "Edit Salon",
+    "salon_name": "Salon Name",
+    "address": "Address",
+    "city": "City",
+    "postal_code": "Postal Code",
+    "country": "Country",
+    "phone": "Phone",
+    "email": "Email",
+    "website": "Website",
+    "is_active": "Active"
+  },
+  "social_links": {
+    "title": "Social Links",
+    "add_link": "Add Link",
+    "edit_link": "Edit Link",
+    "link_type": "Link Type",
+    "link_url": "URL",
+    "display_name": "Display Name",
+    "description": "Description",
+    "is_active": "Active",
+    "display_order": "Display Order",
+    "qr_code": "QR Code",
+    "view_qr": "View QR",
+    "select_salon": "Select Salon",
+    "types": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "tiktok": "TikTok",
+      "google_reviews": "Google Reviews",
+      "yelp": "Yelp",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "youtube": "YouTube",
+      "pinterest": "Pinterest",
+      "custom": "Custom"
+    }
+  },
+  "customer_entries": {
+    "title": "Customer Entries",
+    "search_placeholder": "Search by name...",
+    "full_name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "consent_marketing": "Marketing Consent",
+    "consent_data": "Data Processing",
+    "created_at": "Registered At",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "admin_delegate": "Admin Delegate",
+    "customer_admin": "Customer Admin",
+    "customer_admin_delegate": "Customer Admin Delegate",
+    "customer_facing_tablet_user": "Tablet User"
+  },
+  "footer": {
+    "copyright": "© 2025 SalonLyft. All rights reserved.",
+    "gdpr_compliant": "GDPR Compliant",
+    "secure": "Secure & Private"
+  }
+}

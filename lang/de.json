@@ -1,0 +1,168 @@
+{
+  "app": {
+    "title": "SalonLyft",
+    "subtitle": "Ihr digitaler Salon-Assistent"
+  },
+  "tabs": {
+    "onboarding": "Kundenformular",
+    "qr_generator": "QR Generator",
+    "social": "Social"
+  },
+  "onboarding": {
+    "title": "Kundenregistrierung",
+    "description": "Bitte füllen Sie das Formular aus, um sich zu registrieren",
+    "full_name": "Vollständiger Name",
+    "full_name_placeholder": "Max Mustermann",
+    "email": "E-Mail-Adresse",
+    "email_placeholder": "max@beispiel.de",
+    "phone": "Telefonnummer",
+    "phone_placeholder": "+49 123 456789",
+    "gdpr_title": "Datenschutz & Einwilligungen",
+    "consent_data_processing": "Ich stimme der Verarbeitung meiner personenbezogenen Daten gemäß DSGVO zu",
+    "consent_cancellation": "Ich habe die Stornierungsbedingungen gelesen und akzeptiert",
+    "consent_marketing": "Ich möchte Werbe-E-Mails und Updates erhalten (optional)",
+    "signature_title": "Unterschrift",
+    "signature_description": "Bitte unterschreiben Sie hier",
+    "signature_clear": "Löschen",
+    "submit_button": "Absenden",
+    "submitting": "Wird gesendet..."
+  },
+  "qr_generator": {
+    "title": "QR-Code-Generator",
+    "description": "Erstellen Sie benutzerdefinierte QR-Codes",
+    "url_label": "URL oder Text",
+    "url_placeholder": "https://beispiel.de",
+    "generate_button": "QR-Code generieren",
+    "generating": "Wird generiert...",
+    "download_button": "QR-Code herunterladen"
+  },
+  "social": {
+    "title": "Social Media",
+    "description": "Folgen Sie uns auf unseren Social-Media-Kanälen",
+    "loading": "Social Links werden geladen...",
+    "no_links": "Keine Social Links verfügbar",
+    "tap_to_scan": "Zum Scannen tippen"
+  },
+  "social_qr_modal": {
+    "title": "QR-Code scannen",
+    "description": "Richten Sie Ihre Kamera auf den QR-Code, um den Link zu öffnen",
+    "close": "Schließen"
+  },
+  "messages": {
+    "success": "Erfolgreich!",
+    "error": "Fehler!",
+    "required_fields": "Bitte füllen Sie alle erforderlichen Felder aus",
+    "invalid_email": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "invalid_phone": "Bitte geben Sie eine gültige Telefonnummer ein",
+    "consent_required": "Datenschutzeinwilligung ist erforderlich",
+    "signature_required": "Unterschrift ist erforderlich"
+  },
+  "admin": {
+    "dashboard": "Admin-Dashboard",
+    "welcome": "Willkommen",
+    "logout": "Abmelden",
+    "settings": "Einstellungen",
+    "language": "Sprache",
+    "language_german": "Deutsch",
+    "language_english": "English",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "add": "Hinzufügen",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "actions": "Aktionen",
+    "loading": "Lädt...",
+    "no_data": "Keine Daten verfügbar"
+  },
+  "admin_tabs": {
+    "user_management": "Benutzerverwaltung",
+    "salon_management": "Salonverwaltung",
+    "social_links": "Social Links",
+    "customer_entries": "Kundeneinträge"
+  },
+  "user_management": {
+    "title": "Benutzerverwaltung",
+    "add_user": "Benutzer hinzufügen",
+    "edit_user": "Benutzer bearbeiten",
+    "username": "Benutzername",
+    "email": "E-Mail",
+    "full_name": "Vollständiger Name",
+    "role": "Rolle",
+    "salon": "Salon",
+    "salons": "Salons",
+    "is_active": "Aktiv",
+    "password": "Passwort",
+    "email_verified": "E-Mail verifiziert",
+    "last_login": "Letzte Anmeldung",
+    "created_at": "Erstellt am",
+    "select_salon": "Salon auswählen",
+    "select_salons": "Salons auswählen",
+    "assign_salons": "Salons zuweisen"
+  },
+  "salon_management": {
+    "title": "Salonverwaltung",
+    "add_salon": "Salon hinzufügen",
+    "edit_salon": "Salon bearbeiten",
+    "salon_name": "Salonname",
+    "address": "Adresse",
+    "city": "Stadt",
+    "postal_code": "PLZ",
+    "country": "Land",
+    "phone": "Telefon",
+    "email": "E-Mail",
+    "website": "Website",
+    "is_active": "Aktiv"
+  },
+  "social_links": {
+    "title": "Social Links",
+    "add_link": "Link hinzufügen",
+    "edit_link": "Link bearbeiten",
+    "link_type": "Link-Typ",
+    "link_url": "URL",
+    "display_name": "Anzeigename",
+    "description": "Beschreibung",
+    "is_active": "Aktiv",
+    "display_order": "Reihenfolge",
+    "qr_code": "QR-Code",
+    "view_qr": "QR anzeigen",
+    "select_salon": "Salon auswählen",
+    "types": {
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "tiktok": "TikTok",
+      "google_reviews": "Google Bewertungen",
+      "yelp": "Yelp",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "youtube": "YouTube",
+      "pinterest": "Pinterest",
+      "custom": "Benutzerdefiniert"
+    }
+  },
+  "customer_entries": {
+    "title": "Kundeneinträge",
+    "search_placeholder": "Nach Name suchen...",
+    "full_name": "Name",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "consent_marketing": "Marketing-Einwilligung",
+    "consent_data": "Datenverarbeitung",
+    "created_at": "Registriert am",
+    "yes": "Ja",
+    "no": "Nein"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "admin_delegate": "Admin-Stellvertreter",
+    "customer_admin": "Kunden-Admin",
+    "customer_admin_delegate": "Kunden-Admin-Stellvertreter",
+    "customer_facing_tablet_user": "Tablet-Benutzer"
+  },
+  "footer": {
+    "copyright": "© 2025 SalonLyft. Alle Rechte vorbehalten.",
+    "gdpr_compliant": "DSGVO-konform",
+    "secure": "Sicher & Privat"
+  }
+}

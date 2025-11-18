@@ -45,7 +45,7 @@ $password = $data['password'];
 
 // Get user from database
 $stmt = $conn->prepare(
-    "SELECT user_id, username, email, password_hash, full_name, role, is_active, email_verified
+    "SELECT user_id, username, email, password_hash, full_name, role, is_active, email_verified, preferred_language
     FROM coiffure_users
     WHERE (username = ? OR email = ?) AND is_active = 1"
 );
@@ -134,6 +134,7 @@ sendJsonResponse([
         'salon_id' => $salonId,
         'salon_name' => $salonName,
         'assigned_salons' => $assignedSalons,  // All assigned salons
-        'email_verified' => (bool)$user['email_verified']
+        'email_verified' => (bool)$user['email_verified'],
+        'preferred_language' => $user['preferred_language'] ?? 'de'
     ]
 ]);

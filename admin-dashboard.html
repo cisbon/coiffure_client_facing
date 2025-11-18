@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SalonLyft - Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/i18n.js"></script>
     <style>
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -18,15 +19,29 @@
         <div class="container mx-auto px-4 py-4">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-2xl font-bold">SalonLyft Admin</h1>
+                    <h1 class="text-2xl font-bold" data-i18n="admin.dashboard">Admin Dashboard</h1>
                     <p class="text-sm text-purple-200" id="userInfo">Loading...</p>
                 </div>
-                <button
-                    id="logoutButton"
-                    class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-50 transition duration-200"
-                >
-                    Logout
-                </button>
+                <div class="flex items-center gap-4">
+                    <!-- Language Selector -->
+                    <div class="relative">
+                        <select
+                            id="languageSelector"
+                            class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-50 transition duration-200 cursor-pointer"
+                            onchange="i18n.setLanguage(this.value)"
+                        >
+                            <option value="de">🇩🇪 Deutsch</option>
+                            <option value="en">🇬🇧 English</option>
+                        </select>
+                    </div>
+                    <button
+                        id="logoutButton"
+                        class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-50 transition duration-200"
+                        data-i18n="admin.logout"
+                    >
+                        Logout
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
@@ -36,16 +51,16 @@
         <!-- Tabs -->
         <div class="bg-white rounded-lg shadow-md mb-6">
             <div class="flex flex-wrap border-b">
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200 active" data-tab="salons">
+                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200 active" data-tab="salons" data-i18n="admin_tabs.salon_management">
                     Salons
                 </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="social-links">
+                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="social-links" data-i18n="admin_tabs.social_links">
                     Social Links
                 </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="customer-entries">
+                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="customer-entries" data-i18n="admin_tabs.customer_entries">
                     Customer Entries
                 </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="users">
+                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="users" data-i18n="admin_tabs.user_management">
                     Users
                 </button>
                 <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="profile">
@@ -58,8 +73,8 @@
         <div id="salons-tab" class="tab-content active">
             <div class="bg-white rounded-lg shadow-md p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">Salon Management</h2>
-                    <button id="addSalonButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200">
+                    <h2 class="text-2xl font-bold text-gray-800" data-i18n="salon_management.title">Salon Management</h2>
+                    <button id="addSalonButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="salon_management.add_salon">
                         + Add Salon
                     </button>
                 </div>
@@ -69,17 +84,17 @@
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salon Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Users</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.salon_name">Salon Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.email">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.phone">Phone</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.salons">Users</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.is_active">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="admin.actions">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="salonsTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500" data-i18n="admin.loading">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -91,15 +106,15 @@
         <div id="social-links-tab" class="tab-content">
             <div class="bg-white rounded-lg shadow-md p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">Social Links & Reviews Management</h2>
-                    <button id="addSocialLinkButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200">
+                    <h2 class="text-2xl font-bold text-gray-800" data-i18n="social_links.title">Social Links & Reviews Management</h2>
+                    <button id="addSocialLinkButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="social_links.add_link">
                         + Add Link
                     </button>
                 </div>
 
                 <!-- Salon Filter for Social Links -->
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Salon</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="admin.filter">Filter by Salon</label>
                     <select id="socialLinkSalonFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                         <option value="">All Salons</option>
                     </select>
@@ -107,7 +122,7 @@
 
                 <!-- Social Links Grid -->
                 <div id="socialLinksContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="col-span-full text-center text-gray-500 py-8">Loading...</div>
+                    <div class="col-span-full text-center text-gray-500 py-8" data-i18n="admin.loading">Loading...</div>
                 </div>
             </div>
         </div>
@@ -115,17 +130,17 @@
         <!-- Customer Entries Tab -->
         <div id="customer-entries-tab" class="tab-content">
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">Customer Entries</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-6" data-i18n="customer_entries.title">Customer Entries</h2>
 
                 <!-- Search and Filters -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Search by Name</label>
-                        <input type="text" id="customerSearchInput" placeholder="Enter customer name..."
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="admin.search">Search by Name</label>
+                        <input type="text" id="customerSearchInput" data-i18n-placeholder="customer_entries.search_placeholder"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Salon</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="admin.filter">Filter by Salon</label>
                         <select id="customerSalonFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                             <option value="">All Salons</option>
                         </select>
@@ -137,16 +152,16 @@
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marketing Consent</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.full_name">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.email">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.phone">Phone</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.consent_marketing">Marketing Consent</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.created_at">Created</th>
                             </tr>
                         </thead>
                         <tbody id="customerEntriesTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                <td colspan="5" class="px-6 py-4 text-center text-gray-500" data-i18n="admin.loading">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -158,8 +173,8 @@
         <div id="users-tab" class="tab-content">
             <div class="bg-white rounded-lg shadow-md p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">User Management</h2>
-                    <button id="addUserButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200">
+                    <h2 class="text-2xl font-bold text-gray-800" data-i18n="user_management.title">User Management</h2>
+                    <button id="addUserButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="user_management.add_user">
                         + Add User
                     </button>
                 </div>
@@ -171,11 +186,11 @@
                     </select>
                     <select id="filterRole" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                         <option value="">All Roles</option>
-                        <option value="admin">Admin</option>
-                        <option value="admin_delegate">Admin Delegate</option>
-                        <option value="customer_admin">Customer Admin</option>
-                        <option value="customer_admin_delegate">Customer Admin Delegate</option>
-                        <option value="customer_facing_tablet_user">Tablet User</option>
+                        <option value="admin" data-i18n="roles.admin">Admin</option>
+                        <option value="admin_delegate" data-i18n="roles.admin_delegate">Admin Delegate</option>
+                        <option value="customer_admin" data-i18n="roles.customer_admin">Customer Admin</option>
+                        <option value="customer_admin_delegate" data-i18n="roles.customer_admin_delegate">Customer Admin Delegate</option>
+                        <option value="customer_facing_tablet_user" data-i18n="roles.customer_facing_tablet_user">Tablet User</option>
                     </select>
                     <select id="filterStatus" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                         <option value="">All Status</option>
@@ -189,18 +204,18 @@
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salon</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.username">Username</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.full_name">Full Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.email">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.role">Role</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.salon">Salon</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.is_active">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="admin.actions">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500" data-i18n="admin.loading">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -215,41 +230,41 @@
                 <form id="profileForm" class="space-y-4 max-w-2xl">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.username">Username</label>
                             <input type="text" id="profileUsername" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.email">Email</label>
                             <input type="email" id="profileEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.full_name">Full Name</label>
                             <input type="text" id="profileFullName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone</label>
                             <input type="tel" id="profilePhone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                         </div>
                     </div>
-                    <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200">
+                    <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="admin.save">
                         Update Profile
                     </button>
                 </form>
 
                 <hr class="my-8" />
 
-                <h3 class="text-xl font-bold text-gray-800 mb-4">Change Password</h3>
+                <h3 class="text-xl font-bold text-gray-800 mb-4" data-i18n="user_management.password">Change Password</h3>
                 <form id="passwordForm" class="space-y-4 max-w-2xl">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.password">New Password</label>
                         <input type="password" id="newPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required />
                         <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.password">Confirm Password</label>
                         <input type="password" id="confirmPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required />
                     </div>
-                    <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200">
+                    <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="admin.save">
                         Change Password
                     </button>
                 </form>
@@ -260,20 +275,20 @@
     <!-- Add/Edit Salon Modal -->
     <div id="salonModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-6" id="salonModalTitle">Add Salon</h3>
+            <h3 class="text-2xl font-bold mb-6" id="salonModalTitle" data-i18n="salon_management.add_salon">Add Salon</h3>
             <form id="salonForm" class="space-y-4">
                 <input type="hidden" id="salonId" />
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Salon Name *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.salon_name">Salon Name *</label>
                         <input type="text" id="salonName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.email">Email *</label>
                         <input type="email" id="salonEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone *</label>
                         <input type="tel" id="salonPhone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
@@ -282,7 +297,7 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.address">Address</label>
                     <textarea id="salonAddress" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"></textarea>
                 </div>
                 <div>
@@ -294,8 +309,8 @@
                     <input type="url" id="salonFacebookUrl" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                 </div>
                 <div class="flex justify-end gap-2 pt-4">
-                    <button type="button" id="closeSalonModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Save</button>
+                    <button type="button" id="closeSalonModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" data-i18n="admin.cancel">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" data-i18n="admin.save">Save</button>
                 </div>
             </form>
         </div>
@@ -304,45 +319,45 @@
     <!-- Add/Edit User Modal -->
     <div id="userModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-6" id="userModalTitle">Add User</h3>
+            <h3 class="text-2xl font-bold mb-6" id="userModalTitle" data-i18n="user_management.add_user">Add User</h3>
             <form id="userForm" class="space-y-4">
                 <input type="hidden" id="userId" />
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Username * (3-50 chars)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.username">Username * (3-50 chars)</label>
                         <input type="text" id="userUsername" required pattern="[a-zA-Z0-9_-]{3,50}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.email">Email *</label>
                         <input type="email" id="userEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.full_name">Full Name *</label>
                         <input type="text" id="userFullName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone</label>
                         <input type="tel" id="userPhone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Role *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.role">Role *</label>
                         <select id="userRole" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                             <option value="">Select Role</option>
-                            <option value="admin">Admin</option>
-                            <option value="admin_delegate">Admin Delegate</option>
-                            <option value="customer_admin">Customer Admin</option>
-                            <option value="customer_admin_delegate">Customer Admin Delegate</option>
-                            <option value="customer_facing_tablet_user">Tablet User</option>
+                            <option value="admin" data-i18n="roles.admin">Admin</option>
+                            <option value="admin_delegate" data-i18n="roles.admin_delegate">Admin Delegate</option>
+                            <option value="customer_admin" data-i18n="roles.customer_admin">Customer Admin</option>
+                            <option value="customer_admin_delegate" data-i18n="roles.customer_admin_delegate">Customer Admin Delegate</option>
+                            <option value="customer_facing_tablet_user" data-i18n="roles.customer_facing_tablet_user">Tablet User</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Salon</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.salon">Salon</label>
                         <select id="userSalon" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                             <option value="">None (for admin roles)</option>
                         </select>
                     </div>
                     <div id="passwordField">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Password * (min 8 chars)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.password">Password * (min 8 chars)</label>
                         <input type="password" id="userPassword" minlength="8" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                     </div>
                     <div>
@@ -354,8 +369,8 @@
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-4">
-                    <button type="button" id="closeUserModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Save</button>
+                    <button type="button" id="closeUserModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" data-i18n="admin.cancel">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" data-i18n="admin.save">Save</button>
                 </div>
             </form>
         </div>
@@ -364,54 +379,54 @@
     <!-- Add/Edit Social Link Modal -->
     <div id="socialLinkModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-6" id="socialLinkModalTitle">Add Social Link</h3>
+            <h3 class="text-2xl font-bold mb-6" id="socialLinkModalTitle" data-i18n="social_links.add_link">Add Social Link</h3>
             <form id="socialLinkForm" class="space-y-4">
                 <input type="hidden" id="linkId" />
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Salon *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.select_salon">Salon *</label>
                     <select id="linkSalonId" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="">Select Salon</option>
+                        <option value="" data-i18n="social_links.select_salon">Select Salon</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Link Type *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.link_type">Link Type *</label>
                     <select id="linkType" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                         <option value="">Select Type</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="google_reviews">Google Reviews</option>
-                        <option value="yelp">Yelp</option>
-                        <option value="twitter">Twitter / X</option>
-                        <option value="linkedin">LinkedIn</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="pinterest">Pinterest</option>
-                        <option value="custom">Custom Link</option>
+                        <option value="instagram" data-i18n="social_links.types.instagram">Instagram</option>
+                        <option value="facebook" data-i18n="social_links.types.facebook">Facebook</option>
+                        <option value="tiktok" data-i18n="social_links.types.tiktok">TikTok</option>
+                        <option value="google_reviews" data-i18n="social_links.types.google_reviews">Google Reviews</option>
+                        <option value="yelp" data-i18n="social_links.types.yelp">Yelp</option>
+                        <option value="twitter" data-i18n="social_links.types.twitter">Twitter / X</option>
+                        <option value="linkedin" data-i18n="social_links.types.linkedin">LinkedIn</option>
+                        <option value="youtube" data-i18n="social_links.types.youtube">YouTube</option>
+                        <option value="pinterest" data-i18n="social_links.types.pinterest">Pinterest</option>
+                        <option value="custom" data-i18n="social_links.types.custom">Custom Link</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Display Name *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.display_name">Display Name *</label>
                     <input type="text" id="linkDisplayName" required placeholder="e.g., Follow us on Instagram"
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">URL *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.link_url">URL *</label>
                     <input type="url" id="linkUrl" required placeholder="https://..."
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Description (for custom links)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.description">Description (for custom links)</label>
                     <textarea id="linkDescription" rows="2" placeholder="Optional description shown below icon"
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"></textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Display Order</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.display_order">Display Order</label>
                     <input type="number" id="linkDisplayOrder" value="0" min="0"
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
                 </div>
                 <div class="flex justify-end gap-2 pt-4">
-                    <button type="button" id="closeSocialLinkModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Save</button>
+                    <button type="button" id="closeSocialLinkModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" data-i18n="admin.cancel">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" data-i18n="admin.save">Save</button>
                 </div>
             </form>
         </div>
@@ -420,13 +435,13 @@
     <!-- View QR Code Modal -->
     <div id="qrCodeViewModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
-            <h3 class="text-2xl font-bold mb-6" id="qrCodeViewTitle">QR Code</h3>
+            <h3 class="text-2xl font-bold mb-6" id="qrCodeViewTitle" data-i18n="social_links.qr_code">QR Code</h3>
             <div class="text-center">
                 <div id="qrCodeDisplay" class="bg-gray-50 p-4 rounded-lg mb-4 flex items-center justify-center min-h-[300px]">
                     <!-- QR Code will be displayed here -->
                 </div>
                 <p class="text-sm text-gray-600 mb-4" id="qrCodeUrl"></p>
-                <button type="button" id="closeQrCodeModal" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                <button type="button" id="closeQrCodeModal" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700" data-i18n="social_qr_modal.close">
                     Close
                 </button>
             </div>
@@ -434,5 +449,30 @@
     </div>
 
     <script src="admin-dashboard.js"></script>
+    <script>
+        // Initialize i18n with user's preferred language
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Get language from user_data or fallback to de
+            let currentLang = 'de';
+            const userData = localStorage.getItem('user_data');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    currentLang = user.preferred_language || 'de';
+                } catch (e) {
+                    console.warn('Failed to parse user data');
+                }
+            }
+
+            // Set language selector value
+            const languageSelector = document.getElementById('languageSelector');
+            if (languageSelector) {
+                languageSelector.value = currentLang;
+            }
+
+            // Initialize i18n (it will auto-load from user_data)
+            await i18n.init();
+        });
+    </script>
 </body>
 </html>
