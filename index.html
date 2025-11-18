@@ -8,8 +8,9 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- i18n Support -->
-    <script src="i18n.js"></script>
+    <!-- i18n Support - Skip auto-init, we'll use salon's default language -->
+    <script>window.skipI18nAutoInit = true;</script>
+    <script src="js/i18n.js"></script>
 
     <!-- QRCode.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -413,7 +414,18 @@
 
                 if (data.success && data.salons && data.salons.length > 0) {
                     // Use the first assigned salon
-                    userSalonId = data.salons[0].salon_id;
+                    const salon = data.salons[0];
+                    userSalonId = salon.salon_id;
+
+                    // Load salon's default language for customer-facing UI
+                    const salonLanguage = salon.default_language || 'de';
+                    console.log('Loading salon default language:', salonLanguage);
+
+                    // Override i18n to use salon's language (not user preference)
+                    if (typeof i18n !== 'undefined') {
+                        await i18n.loadLanguage(salonLanguage);
+                        i18n.applyTranslations();
+                    }
                 } else {
                     // Fallback to default salon ID 1
                     userSalonId = 1;

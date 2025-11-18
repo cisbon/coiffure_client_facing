@@ -113,7 +113,8 @@
     "phone": "Phone",
     "email": "Email",
     "website": "Website",
-    "is_active": "Active"
+    "is_active": "Active",
+    "default_language": "Default Language (for Tablets)"
   },
   "social_links": {
     "title": "Social Links",
