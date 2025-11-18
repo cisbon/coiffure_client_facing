@@ -211,15 +211,18 @@ const i18n = {
 };
 
 // Auto-initialize on DOM ready if not already initialized
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+// Skip auto-init if window.skipI18nAutoInit is set (for index.html which uses salon language)
+if (!window.skipI18nAutoInit) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!i18n.translations || Object.keys(i18n.translations).length === 0) {
+                i18n.init();
+            }
+        });
+    } else {
+        // DOM already loaded
         if (!i18n.translations || Object.keys(i18n.translations).length === 0) {
             i18n.init();
         }
-    });
-} else {
-    // DOM already loaded
-    if (!i18n.translations || Object.keys(i18n.translations).length === 0) {
-        i18n.init();
     }
 }

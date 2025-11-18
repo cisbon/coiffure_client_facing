@@ -274,9 +274,11 @@ function openSalonModal(salonId = null) {
             document.getElementById('salonGoogleUrl').value = salon.google_reviews_url || '';
             document.getElementById('salonFacebookUrl').value = salon.facebook_url || '';
             document.getElementById('salonPolicyVersion').value = salon.policy_version;
+            document.getElementById('salonDefaultLanguage').value = salon.default_language || 'de';
         }
     } else {
         title.textContent = 'Add Salon';
+        document.getElementById('salonDefaultLanguage').value = 'de';
     }
 
     modal.classList.add('active');
@@ -297,7 +299,8 @@ async function saveSalon(e) {
         address: document.getElementById('salonAddress').value,
         google_reviews_url: document.getElementById('salonGoogleUrl').value,
         facebook_url: document.getElementById('salonFacebookUrl').value,
-        policy_version: document.getElementById('salonPolicyVersion').value
+        policy_version: document.getElementById('salonPolicyVersion').value,
+        default_language: document.getElementById('salonDefaultLanguage').value
     };
 
     let endpoint = 'salon-management.php';

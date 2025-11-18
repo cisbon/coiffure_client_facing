@@ -51,8 +51,8 @@ switch ($method) {
         break;
 
     case 'PUT':
-        // Only admin and admin_delegate can update salons
-        requireRole($currentUser, ['admin', 'admin_delegate']);
+        // Admin and admin_delegate can update all salon fields
+        // customer_admin and customer_admin_delegate can only update default_language for their assigned salons
         handleUpdateSalon($conn, $currentUser, $salonId, $requestData);
         break;
 
@@ -205,6 +205,12 @@ function handleCreateSalon($conn, $currentUser, $data) {
     $cancellationPolicy = isset($data['cancellation_policy']) ? trim($data['cancellation_policy']) : null;
     $dataProcessingPolicy = isset($data['data_processing_policy']) ? trim($data['data_processing_policy']) : null;
     $isActive = isset($data['is_active']) ? (int)$data['is_active'] : 1;
+    $defaultLanguage = isset($data['default_language']) ? trim($data['default_language']) : 'de';
+
+    // Validate language
+    if (!in_array($defaultLanguage, ['de', 'en'])) {
+        sendErrorResponse('Invalid language. Must be "de" or "en"', 400);
+    }
 
     // Validate email
     if (!validateEmail($email)) {
@@ -220,8 +226,8 @@ function handleCreateSalon($conn, $currentUser, $data) {
     $stmt = $conn->prepare(
         "INSERT INTO coiffure_salons
         (salon_name, email, phone, address, google_reviews_url, facebook_url,
-         policy_version, cancellation_policy, data_processing_policy, is_active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         policy_version, cancellation_policy, data_processing_policy, is_active, default_language)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
     if (!$stmt) {
@@ -230,7 +236,7 @@ function handleCreateSalon($conn, $currentUser, $data) {
     }
 
     $stmt->bind_param(
-        "sssssssssi",
+        "sssssssssiss",
         $salonName,
         $email,
         $phone,
@@ -240,7 +246,8 @@ function handleCreateSalon($conn, $currentUser, $data) {
         $policyVersion,
         $cancellationPolicy,
         $dataProcessingPolicy,
-        $isActive
+        $isActive,
+        $defaultLanguage
     );
 
     if (!$stmt->execute()) {
@@ -269,21 +276,45 @@ function handleUpdateSalon($conn, $currentUser, $salonId, $data) {
         sendErrorResponse('Salon ID required', 400);
     }
 
-    // Check if salon exists
-    $checkStmt = $conn->prepare("SELECT salon_id FROM coiffure_salons WHERE salon_id = ?");
+    $isCustomerRole = in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate']);
+
+    // Check if salon exists and if customer role, verify they have access
+    $query = "SELECT salon_id FROM coiffure_salons WHERE salon_id = ?";
+    if ($isCustomerRole) {
+        $query .= " AND EXISTS (
+            SELECT 1 FROM coiffure_user_salons us
+            WHERE us.salon_id = coiffure_salons.salon_id AND us.user_id = ?
+        )";
+    }
+
+    $checkStmt = $conn->prepare($query);
     if (!$checkStmt) {
         sendErrorResponse('Failed to fetch salon', 500);
     }
 
-    $checkStmt->bind_param("i", $salonId);
+    if ($isCustomerRole) {
+        $checkStmt->bind_param("ii", $salonId, $currentUser['user_id']);
+    } else {
+        $checkStmt->bind_param("i", $salonId);
+    }
+
     $checkStmt->execute();
     $checkResult = $checkStmt->get_result();
 
     if ($checkResult->num_rows === 0) {
         $checkStmt->close();
-        sendErrorResponse('Salon not found', 404);
+        sendErrorResponse($isCustomerRole ? 'Salon not found or access denied' : 'Salon not found', 404);
     }
     $checkStmt->close();
+
+    // If customer role, they can only update default_language
+    if ($isCustomerRole) {
+        $allowedKeys = array_keys($data);
+        $disallowedKeys = array_diff($allowedKeys, ['default_language']);
+        if (!empty($disallowedKeys)) {
+            sendErrorResponse('Customer admin can only update default_language. Attempted to update: ' . implode(', ', $disallowedKeys), 403);
+        }
+    }
 
     // Build update query dynamically
     $updates = [];
@@ -300,7 +331,8 @@ function handleUpdateSalon($conn, $currentUser, $salonId, $data) {
         'policy_version' => 's',
         'cancellation_policy' => 's',
         'data_processing_policy' => 's',
-        'is_active' => 'i'
+        'is_active' => 'i',
+        'default_language' => 's'
     ];
 
     foreach ($allowedFields as $field => $type) {
@@ -313,6 +345,11 @@ function handleUpdateSalon($conn, $currentUser, $salonId, $data) {
             // Validate phone
             if ($field === 'phone' && !validatePhone($data[$field])) {
                 sendErrorResponse('Invalid phone number', 400);
+            }
+
+            // Validate language
+            if ($field === 'default_language' && !in_array($data[$field], ['de', 'en'])) {
+                sendErrorResponse('Invalid language. Must be "de" or "en"', 400);
             }
 
             $updates[] = "$field = ?";
