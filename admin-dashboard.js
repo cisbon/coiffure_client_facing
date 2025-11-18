@@ -42,12 +42,34 @@ async function init() {
 
     // Load initial data
     await loadSalons();
+
+    // Set current salon and load its language
+    await loadSalonLanguage();
+
     await loadUsers();
     await loadSocialLinks();
     await loadCustomerEntries();
 
     // Populate salon dropdown for user form
     populateSalonDropdown();
+}
+
+async function loadSalonLanguage() {
+    // Get user's first assigned salon
+    if (salons && salons.length > 0) {
+        window.currentSalon = salons[0];
+        const salonLanguage = window.currentSalon.default_language || 'de';
+
+        console.log('Loading salon language:', salonLanguage, 'for salon:', window.currentSalon.salon_name);
+
+        // Load and apply salon's language
+        if (typeof i18n !== 'undefined') {
+            await i18n.loadLanguage(salonLanguage);
+            i18n.applyTranslations();
+        }
+    } else {
+        console.warn('No salons found for user');
+    }
 }
 
 function updateUserInfo() {

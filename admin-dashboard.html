@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SalonLyft - Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>window.skipI18nAutoInit = true;</script>
     <script src="js/i18n.js"></script>
     <style>
         .tab-content { display: none; }
@@ -22,26 +23,13 @@
                     <h1 class="text-2xl font-bold" data-i18n="admin.dashboard">Admin Dashboard</h1>
                     <p class="text-sm text-purple-200" id="userInfo">Loading...</p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <!-- Language Selector -->
-                    <div class="relative">
-                        <select
-                            id="languageSelector"
-                            class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-50 transition duration-200 cursor-pointer"
-                            onchange="i18n.setLanguage(this.value)"
-                        >
-                            <option value="de">🇩🇪 Deutsch</option>
-                            <option value="en">🇬🇧 English</option>
-                        </select>
-                    </div>
-                    <button
-                        id="logoutButton"
-                        class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-50 transition duration-200"
-                        data-i18n="admin.logout"
-                    >
-                        Logout
-                    </button>
-                </div>
+                <button
+                    id="logoutButton"
+                    class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-50 transition duration-200"
+                    data-i18n="admin.logout"
+                >
+                    Logout
+                </button>
             </div>
         </div>
     </nav>
@@ -253,6 +241,31 @@
 
                 <hr class="my-8" />
 
+                <h3 class="text-xl font-bold text-gray-800 mb-4" data-i18n="admin.language">Language Settings</h3>
+                <div class="max-w-2xl mb-8">
+                    <p class="text-sm text-gray-600 mb-4">Set the default language for all interfaces (admin dashboard and customer tablets) for your salon.</p>
+                    <div class="flex items-center gap-4">
+                        <label class="block text-sm font-medium text-gray-700">Default Language:</label>
+                        <select
+                            id="salonLanguageSelector"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                        >
+                            <option value="de">🇩🇪 Deutsch</option>
+                            <option value="en">🇬🇧 English</option>
+                        </select>
+                        <button
+                            id="saveSalonLanguageBtn"
+                            class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200"
+                            data-i18n="admin.save"
+                        >
+                            Save
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">This language will be used for the admin dashboard and all customer-facing tablets.</p>
+                </div>
+
+                <hr class="my-8" />
+
                 <h3 class="text-xl font-bold text-gray-800 mb-4" data-i18n="user_management.password">Change Password</h3>
                 <form id="passwordForm" class="space-y-4 max-w-2xl">
                     <div>
@@ -457,28 +470,69 @@
 
     <script src="admin-dashboard.js"></script>
     <script>
-        // Initialize i18n with user's preferred language
-        document.addEventListener('DOMContentLoaded', async function() {
-            // Get language from user_data or fallback to de
-            let currentLang = 'de';
-            const userData = localStorage.getItem('user_data');
-            if (userData) {
-                try {
-                    const user = JSON.parse(userData);
-                    currentLang = user.preferred_language || 'de';
-                } catch (e) {
-                    console.warn('Failed to parse user data');
-                }
-            }
+        // Initialize i18n with salon's default language
+        // The i18n.js auto-init is already running, no need to manually call init() again
 
-            // Set language selector value
-            const languageSelector = document.getElementById('languageSelector');
-            if (languageSelector) {
-                languageSelector.value = currentLang;
-            }
+        // Wait for i18n to load, then update salon language selector
+        window.addEventListener('DOMContentLoaded', function() {
+            // Wait a bit for i18n to initialize
+            setTimeout(() => {
+                updateSalonLanguageSelector();
+            }, 500);
+        });
 
-            // Initialize i18n (it will auto-load from user_data)
-            await i18n.init();
+        function updateSalonLanguageSelector() {
+            const salonLanguageSelector = document.getElementById('salonLanguageSelector');
+            if (salonLanguageSelector && window.currentSalon) {
+                salonLanguageSelector.value = window.currentSalon.default_language || 'de';
+            }
+        }
+
+        // Handle salon language change
+        document.addEventListener('DOMContentLoaded', function() {
+            const saveSalonLanguageBtn = document.getElementById('saveSalonLanguageBtn');
+            if (saveSalonLanguageBtn) {
+                saveSalonLanguageBtn.addEventListener('click', async function() {
+                    const selectedLanguage = document.getElementById('salonLanguageSelector').value;
+
+                    if (!window.currentSalon || !window.currentSalon.salon_id) {
+                        alert('No salon selected. Please ensure you are assigned to a salon.');
+                        return;
+                    }
+
+                    try {
+                        const sessionToken = localStorage.getItem('session_token');
+                        const response = await fetch(`${API_BASE_URL}/salon-management.php?salon_id=${window.currentSalon.salon_id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${sessionToken}`
+                            },
+                            body: JSON.stringify({
+                                default_language: selectedLanguage
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            // Update current salon language
+                            window.currentSalon.default_language = selectedLanguage;
+
+                            // Apply language change immediately
+                            await i18n.setLanguage(selectedLanguage);
+
+                            alert('Language updated successfully! The page will reload.');
+                            window.location.reload();
+                        } else {
+                            alert('Failed to update language: ' + (result.error || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        console.error('Error updating salon language:', error);
+                        alert('Error updating language. Please try again.');
+                    }
+                });
+            }
         });
     </script>
 </body>
