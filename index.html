@@ -411,23 +411,33 @@
                 });
 
                 const data = await response.json();
+                console.log('Salon API response:', data);
 
                 if (data.success && data.salons && data.salons.length > 0) {
                     // Use the first assigned salon
                     const salon = data.salons[0];
                     userSalonId = salon.salon_id;
 
+                    console.log('Salon object:', salon);
+                    console.log('Salon default_language:', salon.default_language);
+
                     // Load salon's default language for customer-facing UI
                     const salonLanguage = salon.default_language || 'de';
-                    console.log('Loading salon default language:', salonLanguage);
+                    console.log('Loading salon default language for index.html:', salonLanguage);
 
                     // Override i18n to use salon's language (not user preference)
                     if (typeof i18n !== 'undefined') {
-                        await i18n.loadLanguage(salonLanguage);
+                        console.log('i18n is available, loading language...');
+                        const success = await i18n.loadLanguage(salonLanguage);
+                        console.log('Language loaded successfully:', success);
                         i18n.applyTranslations();
+                        console.log('Translations applied');
+                    } else {
+                        console.error('i18n is not defined!');
                     }
                 } else {
                     // Fallback to default salon ID 1
+                    console.warn('No salons found, using default salon_id = 1');
                     userSalonId = 1;
                 }
             } catch (error) {
