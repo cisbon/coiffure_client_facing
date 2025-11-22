@@ -4,22 +4,42 @@
  * Handles logo upload and color scheme customization for white-labeling
  */
 
+// Enable error logging
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
 header('Content-Type: application/json');
-require_once __DIR__ . '/config.php';
 
-// Handle CORS
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+try {
+    require_once __DIR__ . '/config.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+    // Handle CORS
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Verify authentication
-$headers = getallheaders();
-$authHeader = $headers['Authorization'] ?? '';
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(200);
+        exit();
+    }
+
+    // Verify authentication
+    // Fallback for getallheaders() in case it's not available
+    if (!function_exists('getallheaders')) {
+        function getallheaders() {
+            $headers = [];
+            foreach ($_SERVER as $name => $value) {
+                if (substr($name, 0, 5) == 'HTTP_') {
+                    $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+                }
+            }
+            return $headers;
+        }
+    }
+
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 
 if (empty($authHeader) || !preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
     http_response_code(401);
@@ -75,8 +95,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         FROM coiffure_salons
         WHERE salon_id = ?
     ");
+
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database prepare error: ' . $conn->error]);
+        exit();
+    }
+
     $stmt->bind_param("i", $salonId);
-    $stmt->execute();
+
+    if (!$stmt->execute()) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database execute error: ' . $stmt->error]);
+        exit();
+    }
+
     $result = $stmt->get_result();
 
     if ($result->num_rows === 0) {
@@ -250,5 +283,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit();
 }
 
-http_response_code(405);
-echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+    http_response_code(405);
+    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+
+} catch (Exception $e) {
+    error_log("Salon Branding API Error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Internal server error: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
+} catch (Error $e) {
+    error_log("Salon Branding API Fatal Error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Fatal error: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
+}
