@@ -15,16 +15,12 @@
             const token = localStorage.getItem('session_token');
             const userData = localStorage.getItem('user_data');
 
-            console.log('Auth check - token:', token ? 'EXISTS' : 'MISSING');
-            console.log('Auth check - userData:', userData ? 'EXISTS' : 'MISSING');
 
             if (!token || !userData) {
-                console.log('Redirecting to login.html...');
                 window.location.replace('login.html');
                 return;
             }
 
-            console.log('User authenticated, loading page...');
         })();
     </script>
 
@@ -505,7 +501,6 @@
 
                     // Load salon's default language for customer-facing UI
                     const salonLanguage = salon.default_language || 'de';
-                    console.log('Loading salon default language:', salonLanguage);
 
                     // Override i18n to use salon's language (not user preference)
                     if (typeof i18n !== 'undefined') {
@@ -871,52 +866,39 @@
 
         // Load social links when page loads
         window.addEventListener('DOMContentLoaded', async () => {
-            console.log('=== DOMContentLoaded - Starting initialization ===');
 
             // Check authentication first
             const isAuthenticated = await checkAuthentication();
-            console.log('Authentication check result:', isAuthenticated);
 
             if (isAuthenticated) {
                 // Initialize i18n with user's preferred language
                 if (typeof i18n !== 'undefined') {
-                    console.log('i18n object found:', i18n);
 
                     // Determine which language to use
                     let targetLang = 'de'; // Default to German
 
                     // Check if user has a preferred language
                     const userLang = currentUser?.preferred_language;
-                    console.log('User preferred_language from currentUser:', userLang);
 
                     if (userLang && (userLang === 'de' || userLang === 'en')) {
                         targetLang = userLang;
-                        console.log('Using user preferred language:', targetLang);
                     } else {
                         // Check if salon has a default language (will be set by getUserSalonAssignments)
                         await new Promise(resolve => setTimeout(resolve, 150));
                         const salonLang = i18n.currentLang;
-                        console.log('Salon language from i18n.currentLang:', salonLang);
                         if (salonLang && (salonLang === 'de' || salonLang === 'en')) {
                             targetLang = salonLang;
                         }
-                        console.log('Using final target language:', targetLang);
                     }
 
                     // Load the determined language
-                    console.log('Loading language:', targetLang);
                     const loadSuccess = await i18n.loadLanguage(targetLang);
-                    console.log('Language load success:', loadSuccess);
-                    console.log('i18n.translations loaded:', Object.keys(i18n.translations).length > 0);
 
                     // Apply translations to the page
-                    console.log('Applying translations...');
                     i18n.applyTranslations();
-                    console.log('Translations applied');
 
                     // Update language buttons
                     updateLanguageButtons();
-                    console.log('Language buttons updated');
                 } else {
                     console.error('i18n object NOT found!');
                 }
@@ -924,16 +906,13 @@
                 loadSocialLinks();
             }
 
-            console.log('=== DOMContentLoaded - Initialization complete ===');
         });
 
         async function loadSocialLinks() {
-            console.log('=== loadSocialLinks() called ===');
             const loadingDiv = document.getElementById('social-loading');
             const gridDiv = document.getElementById('social-links-grid');
             const noLinksDiv = document.getElementById('social-no-links');
 
-            console.log('DOM elements found:', {
                 loadingDiv: !!loadingDiv,
                 gridDiv: !!gridDiv,
                 noLinksDiv: !!noLinksDiv
@@ -945,19 +924,14 @@
                 noLinksDiv.classList.add('hidden');
 
                 // Use the user's assigned salon ID directly from currentUser
-                console.log('currentUser object:', currentUser);
                 const salonId = currentUser.assigned_salons && currentUser.assigned_salons.length > 0
                     ? currentUser.assigned_salons[0].salon_id
                     : (currentUser.salon_id || userSalonId);
 
-                console.log('Determined salon_id:', salonId);
-                console.log('sessionToken exists:', !!sessionToken);
 
                 const salonParam = salonId ? `salon_id=${salonId}` : '';
                 const apiUrl = `${API_BASE_URL}/social-links.php?${salonParam}&include_inactive=false`;
-                console.log('Full API URL:', apiUrl);
 
-                console.log('Making fetch request...');
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => {
                     console.error('Fetch request timed out after 10 seconds!');
@@ -972,17 +946,12 @@
                 });
 
                 clearTimeout(timeoutId);
-                console.log('Fetch completed!');
-                console.log('Response status:', response.status);
-                console.log('Response ok:', response.ok);
 
                 const responseText = await response.text();
-                console.log('Raw response text:', responseText);
 
                 let result;
                 try {
                     result = JSON.parse(responseText);
-                    console.log('Parsed JSON result:', result);
                 } catch (e) {
                     console.error('Failed to parse JSON:', e);
                     console.error('Response was:', responseText);
@@ -990,15 +959,11 @@
                 }
 
                 if (result.success && result.data && result.data.length > 0) {
-                    console.log('SUCCESS! Found', result.data.length, 'social links');
-                    console.log('Social links data:', result.data);
                     socialLinksData = result.data;
                     renderSocialLinks(result.data);
                     gridDiv.classList.remove('hidden');
-                    console.log('Grid displayed');
                 } else {
                     console.warn('No social links found or API returned success=false');
-                    console.log('Result details:', {
                         success: result.success,
                         hasData: !!result.data,
                         dataLength: result.data?.length,
@@ -1013,18 +978,14 @@
                 console.error('Error stack:', error.stack);
                 noLinksDiv.classList.remove('hidden');
             } finally {
-                console.log('Hiding loading spinner');
                 loadingDiv.classList.add('hidden');
-                console.log('=== loadSocialLinks() complete ===');
             }
         }
 
         function renderSocialLinks(links) {
-            console.log('=== renderSocialLinks() called with', links.length, 'links ===');
             const grid = document.getElementById('social-links-grid');
 
             grid.innerHTML = links.map((link, index) => {
-                console.log(`Link ${index}:`, {
                     display_name: link.display_name,
                     link_type: link.link_type,
                     link_url: link.link_url
@@ -1072,7 +1033,6 @@
                                 colorLight: "#ffffff",
                                 correctLevel: QRCode.CorrectLevel.H
                             });
-                            console.log(`QR code generated for ${link.display_name}`);
                         } catch (error) {
                             console.error(`Failed to generate QR code for ${link.display_name}:`, error);
                             qrElement.innerHTML = '<p class="text-xs text-red-500">QR code generation failed</p>';
@@ -1121,7 +1081,6 @@
         }
 
         // ==================== INITIALIZATION ====================
-        console.log('SalonLyft Customer Suite loaded successfully');
     </script>
 </body>
 </html>

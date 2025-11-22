@@ -156,18 +156,27 @@ logAudit($conn, 'ai_consultation', $consultationId, 'create', 'AI consultation s
 // Prepare OpenRouter API request
 $startTime = microtime(true);
 
-// STEP 1: Analyze the photo with vision model
-$analysisPrompt = "Analyze this person's face and hair. Describe their face shape, current hair length and texture, hair color, and skin tone. Be concise.";
+// Log the request
+error_log("=== AI CONSULTATION START ===");
+error_log("Model: " . $aiModel);
+error_log("Style Prompt: " . $stylePrompt);
+error_log("Image Data Length: " . strlen($imageData));
 
-$analysisPayload = [
-    'model' => 'anthropic/claude-3-5-sonnet',
+// Create prompt for hairstyle transformation
+$prompt = "Transform this person's hairstyle to look like: {$stylePrompt}. Generate a new professional salon photograph showing them with this new hairstyle. Keep their face, features, and everything else the same - only change the hairstyle. Style: Professional photography, high quality, photorealistic.";
+
+error_log("AI Prompt: " . $prompt);
+
+// Prepare API payload
+$apiPayload = [
+    'model' => $aiModel,
     'messages' => [
         [
             'role' => 'user',
             'content' => [
                 [
                     'type' => 'text',
-                    'text' => $analysisPrompt
+                    'text' => $prompt
                 ],
                 [
                     'type' => 'image_url',
@@ -178,8 +187,15 @@ $analysisPayload = [
             ]
         ]
     ],
-    'max_tokens' => 500
+    'max_tokens' => 4096,
+    'temperature' => 0.7
 ];
+
+error_log("API Request Payload: " . json_encode([
+    'model' => $apiPayload['model'],
+    'prompt' => $prompt,
+    'image_provided' => true
+]));
 
 $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
@@ -191,58 +207,7 @@ curl_setopt_array($ch, [
         'HTTP-Referer: https://clouedo.com',
         'X-Title: SalonLyft Virtual Consultation'
     ],
-    CURLOPT_POSTFIELDS => json_encode($analysisPayload),
-    CURLOPT_TIMEOUT => 30
-]);
-
-$analysisResponse = curl_exec($ch);
-$analysisHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$analysisCurlError = curl_error($ch);
-curl_close($ch);
-
-if ($analysisResponse === false || $analysisHttpCode !== 200) {
-    $errorMsg = 'Face analysis failed: ' . $analysisCurlError;
-    $failStmt = $conn->prepare(
-        "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = ? WHERE consultation_id = ?"
-    );
-    $failStmt->bind_param("si", $errorMsg, $consultationId);
-    $failStmt->execute();
-    $failStmt->close();
-    $conn->close();
-    sendErrorResponse($errorMsg, 500);
-}
-
-$analysisResult = json_decode($analysisResponse, true);
-$faceAnalysis = $analysisResult['choices'][0]['message']['content'] ?? 'Unable to analyze face';
-
-// STEP 2: Generate image with the new hairstyle
-$generationPrompt = "Professional salon photograph of a person with these features: {$faceAnalysis}. Transform their hairstyle to: {$stylePrompt}. Style: Professional photography, salon quality, natural lighting, photorealistic, front-facing portrait.";
-
-$imageGenPayload = [
-    'model' => $aiModel,
-    'prompt' => $generationPrompt,
-    'n' => 1,
-    'size' => '1024x1024',
-    'response_format' => 'url'
-];
-
-// For models that support img2img
-if (strpos($aiModel, 'flux') !== false || strpos($aiModel, 'stable-diffusion') !== false) {
-    $imageGenPayload['image'] = $imageData;
-    $imageGenPayload['strength'] = 0.75;
-}
-
-$ch = curl_init('https://openrouter.ai/api/v1/images/generations');
-curl_setopt_array($ch, [
-    CURLOPT_POST => true,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER => [
-        'Authorization: Bearer ' . OPENROUTER_API_KEY,
-        'Content-Type: application/json',
-        'HTTP-Referer: https://clouedo.com',
-        'X-Title: SalonLyft Virtual Consultation'
-    ],
-    CURLOPT_POSTFIELDS => json_encode($imageGenPayload),
+    CURLOPT_POSTFIELDS => json_encode($apiPayload),
     CURLOPT_TIMEOUT => 60
 ]);
 
@@ -254,34 +219,97 @@ curl_close($ch);
 $endTime = microtime(true);
 $processingTime = round(($endTime - $startTime) * 1000);
 
-// Parse image generation response
+error_log("API Response HTTP Code: " . $httpCode);
+error_log("Processing Time: " . $processingTime . "ms");
+
+// Check for cURL errors
+if ($response === false) {
+    $errorMsg = 'API request failed: ' . $curlError;
+    error_log("ERROR: " . $errorMsg);
+
+    $failStmt = $conn->prepare(
+        "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = ?, processing_time_ms = ? WHERE consultation_id = ?"
+    );
+    $failStmt->bind_param("sii", $errorMsg, $processingTime, $consultationId);
+    $failStmt->execute();
+    $failStmt->close();
+    $conn->close();
+    sendErrorResponse($errorMsg, 500);
+}
+
+// Parse API response
 $apiResponse = json_decode($response, true);
-$generatedContent = $faceAnalysis;
+error_log("API Response Structure: " . json_encode(array_keys($apiResponse)));
+
+// Check for API errors
+if ($httpCode !== 200) {
+    $errorMsg = isset($apiResponse['error']['message']) ? $apiResponse['error']['message'] : 'Unknown API error';
+    error_log("ERROR: API returned " . $httpCode . " - " . $errorMsg);
+    error_log("Full Error Response: " . $response);
+
+    $failStmt = $conn->prepare(
+        "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = ?, processing_time_ms = ?, ai_response_data = ? WHERE consultation_id = ?"
+    );
+    $responseJson = json_encode($apiResponse);
+    $failStmt->bind_param("sisi", $errorMsg, $processingTime, $responseJson, $consultationId);
+    $failStmt->execute();
+    $failStmt->close();
+    $conn->close();
+    sendErrorResponse('AI service error: ' . $errorMsg, 500);
+}
+
+// Extract response content
+$generatedContent = null;
 $tokensUsed = 0;
-$generatedImageUrl = null;
 $generatedImageBase64 = null;
 
-if ($httpCode === 200 && isset($apiResponse['data'][0])) {
-    // Try to get generated image
-    if (isset($apiResponse['data'][0]['b64_json'])) {
-        $generatedImageBase64 = 'data:image/png;base64,' . $apiResponse['data'][0]['b64_json'];
-    } elseif (isset($apiResponse['data'][0]['url'])) {
-        $generatedImageUrl = $apiResponse['data'][0]['url'];
+if (isset($apiResponse['choices'][0]['message']['content'])) {
+    $generatedContent = $apiResponse['choices'][0]['message']['content'];
+    error_log("AI Response Content Length: " . strlen($generatedContent));
+    error_log("AI Response Content Preview: " . substr($generatedContent, 0, 200));
+
+    // Check if response contains an image URL or base64 data
+    if (preg_match('/!\[.*?\]\((https?:\/\/[^\)]+)\)/', $generatedContent, $matches)) {
+        $imageUrl = $matches[1];
+        error_log("Found image URL in markdown: " . $imageUrl);
 
         // Download and convert to base64
-        $imageContent = @file_get_contents($generatedImageUrl);
+        $imageContent = @file_get_contents($imageUrl);
         if ($imageContent !== false) {
             $generatedImageBase64 = 'data:image/png;base64,' . base64_encode($imageContent);
+            error_log("Successfully downloaded and encoded image");
+        }
+    } elseif (preg_match('/data:image\/[^;]+;base64,([A-Za-z0-9+\/=]+)/', $generatedContent, $matches)) {
+        $generatedImageBase64 = $matches[0];
+        error_log("Found base64 image in response");
+    }
+}
+
+// Check for image in structured response
+if (isset($apiResponse['data'][0])) {
+    error_log("Response has 'data' array");
+    if (isset($apiResponse['data'][0]['b64_json'])) {
+        $generatedImageBase64 = 'data:image/png;base64,' . $apiResponse['data'][0]['b64_json'];
+        error_log("Found image in data[0].b64_json");
+    } elseif (isset($apiResponse['data'][0]['url'])) {
+        $imageUrl = $apiResponse['data'][0]['url'];
+        error_log("Found image URL in data[0].url: " . $imageUrl);
+
+        $imageContent = @file_get_contents($imageUrl);
+        if ($imageContent !== false) {
+            $generatedImageBase64 = 'data:image/png;base64,' . base64_encode($imageContent);
+            error_log("Successfully downloaded image from URL");
         }
     }
-
-    if (isset($apiResponse['usage']['total_tokens'])) {
-        $tokensUsed = $apiResponse['usage']['total_tokens'];
-    }
-} else {
-    // Image generation failed - log but continue with text analysis
-    error_log("Image generation failed (HTTP $httpCode): " . ($response ?: $curlError));
 }
+
+if (isset($apiResponse['usage']['total_tokens'])) {
+    $tokensUsed = $apiResponse['usage']['total_tokens'];
+    error_log("Tokens Used: " . $tokensUsed);
+}
+
+error_log("Generated Image: " . ($generatedImageBase64 ? 'YES (' . strlen($generatedImageBase64) . ' chars)' : 'NO'));
+error_log("=== AI CONSULTATION END ===");
 
 // Update consultation record with results
 $completeStmt = $conn->prepare(
