@@ -275,10 +275,10 @@
 
                     <!-- Mode Selector -->
                     <div class="flex gap-4 mb-8 p-2 bg-gray-100 rounded-lg">
-                        <button id="quick-mode-btn" onclick="switchMode('quick')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white">
+                        <button id="quick-mode-btn" onclick="switchMode('quick')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white" data-i18n="ai_consultation.mode_quick">
                             Quick Mode
                         </button>
-                        <button id="guided-mode-btn" onclick="switchMode('guided')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300">
+                        <button id="guided-mode-btn" onclick="switchMode('guided')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="ai_consultation.mode_guided">
                             Guided Wizard
                         </button>
                     </div>
@@ -414,12 +414,12 @@
                                 <div class="flex items-center flex-1">
                                     <div id="wizard-step-1" class="flex items-center">
                                         <div class="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
-                                        <span class="ml-2 font-semibold text-gray-700">Photo</span>
+                                        <span class="ml-2 font-semibold text-gray-700" data-i18n="ai_consultation.wizard_step_photo">Photo</span>
                                     </div>
                                     <div class="flex-1 h-1 bg-gray-300 mx-4"></div>
                                     <div id="wizard-step-2" class="flex items-center opacity-50">
                                         <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-bold">2</div>
-                                        <span class="ml-2 font-semibold text-gray-600">Style</span>
+                                        <span class="ml-2 font-semibold text-gray-600" data-i18n="ai_consultation.wizard_step_style">Style</span>
                                     </div>
                                 </div>
                             </div>
@@ -427,11 +427,31 @@
 
                         <!-- Step 1: Photo -->
                         <div id="wizard-photo-step" class="space-y-6">
-                            <h3 class="text-xl font-bold text-gray-800">Step 1: Take Your Photo</h3>
-                            <p class="text-gray-600">The camera will start automatically. Center your face in the frame.</p>
+                            <h3 class="text-xl font-bold text-gray-800" data-i18n="ai_consultation.wizard_photo_title">Step 1: Take Your Photo</h3>
+                            <p class="text-gray-600" data-i18n="ai_consultation.wizard_photo_description_upload">Take a photo or upload one.</p>
+
+                            <!-- Upload or Camera Buttons -->
+                            <div id="wizard-photo-options" class="flex gap-3">
+                                <button onclick="wizardStartCamera()" id="wizard-start-camera-btn" class="flex-1 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    <span data-i18n="ai_consultation.take_photo">Take Photo</span>
+                                </button>
+                                <button onclick="document.getElementById('wizard-image-input').click()" class="flex-1 px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                    </svg>
+                                    <span data-i18n="ai_consultation.upload_photo">Upload Photo</span>
+                                </button>
+                            </div>
+
+                            <!-- Hidden file input for wizard -->
+                            <input type="file" id="wizard-image-input" accept="image/*" class="hidden" onchange="wizardHandleImageSelect(event)">
 
                             <!-- Auto Camera View -->
-                            <div class="relative bg-black rounded-lg overflow-hidden">
+                            <div id="wizard-camera-container" class="hidden relative bg-black rounded-lg overflow-hidden">
                                 <video id="wizard-camera-video" class="w-full" autoplay playsinline></video>
                                 <canvas id="wizard-camera-canvas" class="hidden"></canvas>
                             </div>
@@ -441,63 +461,131 @@
                                 <img id="wizard-image-preview" class="w-full rounded-lg shadow-md" alt="Preview">
                             </div>
 
-                            <div class="flex gap-3">
-                                <button onclick="wizardCapturePhoto()" id="wizard-capture-btn" class="flex-1 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+                            <div id="wizard-photo-actions" class="hidden flex gap-3">
+                                <button onclick="wizardCapturePhoto()" id="wizard-capture-btn" class="hidden flex-1 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors" data-i18n="ai_consultation.wizard_capture">
                                     Capture Photo
                                 </button>
-                                <button onclick="wizardRetakePhoto()" id="wizard-retake-btn" class="hidden flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                                <button onclick="wizardRetakePhoto()" id="wizard-retake-btn" class="hidden flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors" data-i18n="ai_consultation.wizard_retake">
                                     Retake Photo
                                 </button>
                             </div>
 
-                            <button onclick="wizardNextStep()" id="wizard-next-photo-btn" class="hidden w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all">
+                            <button onclick="wizardNextStep()" id="wizard-next-photo-btn" class="hidden w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all" data-i18n="ai_consultation.wizard_continue">
                                 Continue to Style Selection →
                             </button>
                         </div>
 
                         <!-- Step 2: Style Selection -->
                         <div id="wizard-style-step" class="hidden space-y-6">
-                            <h3 class="text-xl font-bold text-gray-800">Step 2: Choose Your Style</h3>
-                            <p class="text-gray-600">Select the general look you're going for:</p>
+                            <h3 class="text-xl font-bold text-gray-800" data-i18n="ai_consultation.wizard_style_title">Step 2: Choose Your Style</h3>
 
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                <button onclick="selectWizardStyle('business')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                    <div class="text-4xl mb-2">💼</div>
-                                    <div class="font-semibold">Business</div>
-                                    <div class="text-sm text-gray-600">Professional & polished</div>
+                            <!-- Style Mode Toggle -->
+                            <div class="flex gap-3 mb-6">
+                                <button onclick="selectStyleMode('presets')" id="preset-mode-btn" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-purple-600 text-white" data-i18n="ai_consultation.quick_presets">
+                                    Quick Presets
                                 </button>
-                                <button onclick="selectWizardStyle('casual')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                    <div class="text-4xl mb-2">👔</div>
-                                    <div class="font-semibold">Casual</div>
-                                    <div class="text-sm text-gray-600">Relaxed & comfortable</div>
-                                </button>
-                                <button onclick="selectWizardStyle('trendy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                    <div class="text-4xl mb-2">✨</div>
-                                    <div class="font-semibold">Trendy</div>
-                                    <div class="text-sm text-gray-600">Modern & fashionable</div>
-                                </button>
-                                <button onclick="selectWizardStyle('classic')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                    <div class="text-4xl mb-2">👑</div>
-                                    <div class="font-semibold">Classic</div>
-                                    <div class="text-sm text-gray-600">Timeless & elegant</div>
-                                </button>
-                                <button onclick="selectWizardStyle('edgy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                    <div class="text-4xl mb-2">🎸</div>
-                                    <div class="font-semibold">Edgy</div>
-                                    <div class="text-sm text-gray-600">Bold & daring</div>
-                                </button>
-                                <button onclick="selectWizardStyle('natural')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                    <div class="text-4xl mb-2">🌿</div>
-                                    <div class="font-semibold">Natural</div>
-                                    <div class="text-sm text-gray-600">Easy & effortless</div>
+                                <button onclick="selectStyleMode('custom')" id="custom-mode-btn" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="ai_consultation.custom_style">
+                                    Custom Style
                                 </button>
                             </div>
 
+                            <!-- Preset Styles -->
+                            <div id="preset-styles-container" class="space-y-4">
+                                <p class="text-gray-600" data-i18n="ai_consultation.wizard_style_description">Select the general look you're going for:</p>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <button onclick="selectWizardStyle('business')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="text-4xl mb-2">💼</div>
+                                        <div class="font-semibold" data-i18n="ai_consultation.style_business">Business</div>
+                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_business_desc">Professional & polished</div>
+                                    </button>
+                                    <button onclick="selectWizardStyle('casual')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="text-4xl mb-2">👔</div>
+                                        <div class="font-semibold" data-i18n="ai_consultation.style_casual">Casual</div>
+                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_casual_desc">Relaxed & comfortable</div>
+                                    </button>
+                                    <button onclick="selectWizardStyle('trendy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="text-4xl mb-2">✨</div>
+                                        <div class="font-semibold" data-i18n="ai_consultation.style_trendy">Trendy</div>
+                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_trendy_desc">Modern & fashionable</div>
+                                    </button>
+                                    <button onclick="selectWizardStyle('classic')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="text-4xl mb-2">👑</div>
+                                        <div class="font-semibold" data-i18n="ai_consultation.style_classic">Classic</div>
+                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_classic_desc">Timeless & elegant</div>
+                                    </button>
+                                    <button onclick="selectWizardStyle('edgy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="text-4xl mb-2">🎸</div>
+                                        <div class="font-semibold" data-i18n="ai_consultation.style_edgy">Edgy</div>
+                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_edgy_desc">Bold & daring</div>
+                                    </button>
+                                    <button onclick="selectWizardStyle('natural')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="text-4xl mb-2">🌿</div>
+                                        <div class="font-semibold" data-i18n="ai_consultation.style_natural">Natural</div>
+                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_natural_desc">Easy & effortless</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Custom Style Builder -->
+                            <div id="custom-styles-container" class="hidden space-y-6">
+                                <p class="text-gray-600" data-i18n="ai_consultation.custom_description">Build your perfect hairstyle:</p>
+
+                                <!-- Length Selection -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-3" data-i18n="ai_consultation.length_label">Hair Length</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="selectLength('short')" id="length-short" class="length-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.length_short">Short</div>
+                                        </button>
+                                        <button onclick="selectLength('medium')" id="length-medium" class="length-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.length_medium">Medium</div>
+                                        </button>
+                                        <button onclick="selectLength('long')" id="length-long" class="length-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.length_long">Long</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Texture/Style Selection -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-3" data-i18n="ai_consultation.texture_label">Hair Texture & Style</label>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <button onclick="selectTexture('straight')" id="texture-straight" class="texture-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.texture_straight">Straight</div>
+                                        </button>
+                                        <button onclick="selectTexture('wavy')" id="texture-wavy" class="texture-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.texture_wavy">Wavy</div>
+                                        </button>
+                                        <button onclick="selectTexture('curly')" id="texture-curly" class="texture-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.texture_curly">Curly</div>
+                                        </button>
+                                        <button onclick="selectTexture('messy')" id="texture-messy" class="texture-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.texture_messy">Messy</div>
+                                        </button>
+                                        <button onclick="selectTexture('sleek')" id="texture-sleek" class="texture-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.texture_sleek">Sleek</div>
+                                        </button>
+                                        <button onclick="selectTexture('voluminous')" id="texture-voluminous" class="texture-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.texture_voluminous">Voluminous</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Optional Details -->
+                                <div>
+                                    <label for="wizard-custom-details" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        <span data-i18n="ai_consultation.additional_details">Additional Details (Optional)</span>
+                                    </label>
+                                    <textarea id="wizard-custom-details" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm" data-i18n-placeholder="ai_consultation.details_placeholder" placeholder="e.g., blonde highlights, bangs, layered, like a celebrity..."></textarea>
+                                    <p class="text-xs text-gray-500 mt-1" data-i18n="ai_consultation.details_hint">Add color, bangs, layers, or celebrity reference</p>
+                                </div>
+                            </div>
+
                             <div class="flex gap-3">
-                                <button onclick="wizardPrevStep()" class="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                                <button onclick="wizardPrevStep()" class="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors" data-i18n="ai_consultation.wizard_back">
                                     ← Back
                                 </button>
-                                <button onclick="submitWizardConsultation()" id="wizard-generate-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50" disabled>
+                                <button onclick="submitWizardConsultation()" id="wizard-generate-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50" data-i18n="ai_consultation.wizard_generate" disabled>
                                     Generate AI Hairstyle Preview
                                 </button>
                             </div>
@@ -886,24 +974,97 @@
                 quickContainer.classList.remove('hidden');
                 guidedContainer.classList.add('hidden');
                 stopWizardCamera();
+                resetWizard();
             } else {
                 quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
                 guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white';
                 quickContainer.classList.add('hidden');
                 guidedContainer.classList.remove('hidden');
-                startWizardCamera();
+                resetWizard();
             }
         }
 
-        async function startWizardCamera() {
+        function resetWizard() {
+            // Reset wizard state
+            wizardImage = null;
+            wizardSelectedStyle = null;
+            wizardStyleMode = 'presets';
+            wizardLength = null;
+            wizardTexture = null;
+            stopWizardCamera();
+
+            // Show photo options, hide camera and preview
+            document.getElementById('wizard-photo-options').classList.remove('hidden');
+            document.getElementById('wizard-camera-container').classList.add('hidden');
+            document.getElementById('wizard-image-preview-container').classList.add('hidden');
+            document.getElementById('wizard-photo-actions').classList.add('hidden');
+            document.getElementById('wizard-next-photo-btn').classList.add('hidden');
+
+            // Reset to step 1
+            document.getElementById('wizard-photo-step').classList.remove('hidden');
+            document.getElementById('wizard-style-step').classList.add('hidden');
+            document.getElementById('wizard-step-1').classList.remove('opacity-50');
+            document.getElementById('wizard-step-2').classList.add('opacity-50');
+
+            // Reset style mode to presets
+            document.getElementById('preset-mode-btn').className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+            document.getElementById('custom-mode-btn').className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+            document.getElementById('preset-styles-container').classList.remove('hidden');
+            document.getElementById('custom-styles-container').classList.add('hidden');
+
+            // Clear custom details textarea
+            document.getElementById('wizard-custom-details').value = '';
+
+            // Reset all button states
+            document.querySelectorAll('.wizard-style-btn, .length-btn, .texture-btn').forEach(btn => {
+                btn.className = btn.className.replace('border-purple-600 bg-purple-50', 'border-gray-300');
+            });
+
+            // Disable generate button
+            document.getElementById('wizard-generate-btn').disabled = true;
+        }
+
+        async function wizardStartCamera() {
             try {
+                // Hide photo options, show camera container
+                document.getElementById('wizard-photo-options').classList.add('hidden');
+                document.getElementById('wizard-camera-container').classList.remove('hidden');
+                document.getElementById('wizard-photo-actions').classList.remove('hidden');
+                document.getElementById('wizard-capture-btn').classList.remove('hidden');
+                document.getElementById('wizard-retake-btn').classList.add('hidden');
+
                 wizardStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                 const video = document.getElementById('wizard-camera-video');
                 video.srcObject = wizardStream;
             } catch (err) {
                 console.error('Error accessing camera:', err);
                 alert('Could not access camera. Please grant camera permissions.');
+                // Show photo options again if camera fails
+                document.getElementById('wizard-photo-options').classList.remove('hidden');
+                document.getElementById('wizard-camera-container').classList.add('hidden');
+                document.getElementById('wizard-photo-actions').classList.add('hidden');
             }
+        }
+
+        function wizardHandleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                wizardImage = e.target.result;
+
+                // Show preview
+                document.getElementById('wizard-image-preview').src = wizardImage;
+                document.getElementById('wizard-image-preview-container').classList.remove('hidden');
+
+                // Hide photo options, show retake button and continue
+                document.getElementById('wizard-photo-options').classList.add('hidden');
+                document.getElementById('wizard-photo-actions').classList.remove('hidden');
+                document.getElementById('wizard-retake-btn').classList.remove('hidden');
+                document.getElementById('wizard-next-photo-btn').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
         }
 
         function stopWizardCamera() {
@@ -929,7 +1090,7 @@
             document.getElementById('wizard-image-preview-container').classList.remove('hidden');
 
             // Hide camera, show retake and continue buttons
-            video.parentElement.classList.add('hidden');
+            document.getElementById('wizard-camera-container').classList.add('hidden');
             document.getElementById('wizard-capture-btn').classList.add('hidden');
             document.getElementById('wizard-retake-btn').classList.remove('hidden');
             document.getElementById('wizard-next-photo-btn').classList.remove('hidden');
@@ -938,17 +1099,16 @@
         }
 
         function wizardRetakePhoto() {
-            const video = document.getElementById('wizard-camera-video');
-
-            // Hide preview and show camera again
+            // Hide preview and buttons
             document.getElementById('wizard-image-preview-container').classList.add('hidden');
-            video.parentElement.classList.remove('hidden');
-            document.getElementById('wizard-capture-btn').classList.remove('hidden');
-            document.getElementById('wizard-retake-btn').classList.add('hidden');
+            document.getElementById('wizard-photo-actions').classList.add('hidden');
             document.getElementById('wizard-next-photo-btn').classList.add('hidden');
 
+            // Show photo options again
+            document.getElementById('wizard-photo-options').classList.remove('hidden');
+            document.getElementById('wizard-camera-container').classList.add('hidden');
+
             wizardImage = null;
-            startWizardCamera();
         }
 
         function wizardNextStep() {
@@ -975,6 +1135,84 @@
             document.getElementById('wizard-style-step').classList.add('hidden');
         }
 
+        // Custom style builder variables
+        let wizardStyleMode = 'presets'; // 'presets' or 'custom'
+        let wizardLength = null;
+        let wizardTexture = null;
+
+        function selectStyleMode(mode) {
+            wizardStyleMode = mode;
+
+            const presetBtn = document.getElementById('preset-mode-btn');
+            const customBtn = document.getElementById('custom-mode-btn');
+            const presetsContainer = document.getElementById('preset-styles-container');
+            const customContainer = document.getElementById('custom-styles-container');
+
+            if (mode === 'presets') {
+                presetBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                customBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+                presetsContainer.classList.remove('hidden');
+                customContainer.classList.add('hidden');
+
+                // Reset custom selections
+                wizardLength = null;
+                wizardTexture = null;
+                checkGenerateButtonState();
+            } else {
+                presetBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+                customBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                presetsContainer.classList.add('hidden');
+                customContainer.classList.remove('hidden');
+
+                // Reset preset selection
+                wizardSelectedStyle = null;
+                document.querySelectorAll('.wizard-style-btn').forEach(btn => {
+                    btn.className = 'wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+                });
+                checkGenerateButtonState();
+            }
+        }
+
+        function selectLength(length) {
+            wizardLength = length;
+
+            // Update UI - remove selected state from all
+            document.querySelectorAll('.length-btn').forEach(btn => {
+                btn.className = 'length-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+            });
+
+            // Add selected state to clicked button
+            document.getElementById('length-' + length).className = 'length-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+
+            checkGenerateButtonState();
+        }
+
+        function selectTexture(texture) {
+            wizardTexture = texture;
+
+            // Update UI - remove selected state from all
+            document.querySelectorAll('.texture-btn').forEach(btn => {
+                btn.className = 'texture-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+            });
+
+            // Add selected state to clicked button
+            document.getElementById('texture-' + texture).className = 'texture-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+
+            checkGenerateButtonState();
+        }
+
+        function checkGenerateButtonState() {
+            const generateBtn = document.getElementById('wizard-generate-btn');
+
+            if (wizardStyleMode === 'presets') {
+                // Enable if a preset style is selected
+                generateBtn.disabled = !wizardSelectedStyle;
+            } else {
+                // Enable if both length and texture are selected
+                generateBtn.disabled = !(wizardLength && wizardTexture);
+            }
+        }
+
         function selectWizardStyle(style) {
             wizardSelectedStyle = style;
 
@@ -986,24 +1224,40 @@
             // Add selected state to clicked button
             event.target.closest('.wizard-style-btn').className = 'wizard-style-btn p-6 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
 
-            // Enable generate button
-            document.getElementById('wizard-generate-btn').disabled = false;
+            checkGenerateButtonState();
         }
 
         async function submitWizardConsultation() {
-            if (!wizardImage || !wizardSelectedStyle) return;
+            if (!wizardImage) return;
 
-            // Map style to descriptive prompt
-            const styleDescriptions = {
-                'business': 'professional business hairstyle, neat and polished, executive style',
-                'casual': 'casual everyday hairstyle, relaxed and comfortable, natural look',
-                'trendy': 'trendy modern hairstyle, fashionable and contemporary, Instagram-worthy',
-                'classic': 'classic timeless hairstyle, elegant and sophisticated, traditional style',
-                'edgy': 'edgy bold hairstyle, daring and unique, statement-making look',
-                'natural': 'natural effortless hairstyle, easy-going and low-maintenance'
-            };
+            let stylePrompt;
 
-            const stylePrompt = styleDescriptions[wizardSelectedStyle];
+            if (wizardStyleMode === 'presets') {
+                if (!wizardSelectedStyle) return;
+
+                // Map style to descriptive prompt
+                const styleDescriptions = {
+                    'business': 'professional business hairstyle, neat and polished, executive style',
+                    'casual': 'casual everyday hairstyle, relaxed and comfortable, natural look',
+                    'trendy': 'trendy modern hairstyle, fashionable and contemporary, Instagram-worthy',
+                    'classic': 'classic timeless hairstyle, elegant and sophisticated, traditional style',
+                    'edgy': 'edgy bold hairstyle, daring and unique, statement-making look',
+                    'natural': 'natural effortless hairstyle, easy-going and low-maintenance'
+                };
+
+                stylePrompt = styleDescriptions[wizardSelectedStyle];
+            } else {
+                // Custom style mode
+                if (!wizardLength || !wizardTexture) return;
+
+                // Build custom prompt
+                const additionalDetails = document.getElementById('wizard-custom-details').value;
+                stylePrompt = `${wizardLength} ${wizardTexture} hairstyle`;
+
+                if (additionalDetails.trim()) {
+                    stylePrompt += `, ${additionalDetails}`;
+                }
+            }
 
             // Use the same submission logic as quick mode
             await performAIConsultation(wizardImage, stylePrompt);
