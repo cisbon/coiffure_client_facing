@@ -282,16 +282,54 @@
                         <div>
                             <h3 class="text-lg font-semibold text-gray-700 mb-4" data-i18n="ai_consultation.upload_section">Upload Your Photo</h3>
 
-                            <!-- Drop Zone -->
-                            <div id="drop-zone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
-                                <input type="file" id="image-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
-                                <p class="mt-2 text-sm text-gray-600">
-                                    <span class="font-semibold" data-i18n="ai_consultation.upload_prompt">Click to upload</span> <span data-i18n="ai_consultation.upload_drag">or drag and drop</span>
-                                </p>
-                                <p class="text-xs text-gray-500" data-i18n="ai_consultation.upload_hint">PNG, JPG, WEBP up to 5MB</p>
+                            <!-- Camera and Upload Buttons -->
+                            <div class="flex gap-3 mb-4">
+                                <button type="button" onclick="openCamera()" class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    <span data-i18n="ai_consultation.take_photo">Take Photo</span>
+                                </button>
+                                <button type="button" onclick="document.getElementById('image-input').click()" class="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                    </svg>
+                                    <span data-i18n="ai_consultation.upload_photo">Upload Photo</span>
+                                </button>
+                            </div>
+
+                            <!-- Hidden file input -->
+                            <input type="file" id="image-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+
+                            <!-- Camera Modal -->
+                            <div id="camera-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+                                <div class="bg-white rounded-lg max-w-2xl w-full p-6">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="text-xl font-bold" data-i18n="ai_consultation.camera_title">Take Photo</h3>
+                                        <button onclick="closeCamera()" class="text-gray-500 hover:text-gray-700">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <!-- Camera View -->
+                                    <div class="relative bg-black rounded-lg overflow-hidden mb-4">
+                                        <video id="camera-video" class="w-full" autoplay playsinline></video>
+                                        <canvas id="camera-canvas" class="hidden"></canvas>
+                                    </div>
+
+                                    <!-- Camera Controls -->
+                                    <div class="flex gap-3">
+                                        <button onclick="capturePhoto()" class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                            <span data-i18n="ai_consultation.capture">Capture Photo</span>
+                                        </button>
+                                        <button onclick="closeCamera()" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                                            <span data-i18n="ai_consultation.cancel">Cancel</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Image Preview -->
@@ -611,37 +649,74 @@
 
         // ==================== AI CONSULTATION ====================
         let uploadedImage = null;
+        let cameraStream = null;
 
-        // Drop zone functionality
-        const dropZone = document.getElementById('drop-zone');
-        const imageInput = document.getElementById('image-input');
-
-        dropZone.addEventListener('click', () => imageInput.click());
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleImageFile(files[0]);
-            }
-        });
-
+        // Handle file input selection
         function handleImageSelect(event) {
             const file = event.target.files[0];
             if (file) {
                 handleImageFile(file);
             }
+        }
+
+        // Camera functions
+        async function openCamera() {
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-video');
+
+            try {
+                // Request camera access with specific constraints for iPad
+                const constraints = {
+                    video: {
+                        facingMode: 'user', // Front camera by default
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = cameraStream;
+                modal.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('Could not access camera. Please ensure camera permissions are enabled.');
+            }
+        }
+
+        function closeCamera() {
+            const modal = document.getElementById('camera-modal');
+            const video = document.getElementById('camera-video');
+
+            // Stop all video tracks
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+
+            video.srcObject = null;
+            modal.classList.add('hidden');
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            const context = canvas.getContext('2d');
+
+            // Set canvas dimensions to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the video frame to canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to blob
+            canvas.toBlob((blob) => {
+                // Create a file from the blob
+                const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+                handleImageFile(file);
+                closeCamera();
+            }, 'image/jpeg', 0.95);
         }
 
         function handleImageFile(file) {

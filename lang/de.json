@@ -172,6 +172,11 @@
   "ai_consultation": {
     "title": "KI-Virtuelle Frisurberatung",
     "upload_section": "Laden Sie Ihr Foto hoch",
+    "take_photo": "Foto aufnehmen",
+    "upload_photo": "Foto hochladen",
+    "camera_title": "Foto aufnehmen",
+    "capture": "Foto aufnehmen",
+    "cancel": "Abbrechen",
     "upload_prompt": "Klicken Sie zum Hochladen",
     "upload_drag": "oder ziehen Sie es hierher",
     "upload_hint": "PNG, JPG, WEBP bis zu 5MB",

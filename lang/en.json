@@ -172,6 +172,11 @@
   "ai_consultation": {
     "title": "AI Virtual Hairstyle Consultation",
     "upload_section": "Upload Your Photo",
+    "take_photo": "Take Photo",
+    "upload_photo": "Upload Photo",
+    "camera_title": "Take Photo",
+    "capture": "Capture Photo",
+    "cancel": "Cancel",
     "upload_prompt": "Click to upload",
     "upload_drag": "or drag and drop",
     "upload_hint": "PNG, JPG, WEBP up to 5MB",
