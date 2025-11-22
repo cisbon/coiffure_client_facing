@@ -273,7 +273,18 @@
                 <div class="bg-white rounded-lg shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-6" data-i18n="ai_consultation.title">AI Virtual Hairstyle Consultation</h2>
 
-                    <div class="space-y-6">
+                    <!-- Mode Selector -->
+                    <div class="flex gap-4 mb-8 p-2 bg-gray-100 rounded-lg">
+                        <button id="quick-mode-btn" onclick="switchMode('quick')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white">
+                            Quick Mode
+                        </button>
+                        <button id="guided-mode-btn" onclick="switchMode('guided')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300">
+                            Guided Wizard
+                        </button>
+                    </div>
+
+                    <!-- Quick Mode (Current Interface) -->
+                    <div id="quick-mode-container" class="space-y-6">
                         <!-- Upload Section -->
                         <div>
                             <h3 class="text-lg font-semibold text-gray-700 mb-4" data-i18n="ai_consultation.upload_section">Upload Your Photo</h3>
@@ -392,6 +403,108 @@
                         <!-- Error Message -->
                         <div id="ai-message" class="hidden mt-4"></div>
                     </div>
+                    </div>
+                    <!-- End Quick Mode -->
+
+                    <!-- Guided Wizard Mode -->
+                    <div id="guided-mode-container" class="hidden">
+                        <!-- Progress Steps -->
+                        <div class="mb-8">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center flex-1">
+                                    <div id="wizard-step-1" class="flex items-center">
+                                        <div class="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                                        <span class="ml-2 font-semibold text-gray-700">Photo</span>
+                                    </div>
+                                    <div class="flex-1 h-1 bg-gray-300 mx-4"></div>
+                                    <div id="wizard-step-2" class="flex items-center opacity-50">
+                                        <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-bold">2</div>
+                                        <span class="ml-2 font-semibold text-gray-600">Style</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: Photo -->
+                        <div id="wizard-photo-step" class="space-y-6">
+                            <h3 class="text-xl font-bold text-gray-800">Step 1: Take Your Photo</h3>
+                            <p class="text-gray-600">The camera will start automatically. Center your face in the frame.</p>
+
+                            <!-- Auto Camera View -->
+                            <div class="relative bg-black rounded-lg overflow-hidden">
+                                <video id="wizard-camera-video" class="w-full" autoplay playsinline></video>
+                                <canvas id="wizard-camera-canvas" class="hidden"></canvas>
+                            </div>
+
+                            <!-- Wizard Image Preview -->
+                            <div id="wizard-image-preview-container" class="hidden">
+                                <img id="wizard-image-preview" class="w-full rounded-lg shadow-md" alt="Preview">
+                            </div>
+
+                            <div class="flex gap-3">
+                                <button onclick="wizardCapturePhoto()" id="wizard-capture-btn" class="flex-1 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+                                    Capture Photo
+                                </button>
+                                <button onclick="wizardRetakePhoto()" id="wizard-retake-btn" class="hidden flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                                    Retake Photo
+                                </button>
+                            </div>
+
+                            <button onclick="wizardNextStep()" id="wizard-next-photo-btn" class="hidden w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all">
+                                Continue to Style Selection →
+                            </button>
+                        </div>
+
+                        <!-- Step 2: Style Selection -->
+                        <div id="wizard-style-step" class="hidden space-y-6">
+                            <h3 class="text-xl font-bold text-gray-800">Step 2: Choose Your Style</h3>
+                            <p class="text-gray-600">Select the general look you're going for:</p>
+
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <button onclick="selectWizardStyle('business')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                    <div class="text-4xl mb-2">💼</div>
+                                    <div class="font-semibold">Business</div>
+                                    <div class="text-sm text-gray-600">Professional & polished</div>
+                                </button>
+                                <button onclick="selectWizardStyle('casual')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                    <div class="text-4xl mb-2">👔</div>
+                                    <div class="font-semibold">Casual</div>
+                                    <div class="text-sm text-gray-600">Relaxed & comfortable</div>
+                                </button>
+                                <button onclick="selectWizardStyle('trendy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                    <div class="text-4xl mb-2">✨</div>
+                                    <div class="font-semibold">Trendy</div>
+                                    <div class="text-sm text-gray-600">Modern & fashionable</div>
+                                </button>
+                                <button onclick="selectWizardStyle('classic')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                    <div class="text-4xl mb-2">👑</div>
+                                    <div class="font-semibold">Classic</div>
+                                    <div class="text-sm text-gray-600">Timeless & elegant</div>
+                                </button>
+                                <button onclick="selectWizardStyle('edgy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                    <div class="text-4xl mb-2">🎸</div>
+                                    <div class="font-semibold">Edgy</div>
+                                    <div class="text-sm text-gray-600">Bold & daring</div>
+                                </button>
+                                <button onclick="selectWizardStyle('natural')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                    <div class="text-4xl mb-2">🌿</div>
+                                    <div class="font-semibold">Natural</div>
+                                    <div class="text-sm text-gray-600">Easy & effortless</div>
+                                </button>
+                            </div>
+
+                            <div class="flex gap-3">
+                                <button onclick="wizardPrevStep()" class="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                                    ← Back
+                                </button>
+                                <button onclick="submitWizardConsultation()" id="wizard-generate-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50" disabled>
+                                    Generate AI Hairstyle Preview
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End Guided Wizard -->
+
                 </div>
             </div>
 
@@ -756,37 +869,164 @@
             document.getElementById('image-preview-container').classList.add('hidden');
         }
 
-        async function submitAIConsultation() {
-            const stylePrompt = document.getElementById('style_prompt').value;
-            const submitBtn = document.getElementById('ai-submit-btn');
+        // ===== WIZARD MODE FUNCTIONS =====
+        let wizardStream = null;
+        let wizardImage = null;
+        let wizardSelectedStyle = null;
+
+        function switchMode(mode) {
+            const quickBtn = document.getElementById('quick-mode-btn');
+            const guidedBtn = document.getElementById('guided-mode-btn');
+            const quickContainer = document.getElementById('quick-mode-container');
+            const guidedContainer = document.getElementById('guided-mode-container');
+
+            if (mode === 'quick') {
+                quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+                quickContainer.classList.remove('hidden');
+                guidedContainer.classList.add('hidden');
+                stopWizardCamera();
+            } else {
+                quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+                guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                quickContainer.classList.add('hidden');
+                guidedContainer.classList.remove('hidden');
+                startWizardCamera();
+            }
+        }
+
+        async function startWizardCamera() {
+            try {
+                wizardStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const video = document.getElementById('wizard-camera-video');
+                video.srcObject = wizardStream;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Could not access camera. Please grant camera permissions.');
+            }
+        }
+
+        function stopWizardCamera() {
+            if (wizardStream) {
+                wizardStream.getTracks().forEach(track => track.stop());
+                wizardStream = null;
+            }
+        }
+
+        function wizardCapturePhoto() {
+            const video = document.getElementById('wizard-camera-video');
+            const canvas = document.getElementById('wizard-camera-canvas');
+            const context = canvas.getContext('2d');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+
+            wizardImage = canvas.toDataURL('image/jpeg', 0.9);
+
+            // Show preview
+            document.getElementById('wizard-image-preview').src = wizardImage;
+            document.getElementById('wizard-image-preview-container').classList.remove('hidden');
+
+            // Hide camera, show retake and continue buttons
+            video.parentElement.classList.add('hidden');
+            document.getElementById('wizard-capture-btn').classList.add('hidden');
+            document.getElementById('wizard-retake-btn').classList.remove('hidden');
+            document.getElementById('wizard-next-photo-btn').classList.remove('hidden');
+
+            stopWizardCamera();
+        }
+
+        function wizardRetakePhoto() {
+            const video = document.getElementById('wizard-camera-video');
+
+            // Hide preview and show camera again
+            document.getElementById('wizard-image-preview-container').classList.add('hidden');
+            video.parentElement.classList.remove('hidden');
+            document.getElementById('wizard-capture-btn').classList.remove('hidden');
+            document.getElementById('wizard-retake-btn').classList.add('hidden');
+            document.getElementById('wizard-next-photo-btn').classList.add('hidden');
+
+            wizardImage = null;
+            startWizardCamera();
+        }
+
+        function wizardNextStep() {
+            if (!wizardImage) return;
+
+            // Update progress indicators
+            document.getElementById('wizard-step-1').classList.add('opacity-50');
+            document.getElementById('wizard-step-2').classList.remove('opacity-50');
+            document.getElementById('wizard-step-2').querySelector('div').className = 'w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold';
+
+            // Hide photo step, show style step
+            document.getElementById('wizard-photo-step').classList.add('hidden');
+            document.getElementById('wizard-style-step').classList.remove('hidden');
+        }
+
+        function wizardPrevStep() {
+            // Update progress indicators
+            document.getElementById('wizard-step-1').classList.remove('opacity-50');
+            document.getElementById('wizard-step-2').classList.add('opacity-50');
+            document.getElementById('wizard-step-2').querySelector('div').className = 'w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-bold';
+
+            // Show photo step, hide style step
+            document.getElementById('wizard-photo-step').classList.remove('hidden');
+            document.getElementById('wizard-style-step').classList.add('hidden');
+        }
+
+        function selectWizardStyle(style) {
+            wizardSelectedStyle = style;
+
+            // Update UI - remove selected state from all
+            document.querySelectorAll('.wizard-style-btn').forEach(btn => {
+                btn.className = 'wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+            });
+
+            // Add selected state to clicked button
+            event.target.closest('.wizard-style-btn').className = 'wizard-style-btn p-6 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+
+            // Enable generate button
+            document.getElementById('wizard-generate-btn').disabled = false;
+        }
+
+        async function submitWizardConsultation() {
+            if (!wizardImage || !wizardSelectedStyle) return;
+
+            // Map style to descriptive prompt
+            const styleDescriptions = {
+                'business': 'professional business hairstyle, neat and polished, executive style',
+                'casual': 'casual everyday hairstyle, relaxed and comfortable, natural look',
+                'trendy': 'trendy modern hairstyle, fashionable and contemporary, Instagram-worthy',
+                'classic': 'classic timeless hairstyle, elegant and sophisticated, traditional style',
+                'edgy': 'edgy bold hairstyle, daring and unique, statement-making look',
+                'natural': 'natural effortless hairstyle, easy-going and low-maintenance'
+            };
+
+            const stylePrompt = styleDescriptions[wizardSelectedStyle];
+
+            // Use the same submission logic as quick mode
+            await performAIConsultation(wizardImage, stylePrompt);
+        }
+
+        // ===== END WIZARD FUNCTIONS =====
+
+        // Shared function for both quick and wizard modes
+        async function performAIConsultation(imageBase64, stylePrompt) {
             const loadingDiv = document.getElementById('ai-loading');
             const resultsDiv = document.getElementById('ai-results');
             const messageDiv = document.getElementById('ai-message');
-
-            // Validate inputs
-            if (!uploadedImage) {
-                const errorMsg = i18n ? i18n.t('ai_consultation.error_no_image') : 'Please upload an image first';
-                showMessage(messageDiv, errorMsg, 'error');
-                return;
-            }
-
-            if (!stylePrompt.trim()) {
-                const errorMsg = i18n ? i18n.t('ai_consultation.error_no_prompt') : 'Please describe the hairstyle you want';
-                showMessage(messageDiv, errorMsg, 'error');
-                return;
-            }
 
             // Hide previous results
             resultsDiv.classList.add('hidden');
             messageDiv.classList.add('hidden');
 
             // Show loading
-            submitBtn.disabled = true;
             loadingDiv.classList.remove('hidden');
 
             // Prepare request data
             const requestData = {
-                image_base64: uploadedImage,
+                image_base64: imageBase64,
                 style_prompt: stylePrompt
             };
 
@@ -835,6 +1075,9 @@
                     `;
 
                     resultsDiv.classList.remove('hidden');
+
+                    // Scroll to results
+                    resultsDiv.scrollIntoView({ behavior: 'smooth' });
                 } else {
                     showMessage(messageDiv, result.error || 'AI consultation failed', 'error');
                 }
@@ -842,8 +1085,33 @@
                 showMessage(messageDiv, 'Network error. Please try again.', 'error');
                 console.error('Error:', error);
             } finally {
-                submitBtn.disabled = false;
                 loadingDiv.classList.add('hidden');
+            }
+        }
+
+        async function submitAIConsultation() {
+            const stylePrompt = document.getElementById('style_prompt').value;
+            const submitBtn = document.getElementById('ai-submit-btn');
+            const messageDiv = document.getElementById('ai-message');
+
+            // Validate inputs
+            if (!uploadedImage) {
+                const errorMsg = i18n ? i18n.t('ai_consultation.error_no_image') : 'Please upload an image first';
+                showMessage(messageDiv, errorMsg, 'error');
+                return;
+            }
+
+            if (!stylePrompt.trim()) {
+                const errorMsg = i18n ? i18n.t('ai_consultation.error_no_prompt') : 'Please describe the hairstyle you want';
+                showMessage(messageDiv, errorMsg, 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            try {
+                await performAIConsultation(uploadedImage, stylePrompt);
+            } finally {
+                submitBtn.disabled = false;
             }
         }
 
