@@ -246,6 +246,8 @@ error_log("Content[1] type: " . $apiPayload['messages'][0]['content'][1]['type']
 error_log("Content[1] has image_url: " . (isset($apiPayload['messages'][0]['content'][1]['image_url']['url']) ? 'YES' : 'NO'));
 error_log("Image URL in payload length: " . strlen($apiPayload['messages'][0]['content'][1]['image_url']['url']));
 error_log("Max tokens: " . $apiPayload['max_tokens']);
+error_log("Temperature: " . $apiPayload['temperature']);
+error_log("FULL PAYLOAD JSON: " . json_encode($apiPayload));
 
 $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
@@ -264,13 +266,19 @@ curl_setopt_array($ch, [
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
+$curlInfo = curl_getinfo($ch);
 curl_close($ch);
 
 $endTime = microtime(true);
 $processingTime = round(($endTime - $startTime) * 1000);
 
+error_log("=== CURL RESPONSE DETAILS ===");
 error_log("API Response HTTP Code: " . $httpCode);
 error_log("Processing Time: " . $processingTime . "ms");
+error_log("Content Type: " . ($curlInfo['content_type'] ?? 'unknown'));
+error_log("Total cURL time: " . ($curlInfo['total_time'] ?? 0) . " seconds");
+error_log("Response size: " . strlen($response) . " bytes");
+error_log("RAW API RESPONSE (first 5000 chars): " . substr($response, 0, 5000));
 
 // Check for cURL errors
 if ($response === false) {
@@ -289,7 +297,19 @@ if ($response === false) {
 
 // Parse API response
 $apiResponse = json_decode($response, true);
-error_log("API Response Structure: " . json_encode(array_keys($apiResponse)));
+$jsonError = json_last_error();
+error_log("=== JSON PARSING ===");
+error_log("JSON decode error code: " . $jsonError);
+if ($jsonError !== JSON_ERROR_NONE) {
+    error_log("JSON ERROR: " . json_last_error_msg());
+}
+error_log("API Response is array: " . (is_array($apiResponse) ? 'YES' : 'NO'));
+if (is_array($apiResponse)) {
+    error_log("API Response Structure (keys): " . json_encode(array_keys($apiResponse)));
+    error_log("Full API Response (formatted): " . json_encode($apiResponse, JSON_PRETTY_PRINT));
+} else {
+    error_log("API Response is NOT an array - type: " . gettype($apiResponse));
+}
 
 // Check for API errors
 if ($httpCode !== 200) {
@@ -314,14 +334,22 @@ $generatedImageBase64 = null;
 $tokensUsed = 0;
 $textResponse = '';
 
-error_log("=== PARSING API RESPONSE ===");
-error_log("Full API Response: " . $response);
-error_log("Response structure: " . json_encode(array_keys($apiResponse)));
+error_log("=== PARSING API RESPONSE FOR IMAGES ===");
+error_log("Checking if choices array exists: " . (isset($apiResponse['choices']) ? 'YES' : 'NO'));
+if (isset($apiResponse['choices'])) {
+    error_log("Number of choices: " . count($apiResponse['choices']));
+    error_log("Checking if choices[0] exists: " . (isset($apiResponse['choices'][0]) ? 'YES' : 'NO'));
+}
 
 if (isset($apiResponse['choices'][0]['message'])) {
     $message = $apiResponse['choices'][0]['message'];
-    error_log("Full message object: " . json_encode($message));
+    error_log("MESSAGE FOUND - Full message object (formatted): " . json_encode($message, JSON_PRETTY_PRINT));
     error_log("Message keys: " . json_encode(array_keys($message)));
+    error_log("Message role: " . ($message['role'] ?? 'NOT SET'));
+    error_log("Message has 'content' key: " . (isset($message['content']) ? 'YES' : 'NO'));
+    error_log("Message has 'images' key: " . (isset($message['images']) ? 'YES' : 'NO'));
+    error_log("Message has 'refusal' key: " . (isset($message['refusal']) ? 'YES' : 'NO'));
+    error_log("Message has 'reasoning' key: " . (isset($message['reasoning']) ? 'YES' : 'NO'));
 
     // Get text content if present
     if (isset($message['content'])) {
