@@ -943,9 +943,13 @@
             reader.onload = function(e) {
                 uploadedImage = e.target.result;
 
-                // Show preview
+                // Show preview in quick mode
                 document.getElementById('image-preview').src = uploadedImage;
                 document.getElementById('image-preview-container').classList.remove('hidden');
+
+                // Also show preview in wizard mode (shared image)
+                document.getElementById('wizard-image-preview').src = uploadedImage;
+                document.getElementById('wizard-image-preview-container').classList.remove('hidden');
             };
             reader.readAsDataURL(file);
         }
@@ -954,12 +958,15 @@
             uploadedImage = null;
             const imageInput = document.getElementById('image-input');
             imageInput.value = '';
+
+            // Hide preview in both modes
             document.getElementById('image-preview-container').classList.add('hidden');
+            document.getElementById('wizard-image-preview-container').classList.add('hidden');
         }
 
         // ===== WIZARD MODE FUNCTIONS =====
         let wizardStream = null;
-        let wizardImage = null;
+        // Note: wizardImage removed - now using shared uploadedImage variable
         let wizardSelectedStyle = null;
 
         function switchMode(mode) {
@@ -985,20 +992,30 @@
         }
 
         function resetWizard() {
-            // Reset wizard state
-            wizardImage = null;
+            // Reset wizard state (but keep uploadedImage so it's shared between modes)
             wizardSelectedStyle = null;
             wizardStyleMode = 'presets';
             wizardLength = null;
             wizardTexture = null;
             stopWizardCamera();
 
-            // Show photo options, hide camera and preview
-            document.getElementById('wizard-photo-options').classList.remove('hidden');
-            document.getElementById('wizard-camera-container').classList.add('hidden');
-            document.getElementById('wizard-image-preview-container').classList.add('hidden');
-            document.getElementById('wizard-photo-actions').classList.add('hidden');
-            document.getElementById('wizard-next-photo-btn').classList.add('hidden');
+            // If there's already an image uploaded (from Quick Mode), show it
+            if (uploadedImage) {
+                document.getElementById('wizard-image-preview').src = uploadedImage;
+                document.getElementById('wizard-image-preview-container').classList.remove('hidden');
+                document.getElementById('wizard-photo-options').classList.add('hidden');
+                document.getElementById('wizard-camera-container').classList.add('hidden');
+                document.getElementById('wizard-photo-actions').classList.remove('hidden');
+                document.getElementById('wizard-retake-btn').classList.remove('hidden');
+                document.getElementById('wizard-next-photo-btn').classList.remove('hidden');
+            } else {
+                // No image yet, show photo options
+                document.getElementById('wizard-photo-options').classList.remove('hidden');
+                document.getElementById('wizard-camera-container').classList.add('hidden');
+                document.getElementById('wizard-image-preview-container').classList.add('hidden');
+                document.getElementById('wizard-photo-actions').classList.add('hidden');
+                document.getElementById('wizard-next-photo-btn').classList.add('hidden');
+            }
 
             // Reset to step 1
             document.getElementById('wizard-photo-step').classList.remove('hidden');
@@ -1052,11 +1069,15 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                wizardImage = e.target.result;
+                uploadedImage = e.target.result;  // Use shared variable
 
-                // Show preview
-                document.getElementById('wizard-image-preview').src = wizardImage;
+                // Show preview in wizard
+                document.getElementById('wizard-image-preview').src = uploadedImage;
                 document.getElementById('wizard-image-preview-container').classList.remove('hidden');
+
+                // Also show in quick mode preview
+                document.getElementById('image-preview').src = uploadedImage;
+                document.getElementById('image-preview-container').classList.remove('hidden');
 
                 // Hide photo options, show retake button and continue
                 document.getElementById('wizard-photo-options').classList.add('hidden');
@@ -1083,11 +1104,15 @@
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0);
 
-            wizardImage = canvas.toDataURL('image/jpeg', 0.9);
+            uploadedImage = canvas.toDataURL('image/jpeg', 0.9);  // Use shared variable
 
-            // Show preview
-            document.getElementById('wizard-image-preview').src = wizardImage;
+            // Show preview in wizard
+            document.getElementById('wizard-image-preview').src = uploadedImage;
             document.getElementById('wizard-image-preview-container').classList.remove('hidden');
+
+            // Also show in quick mode preview
+            document.getElementById('image-preview').src = uploadedImage;
+            document.getElementById('image-preview-container').classList.remove('hidden');
 
             // Hide camera, show retake and continue buttons
             document.getElementById('wizard-camera-container').classList.add('hidden');
@@ -1108,11 +1133,13 @@
             document.getElementById('wizard-photo-options').classList.remove('hidden');
             document.getElementById('wizard-camera-container').classList.add('hidden');
 
-            wizardImage = null;
+            // Clear shared image (affects both modes)
+            uploadedImage = null;
+            document.getElementById('image-preview-container').classList.add('hidden');
         }
 
         function wizardNextStep() {
-            if (!wizardImage) return;
+            if (!uploadedImage) return;  // Use shared variable
 
             // Update progress indicators
             document.getElementById('wizard-step-1').classList.add('opacity-50');
@@ -1228,7 +1255,7 @@
         }
 
         async function submitWizardConsultation() {
-            if (!wizardImage) return;
+            if (!uploadedImage) return;  // Use shared variable
 
             let stylePrompt;
 
@@ -1260,7 +1287,7 @@
             }
 
             // Use the same submission logic as quick mode
-            await performAIConsultation(wizardImage, stylePrompt);
+            await performAIConsultation(uploadedImage, stylePrompt);  // Use shared variable
         }
 
         // ===== END WIZARD FUNCTIONS =====
