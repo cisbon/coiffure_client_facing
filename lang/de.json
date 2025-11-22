@@ -19,7 +19,7 @@
     "phone": "Telefonnummer",
     "phone_placeholder": "+49 123 456789",
     "gdpr_title": "Datenschutz & Einwilligungen",
-    "gdpr_notice": "Ihre personenbezogenen Daten werden für Terminverwaltung, Leistungserbringung und Kundenbeziehungsmanagement verarbeitet. Wir speichern Ihre Daten sicher und geben sie nicht ohne Ihre Zustimmung an Dritte weiter. Sie haben jederzeit das Recht, auf Ihre Daten zuzugreifen, sie zu ändern oder zu löschen. Die Daten werden 3 Jahre lang aufbewahrt, es sei denn, Sie beantragen eine frühere Löschung.",
+    "gdpr_notice": "Ihre personenbezogenen Daten werden für Terminverwaltung, Leistungserbringung und Kundenbeziehungsmanagement verarbeitet. Wir speichern Ihre Daten sicher und geben sie nicht ohne Ihre Zustimmung an Dritte weiter. Sie haben jederzeit das Recht, auf Ihre Daten zuzugreifen, sie zu ändern oder zu löschen.",
     "gdpr_notice_title": "Hinweis zur Datenverarbeitung:",
     "consent_data_processing": "Ich stimme der Verarbeitung meiner personenbezogenen Daten gemäß DSGVO zu",
     "consent_cancellation": "Ich habe die Stornierungsbedingungen gelesen und akzeptiert",
