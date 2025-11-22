@@ -384,6 +384,15 @@ if (!$generatedImageBase64) {
     error_log("CRITICAL ERROR: No image was generated!");
     error_log("Full API Response: " . json_encode($apiResponse));
 
+    // Create detailed error message showing what was returned
+    $errorDetails = [
+        'message_keys' => isset($apiResponse['choices'][0]['message']) ? array_keys($apiResponse['choices'][0]['message']) : [],
+        'has_images_array' => isset($apiResponse['choices'][0]['message']['images']),
+        'has_content' => isset($apiResponse['choices'][0]['message']['content']),
+        'content_preview' => substr($textResponse, 0, 200)
+    ];
+    error_log("Error details: " . json_encode($errorDetails));
+
     $failStmt = $conn->prepare(
         "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = 'No image generated - model returned text only', processing_time_ms = ?, ai_response_data = ? WHERE consultation_id = ?"
     );
@@ -392,7 +401,9 @@ if (!$generatedImageBase64) {
     $failStmt->execute();
     $failStmt->close();
     $conn->close();
-    sendErrorResponse('Image generation failed - model returned text instead of image. Text response: ' . substr($textResponse, 0, 200), 500);
+
+    // Return detailed error to help diagnose
+    sendErrorResponse('Image generation failed. Model: ' . $aiModel . '. Response had ' . json_encode($errorDetails['message_keys']) . '. Text: ' . substr($textResponse, 0, 100), 500);
 }
 
 error_log("=== AI CONSULTATION END - SUCCESS ===");
