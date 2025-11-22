@@ -571,6 +571,67 @@
                                     </div>
                                 </div>
 
+                                <!-- Bangs -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="ai_consultation.bangs_label">Bangs</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="selectBangs('none')" id="bangs-none" class="bangs-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.bangs_none">No Bangs</div>
+                                        </button>
+                                        <button onclick="selectBangs('yes')" id="bangs-yes" class="bangs-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.bangs_yes">Full Bangs</div>
+                                        </button>
+                                        <button onclick="selectBangs('side')" id="bangs-side" class="bangs-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.bangs_side">Side-swept</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Layers -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="ai_consultation.layers_label">Layers</label>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button onclick="selectLayers('layered')" id="layers-layered" class="layers-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.layers_layered">Layered</div>
+                                        </button>
+                                        <button onclick="selectLayers('blunt')" id="layers-blunt" class="layers-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.layers_blunt">Blunt Cut</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Part -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="ai_consultation.part_label">Hair Part</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="selectPart('side')" id="part-side" class="part-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.part_side">Side Part</div>
+                                        </button>
+                                        <button onclick="selectPart('middle')" id="part-middle" class="part-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.part_middle">Middle Part</div>
+                                        </button>
+                                        <button onclick="selectPart('none')" id="part-none" class="part-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.part_none">No Part</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Color -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="ai_consultation.color_label">Hair Color</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="selectColor('natural')" id="color-natural" class="color-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.color_natural">Natural</div>
+                                        </button>
+                                        <button onclick="selectColor('highlights')" id="color-highlights" class="color-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.color_highlights">Highlights</div>
+                                        </button>
+                                        <button onclick="selectColor('bold')" id="color-bold" class="color-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.color_bold">Bold Color</div>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <!-- Optional Details -->
                                 <div>
                                     <label for="wizard-custom-details" class="block text-sm font-semibold text-gray-700 mb-2">
@@ -968,6 +1029,10 @@
         let wizardStream = null;
         // Note: wizardImage removed - now using shared uploadedImage variable
         let wizardSelectedStyle = null;
+        let wizardBangs = null;
+        let wizardLayers = null;
+        let wizardPart = null;
+        let wizardColor = null;
 
         function switchMode(mode) {
             const quickBtn = document.getElementById('quick-mode-btn');
@@ -997,6 +1062,10 @@
             wizardStyleMode = 'presets';
             wizardLength = null;
             wizardTexture = null;
+            wizardBangs = null;
+            wizardLayers = null;
+            wizardPart = null;
+            wizardColor = null;
             stopWizardCamera();
 
             // If there's already an image uploaded (from Quick Mode), show it
@@ -1033,7 +1102,7 @@
             document.getElementById('wizard-custom-details').value = '';
 
             // Reset all button states
-            document.querySelectorAll('.wizard-style-btn, .length-btn, .texture-btn').forEach(btn => {
+            document.querySelectorAll('.wizard-style-btn, .length-btn, .texture-btn, .bangs-btn, .layers-btn, .part-btn, .color-btn').forEach(btn => {
                 btn.className = btn.className.replace('border-purple-600 bg-purple-50', 'border-gray-300');
             });
 
@@ -1184,6 +1253,10 @@
                 // Reset custom selections
                 wizardLength = null;
                 wizardTexture = null;
+                wizardBangs = null;
+                wizardLayers = null;
+                wizardPart = null;
+                wizardColor = null;
                 checkGenerateButtonState();
             } else {
                 presetBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
@@ -1224,6 +1297,62 @@
 
             // Add selected state to clicked button
             document.getElementById('texture-' + texture).className = 'texture-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+
+            checkGenerateButtonState();
+        }
+
+        function selectBangs(bangs) {
+            wizardBangs = bangs;
+
+            // Update UI - remove selected state from all
+            document.querySelectorAll('.bangs-btn').forEach(btn => {
+                btn.className = 'bangs-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+            });
+
+            // Add selected state to clicked button
+            document.getElementById('bangs-' + bangs).className = 'bangs-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+
+            checkGenerateButtonState();
+        }
+
+        function selectLayers(layers) {
+            wizardLayers = layers;
+
+            // Update UI - remove selected state from all
+            document.querySelectorAll('.layers-btn').forEach(btn => {
+                btn.className = 'layers-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+            });
+
+            // Add selected state to clicked button
+            document.getElementById('layers-' + layers).className = 'layers-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+
+            checkGenerateButtonState();
+        }
+
+        function selectPart(part) {
+            wizardPart = part;
+
+            // Update UI - remove selected state from all
+            document.querySelectorAll('.part-btn').forEach(btn => {
+                btn.className = 'part-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+            });
+
+            // Add selected state to clicked button
+            document.getElementById('part-' + part).className = 'part-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+
+            checkGenerateButtonState();
+        }
+
+        function selectColor(color) {
+            wizardColor = color;
+
+            // Update UI - remove selected state from all
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.className = 'color-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+            });
+
+            // Add selected state to clicked button
+            document.getElementById('color-' + color).className = 'color-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
 
             checkGenerateButtonState();
         }
@@ -1277,14 +1406,57 @@
                 // Custom style mode
                 if (!wizardLength || !wizardTexture) return;
 
-                // Build custom prompt
-                const additionalDetails = document.getElementById('wizard-custom-details').value;
+                // Build custom prompt with all selected options
                 stylePrompt = `${wizardLength} ${wizardTexture} hairstyle`;
 
+                // Add bangs option
+                if (wizardBangs) {
+                    if (wizardBangs === 'yes') {
+                        stylePrompt += ', with full bangs';
+                    } else if (wizardBangs === 'side') {
+                        stylePrompt += ', with side-swept bangs';
+                    }
+                    // 'none' doesn't add anything
+                }
+
+                // Add layers option
+                if (wizardLayers) {
+                    if (wizardLayers === 'layered') {
+                        stylePrompt += ', layered';
+                    } else if (wizardLayers === 'blunt') {
+                        stylePrompt += ', blunt cut';
+                    }
+                }
+
+                // Add part option
+                if (wizardPart) {
+                    if (wizardPart === 'side') {
+                        stylePrompt += ', side part';
+                    } else if (wizardPart === 'middle') {
+                        stylePrompt += ', middle part';
+                    }
+                    // 'none' doesn't add anything
+                }
+
+                // Add color option
+                if (wizardColor) {
+                    if (wizardColor === 'highlights') {
+                        stylePrompt += ', with highlights';
+                    } else if (wizardColor === 'bold') {
+                        stylePrompt += ', with bold vibrant color';
+                    }
+                    // 'natural' doesn't add anything specific
+                }
+
+                // Add additional details if provided
+                const additionalDetails = document.getElementById('wizard-custom-details').value;
                 if (additionalDetails.trim()) {
                     stylePrompt += `, ${additionalDetails}`;
                 }
             }
+
+            // Switch to Quick Mode so user can see loading indicator and results
+            switchMode('quick');
 
             // Use the same submission logic as quick mode
             await performAIConsultation(uploadedImage, stylePrompt);  // Use shared variable
