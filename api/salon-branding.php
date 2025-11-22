@@ -24,53 +24,18 @@ try {
         exit();
     }
 
-    // Verify authentication
-    // Fallback for getallheaders() in case it's not available
-    if (!function_exists('getallheaders')) {
-        function getallheaders() {
-            $headers = [];
-            foreach ($_SERVER as $name => $value) {
-                if (substr($name, 0, 5) == 'HTTP_') {
-                    $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
-                }
-            }
-            return $headers;
-        }
+    // Get database connection
+    $conn = getDbConnection();
+    if (!$conn) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database connection failed']);
+        exit();
     }
 
-    $headers = getallheaders();
-    $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-
-if (empty($authHeader) || !preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit();
-}
-
-$sessionToken = $matches[1];
-
-// Verify session and get user
-$conn = getDbConnection();
-if (!$conn) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
-    exit();
-}
-
-$stmt = $conn->prepare("SELECT user_id, role FROM coiffure_users WHERE session_token = ? AND session_expiry > NOW()");
-$stmt->bind_param("s", $sessionToken);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows === 0) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Invalid or expired session']);
-    exit();
-}
-
-$user = $result->fetch_assoc();
-$userId = $user['user_id'];
-$userRole = $user['role'];
+    // Use standard authentication from config.php
+    $user = requireAuth($conn);
+    $userId = $user['user_id'];
+    $userRole = $user['role'];
 
 // Handle GET request - Fetch salon branding (allowed for all authenticated users)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -79,6 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (empty($salonId)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Salon ID required']);
+        exit();
+    }
+
+    // First check if branding columns exist
+    $checkColumns = $conn->query("SHOW COLUMNS FROM coiffure_salons LIKE 'logo_path'");
+    if ($checkColumns->num_rows === 0) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Branding columns do not exist in database. Please run migration 007.',
+            'hint' => 'Go to api/run-migration.php and run migration 007'
+        ]);
         exit();
     }
 
@@ -98,7 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if (!$stmt) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'error' => 'Database prepare error: ' . $conn->error]);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database prepare error: ' . $conn->error,
+            'sql_error' => $conn->error,
+            'errno' => $conn->errno
+        ]);
         exit();
     }
 
