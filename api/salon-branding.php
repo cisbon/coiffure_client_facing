@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $conn->prepare("
         SELECT
             salon_id,
-            name,
+            salon_name,
             logo_path,
             primary_color,
             secondary_color,
