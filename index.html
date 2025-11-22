@@ -490,39 +490,131 @@
                             </div>
 
                             <!-- Preset Styles -->
-                            <div id="preset-styles-container" class="space-y-4">
-                                <p class="text-gray-600" data-i18n="ai_consultation.wizard_style_description">Select the general look you're going for:</p>
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <button onclick="selectWizardStyle('business')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                        <div class="text-4xl mb-2">💼</div>
-                                        <div class="font-semibold" data-i18n="ai_consultation.style_business">Business</div>
-                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_business_desc">Professional & polished</div>
-                                    </button>
-                                    <button onclick="selectWizardStyle('casual')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                        <div class="text-4xl mb-2">👔</div>
-                                        <div class="font-semibold" data-i18n="ai_consultation.style_casual">Casual</div>
-                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_casual_desc">Relaxed & comfortable</div>
-                                    </button>
-                                    <button onclick="selectWizardStyle('trendy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                        <div class="text-4xl mb-2">✨</div>
-                                        <div class="font-semibold" data-i18n="ai_consultation.style_trendy">Trendy</div>
-                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_trendy_desc">Modern & fashionable</div>
-                                    </button>
-                                    <button onclick="selectWizardStyle('classic')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                        <div class="text-4xl mb-2">👑</div>
-                                        <div class="font-semibold" data-i18n="ai_consultation.style_classic">Classic</div>
-                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_classic_desc">Timeless & elegant</div>
-                                    </button>
-                                    <button onclick="selectWizardStyle('edgy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                        <div class="text-4xl mb-2">🎸</div>
-                                        <div class="font-semibold" data-i18n="ai_consultation.style_edgy">Edgy</div>
-                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_edgy_desc">Bold & daring</div>
-                                    </button>
-                                    <button onclick="selectWizardStyle('natural')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
-                                        <div class="text-4xl mb-2">🌿</div>
-                                        <div class="font-semibold" data-i18n="ai_consultation.style_natural">Natural</div>
-                                        <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_natural_desc">Easy & effortless</div>
-                                    </button>
+                            <div id="preset-styles-container" class="space-y-6">
+                                <!-- General Style Section -->
+                                <div>
+                                    <p class="text-gray-600 mb-3" data-i18n="ai_consultation.wizard_style_description">Select the general look you're going for:</p>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <button onclick="selectWizardStyle('business')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="text-4xl mb-2">💼</div>
+                                            <div class="font-semibold" data-i18n="ai_consultation.style_business">Business</div>
+                                            <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_business_desc">Professional & polished</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('casual')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="text-4xl mb-2">👔</div>
+                                            <div class="font-semibold" data-i18n="ai_consultation.style_casual">Casual</div>
+                                            <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_casual_desc">Relaxed & comfortable</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('trendy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="text-4xl mb-2">✨</div>
+                                            <div class="font-semibold" data-i18n="ai_consultation.style_trendy">Trendy</div>
+                                            <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_trendy_desc">Modern & fashionable</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('classic')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="text-4xl mb-2">👑</div>
+                                            <div class="font-semibold" data-i18n="ai_consultation.style_classic">Classic</div>
+                                            <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_classic_desc">Timeless & elegant</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('edgy')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="text-4xl mb-2">🎸</div>
+                                            <div class="font-semibold" data-i18n="ai_consultation.style_edgy">Edgy</div>
+                                            <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_edgy_desc">Bold & daring</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('natural')" class="wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="text-4xl mb-2">🌿</div>
+                                            <div class="font-semibold" data-i18n="ai_consultation.style_natural">Natural</div>
+                                            <div class="text-sm text-gray-600" data-i18n="ai_consultation.style_natural_desc">Easy & effortless</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Divider -->
+                                <div class="border-t border-gray-200"></div>
+
+                                <!-- Specific Haircuts Section -->
+                                <div>
+                                    <p class="text-gray-600 mb-3" data-i18n="ai_consultation.specific_haircuts_title">Or choose a specific haircut:</p>
+
+                                    <!-- Gender Tabs -->
+                                    <div class="flex gap-3 mb-4">
+                                        <button onclick="selectHaircutGender('women')" id="haircut-gender-women" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-purple-600 text-white" data-i18n="ai_consultation.haircuts_women">
+                                            Women's Haircuts
+                                        </button>
+                                        <button onclick="selectHaircutGender('men')" id="haircut-gender-men" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="ai_consultation.haircuts_men">
+                                            Men's Haircuts
+                                        </button>
+                                    </div>
+
+                                    <!-- Women's Haircuts -->
+                                    <div id="women-haircuts-container" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <button onclick="selectWizardStyle('pixie')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_pixie">Pixie Cut</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('bob')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_bob">Bob</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('lob')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_lob">Lob (Long Bob)</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('shag')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_shag">Shag</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('layers')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_layers">Long Layers</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('butterfly')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_butterfly">Butterfly Cut</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('blunt')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_blunt">Blunt Cut</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('updo')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_updo">Updo/Bun</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('wolf_cut')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_wolf">Wolf Cut</div>
+                                        </button>
+                                    </div>
+
+                                    <!-- Men's Haircuts -->
+                                    <div id="men-haircuts-container" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <button onclick="selectWizardStyle('buzz_cut')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_buzz">Buzz Cut</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('crew_cut')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_crew">Crew Cut</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('fade')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_fade">Fade</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('undercut')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_undercut">Undercut</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('pompadour')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_pompadour">Pompadour</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('quiff')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_quiff">Quiff</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('side_part')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_side_part">Side Part</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('mullet')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_mullet">Mullet</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('man_bun')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_man_bun">Man Bun</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('french_crop')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_french_crop">French Crop</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('slick_back')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_slick_back">Slick Back</div>
+                                        </button>
+                                        <button onclick="selectWizardStyle('textured_crop')" class="wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="ai_consultation.haircut_textured_crop">Textured Crop</div>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1369,16 +1461,49 @@
             }
         }
 
+        function selectHaircutGender(gender) {
+            const womenBtn = document.getElementById('haircut-gender-women');
+            const menBtn = document.getElementById('haircut-gender-men');
+            const womenContainer = document.getElementById('women-haircuts-container');
+            const menContainer = document.getElementById('men-haircuts-container');
+
+            if (gender === 'women') {
+                womenBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                menBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+                womenContainer.classList.remove('hidden');
+                menContainer.classList.add('hidden');
+            } else {
+                menBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                womenBtn.className = 'flex-1 px-4 py-2 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+                menContainer.classList.remove('hidden');
+                womenContainer.classList.add('hidden');
+            }
+        }
+
         function selectWizardStyle(style) {
             wizardSelectedStyle = style;
 
-            // Update UI - remove selected state from all
+            // Update UI - remove selected state from all wizard style buttons
             document.querySelectorAll('.wizard-style-btn').forEach(btn => {
-                btn.className = 'wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+                // Check if this is a large card (general styles) or small button (specific haircuts)
+                if (btn.querySelector('.text-4xl')) {
+                    // Large card with emoji
+                    btn.className = 'wizard-style-btn p-6 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+                } else {
+                    // Small button (haircut)
+                    btn.className = 'wizard-style-btn p-4 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
+                }
             });
 
             // Add selected state to clicked button
-            event.target.closest('.wizard-style-btn').className = 'wizard-style-btn p-6 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+            const clickedBtn = event.target.closest('.wizard-style-btn');
+            if (clickedBtn.querySelector('.text-4xl')) {
+                // Large card
+                clickedBtn.className = 'wizard-style-btn p-6 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+            } else {
+                // Small button
+                clickedBtn.className = 'wizard-style-btn p-4 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
+            }
 
             checkGenerateButtonState();
         }
@@ -1393,12 +1518,38 @@
 
                 // Map style to descriptive prompt
                 const styleDescriptions = {
+                    // General styles
                     'business': 'professional business hairstyle, neat and polished, executive style',
                     'casual': 'casual everyday hairstyle, relaxed and comfortable, natural look',
                     'trendy': 'trendy modern hairstyle, fashionable and contemporary, Instagram-worthy',
                     'classic': 'classic timeless hairstyle, elegant and sophisticated, traditional style',
                     'edgy': 'edgy bold hairstyle, daring and unique, statement-making look',
-                    'natural': 'natural effortless hairstyle, easy-going and low-maintenance'
+                    'natural': 'natural effortless hairstyle, easy-going and low-maintenance',
+
+                    // Women's specific haircuts
+                    'pixie': 'pixie cut hairstyle, short and chic, feminine and modern',
+                    'bob': 'classic bob haircut, chin-length, sleek and polished',
+                    'lob': 'long bob (lob) hairstyle, shoulder-length, versatile and trendy',
+                    'shag': 'shag haircut with layers, textured and effortless, rock-inspired',
+                    'layers': 'long layered hairstyle, flowing layers, voluminous and feminine',
+                    'butterfly': 'butterfly cut with face-framing layers, soft and romantic',
+                    'blunt': 'blunt cut hairstyle, one-length, sharp and modern',
+                    'updo': 'updo hairstyle with bun, elegant and sophisticated, formal style',
+                    'wolf_cut': 'wolf cut hairstyle, shaggy layers with volume, edgy and trendy',
+
+                    // Men's specific haircuts
+                    'buzz_cut': 'buzz cut, very short all-over, low-maintenance and clean',
+                    'crew_cut': 'crew cut, short tapered sides, classic military style',
+                    'fade': 'fade haircut, gradual taper from short to long, modern and sharp',
+                    'undercut': 'undercut hairstyle, short sides with longer top, versatile and bold',
+                    'pompadour': 'pompadour hairstyle, voluminous top swept back, classic vintage style',
+                    'quiff': 'quiff hairstyle, textured top with volume, modern British style',
+                    'side_part': 'side part haircut, classic taper with defined part, professional gentleman style',
+                    'mullet': 'mullet haircut, short in front and sides with long back, retro bold style',
+                    'man_bun': 'man bun hairstyle, long hair tied back, relaxed and trendy',
+                    'french_crop': 'French crop, short textured fringe, clean and modern European style',
+                    'slick_back': 'slick back hairstyle, combed back smoothly, sophisticated and polished',
+                    'textured_crop': 'textured crop, short with messy texture on top, casual modern style'
                 };
 
                 stylePrompt = styleDescriptions[wizardSelectedStyle];
