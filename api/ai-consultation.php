@@ -195,19 +195,28 @@ if (!$isImageGenerationModel) {
 }
 
 // Create prompt for hairstyle transformation
-// CRITICAL: Emphasize preserving the person's identity and only changing hair
-$prompt = "IMPORTANT: This is an image transformation task. You MUST keep this exact same person with their exact same face, skin tone, facial features, and expression. ONLY change their hairstyle to: {$stylePrompt}.
+// CRITICAL: Must explicitly tell the model to EDIT the provided image, not generate new
+$prompt = "EDIT THE PROVIDED IMAGE: Change ONLY the hairstyle to look {$stylePrompt}.
 
-The person in the photo should look exactly the same, with:
-- Same face shape and facial features
-- Same skin tone and complexion
-- Same eyes, nose, mouth
-- Same facial expression
-- Same person, same identity
+CRITICAL INSTRUCTIONS:
+1. This is an IMAGE EDIT operation - modify the provided photograph
+2. Keep the EXACT SAME person - same face, same identity, same everything
+3. ONLY change the hair/hairstyle region
+4. Do NOT generate a new person
+5. Do NOT create a different face
+6. This must be a BEFORE/AFTER of the SAME individual
 
-ONLY modify: The hairstyle to match '{$stylePrompt}' style
+What to preserve 100%:
+- Exact same face and facial structure
+- Same skin tone and texture
+- Same eyes, nose, mouth, facial features
+- Same person's identity
+- Same background and lighting style
 
-The result should be a professional salon photograph with natural lighting and clean background. Photorealistic, front-facing portrait, salon quality. This is the SAME person with a new hairstyle, not a different person.";
+What to change:
+- ONLY the hairstyle to: {$stylePrompt}
+
+Output: Professional salon photograph showing the SAME person from the input image with the new hairstyle. This is an edit/transformation of the provided image, not a new generation.";
 
 error_log("AI Prompt: " . $prompt);
 
@@ -220,29 +229,31 @@ error_log("Image format detected: " . $imageDataFormat);
 
 // Gemini image models use chat/completions endpoint with messages format
 // CRITICAL: Must include modalities parameter for image generation
+// CRITICAL: Put image FIRST, then instruction to make it clear we're editing THIS image
 $apiPayload = [
     'model' => $aiModel,
-    'modalities' => ['text', 'image'],  // Required for image generation
+    'modalities' => ['text', 'image'],  // Required for image generation/editing
     'messages' => [
         [
             'role' => 'user',
             'content' => [
                 [
-                    'type' => 'text',
-                    'text' => $prompt
-                ],
-                [
                     'type' => 'image_url',
                     'image_url' => [
                         'url' => $imageData
                     ]
+                ],
+                [
+                    'type' => 'text',
+                    'text' => $prompt
                 ]
             ]
         ]
     ],
     'max_tokens' => 4096,
     'image_config' => [
-        'aspect_ratio' => '1:1'  // 1024x1024, can be changed to other ratios
+        'aspect_ratio' => '1:1',
+        'mode' => 'edit'  // Explicitly request edit mode if supported
     ]
 ];
 
