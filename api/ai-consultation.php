@@ -156,27 +156,18 @@ logAudit($conn, 'ai_consultation', $consultationId, 'create', 'AI consultation s
 // Prepare OpenRouter API request
 $startTime = microtime(true);
 
-$openRouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
+// STEP 1: Analyze the photo with vision model
+$analysisPrompt = "Analyze this person's face and hair. Describe their face shape, current hair length and texture, hair color, and skin tone. Be concise.";
 
-// Construct the prompt for hairstyle generation
-$systemPrompt = "You are a professional hairstylist AI assistant. Analyze the uploaded photo and generate a new image showing the person with the requested hairstyle. Be creative and professional in your styling suggestions.";
-
-$userPrompt = "Please show this person with the following hairstyle: " . $stylePrompt . ". Keep the person's face and features the same, only modify the hairstyle.";
-
-// Prepare API payload
-$apiPayload = [
-    'model' => $aiModel,
+$analysisPayload = [
+    'model' => 'anthropic/claude-3-5-sonnet',
     'messages' => [
-        [
-            'role' => 'system',
-            'content' => $systemPrompt
-        ],
         [
             'role' => 'user',
             'content' => [
                 [
                     'type' => 'text',
-                    'text' => $userPrompt
+                    'text' => $analysisPrompt
                 ],
                 [
                     'type' => 'image_url',
@@ -187,22 +178,71 @@ $apiPayload = [
             ]
         ]
     ],
-    'max_tokens' => 1024,
-    'temperature' => 0.7
+    'max_tokens' => 500
 ];
 
-// Make API request
-$ch = curl_init($openRouterUrl);
+$ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => [
         'Authorization: Bearer ' . OPENROUTER_API_KEY,
         'Content-Type: application/json',
-        'HTTP-Referer: https://salonlyft.app',
+        'HTTP-Referer: https://clouedo.com',
         'X-Title: SalonLyft Virtual Consultation'
     ],
-    CURLOPT_POSTFIELDS => json_encode($apiPayload),
+    CURLOPT_POSTFIELDS => json_encode($analysisPayload),
+    CURLOPT_TIMEOUT => 30
+]);
+
+$analysisResponse = curl_exec($ch);
+$analysisHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$analysisCurlError = curl_error($ch);
+curl_close($ch);
+
+if ($analysisResponse === false || $analysisHttpCode !== 200) {
+    $errorMsg = 'Face analysis failed: ' . $analysisCurlError;
+    $failStmt = $conn->prepare(
+        "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = ? WHERE consultation_id = ?"
+    );
+    $failStmt->bind_param("si", $errorMsg, $consultationId);
+    $failStmt->execute();
+    $failStmt->close();
+    $conn->close();
+    sendErrorResponse($errorMsg, 500);
+}
+
+$analysisResult = json_decode($analysisResponse, true);
+$faceAnalysis = $analysisResult['choices'][0]['message']['content'] ?? 'Unable to analyze face';
+
+// STEP 2: Generate image with the new hairstyle
+$generationPrompt = "Professional salon photograph of a person with these features: {$faceAnalysis}. Transform their hairstyle to: {$stylePrompt}. Style: Professional photography, salon quality, natural lighting, photorealistic, front-facing portrait.";
+
+$imageGenPayload = [
+    'model' => $aiModel,
+    'prompt' => $generationPrompt,
+    'n' => 1,
+    'size' => '1024x1024',
+    'response_format' => 'url'
+];
+
+// For models that support img2img
+if (strpos($aiModel, 'flux') !== false || strpos($aiModel, 'stable-diffusion') !== false) {
+    $imageGenPayload['image'] = $imageData;
+    $imageGenPayload['strength'] = 0.75;
+}
+
+$ch = curl_init('https://openrouter.ai/api/v1/images/generations');
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer ' . OPENROUTER_API_KEY,
+        'Content-Type: application/json',
+        'HTTP-Referer: https://clouedo.com',
+        'X-Title: SalonLyft Virtual Consultation'
+    ],
+    CURLOPT_POSTFIELDS => json_encode($imageGenPayload),
     CURLOPT_TIMEOUT => 60
 ]);
 
@@ -212,63 +252,36 @@ $curlError = curl_error($ch);
 curl_close($ch);
 
 $endTime = microtime(true);
-$processingTime = round(($endTime - $startTime) * 1000); // Convert to milliseconds
+$processingTime = round(($endTime - $startTime) * 1000);
 
-// Check for cURL errors
-if ($response === false) {
-    // Update consultation status to failed
-    $errorMsg = 'API request failed: ' . $curlError;
-    $failStmt = $conn->prepare(
-        "UPDATE coiffure_ai_consultations
-        SET status = 'failed', error_message = ?, processing_time_ms = ?
-        WHERE consultation_id = ?"
-    );
-    $failStmt->bind_param("sii", $errorMsg, $processingTime, $consultationId);
-    $failStmt->execute();
-    $failStmt->close();
-
-    $conn->close();
-    sendErrorResponse('Failed to connect to AI service', 500);
-}
-
-// Parse API response
+// Parse image generation response
 $apiResponse = json_decode($response, true);
-
-// Check for API errors
-if ($httpCode !== 200) {
-    $errorMsg = isset($apiResponse['error']['message']) ? $apiResponse['error']['message'] : 'Unknown API error';
-
-    // Update consultation status to failed
-    $failStmt = $conn->prepare(
-        "UPDATE coiffure_ai_consultations
-        SET status = 'failed', error_message = ?, processing_time_ms = ?, ai_response_data = ?
-        WHERE consultation_id = ?"
-    );
-    $responseJson = json_encode($apiResponse);
-    $failStmt->bind_param("sisi", $errorMsg, $processingTime, $responseJson, $consultationId);
-    $failStmt->execute();
-    $failStmt->close();
-
-    $conn->close();
-    sendErrorResponse('AI service error: ' . $errorMsg, 500);
-}
-
-// Extract generated content from response
-$generatedContent = null;
+$generatedContent = $faceAnalysis;
 $tokensUsed = 0;
-
-if (isset($apiResponse['choices'][0]['message']['content'])) {
-    $generatedContent = $apiResponse['choices'][0]['message']['content'];
-}
-
-if (isset($apiResponse['usage']['total_tokens'])) {
-    $tokensUsed = $apiResponse['usage']['total_tokens'];
-}
-
-// For vision models, the response might contain text description
-// In a production environment, you'd use a model that can generate images
-// For now, we'll store the text response
 $generatedImageUrl = null;
+$generatedImageBase64 = null;
+
+if ($httpCode === 200 && isset($apiResponse['data'][0])) {
+    // Try to get generated image
+    if (isset($apiResponse['data'][0]['b64_json'])) {
+        $generatedImageBase64 = 'data:image/png;base64,' . $apiResponse['data'][0]['b64_json'];
+    } elseif (isset($apiResponse['data'][0]['url'])) {
+        $generatedImageUrl = $apiResponse['data'][0]['url'];
+
+        // Download and convert to base64
+        $imageContent = @file_get_contents($generatedImageUrl);
+        if ($imageContent !== false) {
+            $generatedImageBase64 = 'data:image/png;base64,' . base64_encode($imageContent);
+        }
+    }
+
+    if (isset($apiResponse['usage']['total_tokens'])) {
+        $tokensUsed = $apiResponse['usage']['total_tokens'];
+    }
+} else {
+    // Image generation failed - log but continue with text analysis
+    error_log("Image generation failed (HTTP $httpCode): " . ($response ?: $curlError));
+}
 
 // Update consultation record with results
 $completeStmt = $conn->prepare(
@@ -300,9 +313,9 @@ sendJsonResponse([
     'consultation_id' => $consultationId,
     'session_id' => $sessionId,
     'ai_response' => $generatedContent,
+    'generated_image' => $generatedImageBase64,  // Frontend expects this field
     'generated_image_url' => $generatedImageUrl,
     'processing_time_ms' => $processingTime,
     'tokens_used' => $tokensUsed,
-    'model_used' => $aiModel,
-    'note' => 'The AI model provides hairstyle analysis and suggestions. For image generation, consider using DALL-E or Stable Diffusion models.'
+    'model_used' => $aiModel
 ], 200);
