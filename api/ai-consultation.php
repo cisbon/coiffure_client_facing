@@ -195,28 +195,10 @@ if (!$isImageGenerationModel) {
 }
 
 // Create prompt for hairstyle transformation
-// CRITICAL: Must explicitly tell the model to EDIT the provided image, not generate new
-$prompt = "EDIT THE PROVIDED IMAGE: Change ONLY the hairstyle to look {$stylePrompt}.
+// CRITICAL: Keep it simple and direct - focus on EDITING the provided image
+$prompt = "Edit this person's hairstyle to: {$stylePrompt}
 
-CRITICAL INSTRUCTIONS:
-1. This is an IMAGE EDIT operation - modify the provided photograph
-2. Keep the EXACT SAME person - same face, same identity, same everything
-3. ONLY change the hair/hairstyle region
-4. Do NOT generate a new person
-5. Do NOT create a different face
-6. This must be a BEFORE/AFTER of the SAME individual
-
-What to preserve 100%:
-- Exact same face and facial structure
-- Same skin tone and texture
-- Same eyes, nose, mouth, facial features
-- Same person's identity
-- Same background and lighting style
-
-What to change:
-- ONLY the hairstyle to: {$stylePrompt}
-
-Output: Professional salon photograph showing the SAME person from the input image with the new hairstyle. This is an edit/transformation of the provided image, not a new generation.";
+Keep everything else identical - same person, same face, same features, same background. Only change the hair.";
 
 error_log("AI Prompt: " . $prompt);
 
@@ -250,10 +232,11 @@ $apiPayload = [
             ]
         ]
     ],
-    'max_tokens' => 4096,
+    'max_tokens' => 1024,  // Lower tokens to discourage text-only responses
+    'temperature' => 0.7,  // Control creativity
     'image_config' => [
         'aspect_ratio' => '1:1',
-        'mode' => 'edit'  // Explicitly request edit mode if supported
+        'quality' => 'high'
     ]
 ];
 
@@ -263,8 +246,10 @@ error_log("Modalities: " . json_encode($apiPayload['modalities']));
 error_log("Message content items: " . count($apiPayload['messages'][0]['content']));
 error_log("Content[0] type: " . $apiPayload['messages'][0]['content'][0]['type']);
 error_log("Content[1] type: " . $apiPayload['messages'][0]['content'][1]['type']);
-error_log("Content[1] has image_url: " . (isset($apiPayload['messages'][0]['content'][1]['image_url']['url']) ? 'YES' : 'NO'));
-error_log("Image URL in payload length: " . strlen($apiPayload['messages'][0]['content'][1]['image_url']['url']));
+// Image is now at [0], text is at [1]
+error_log("Content[0] has image_url: " . (isset($apiPayload['messages'][0]['content'][0]['image_url']['url']) ? 'YES' : 'NO'));
+error_log("Image URL in payload length: " . strlen($apiPayload['messages'][0]['content'][0]['image_url']['url']));
+error_log("Image config: " . json_encode($apiPayload['image_config']));
 
 $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
