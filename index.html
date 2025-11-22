@@ -151,11 +151,11 @@
 
                 <!-- Language Switcher -->
                 <div class="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                    <button onclick="switchLanguage('de')" id="lang-de" class="px-3 py-1 rounded-md text-sm font-medium transition-colors">
-                        DE
+                    <button onclick="switchLanguage('de')" id="lang-de" class="px-3 py-2 rounded-md text-2xl transition-colors" title="Deutsch">
+                        🇩🇪
                     </button>
-                    <button onclick="switchLanguage('en')" id="lang-en" class="px-3 py-1 rounded-md text-sm font-medium transition-colors">
-                        EN
+                    <button onclick="switchLanguage('en')" id="lang-en" class="px-3 py-2 rounded-md text-2xl transition-colors" title="English">
+                        🇬🇧
                     </button>
                 </div>
             </div>
@@ -1064,6 +1064,32 @@
                 #quick-mode-btn.bg-purple-600,
                 #guided-mode-btn.bg-purple-600 {
                     background-color: ${branding.button_color || '#9333EA'} !important;
+                }
+
+                /* Submit buttons with gradients */
+                .bg-gradient-to-r.from-purple-600,
+                button.bg-gradient-to-r.from-purple-600,
+                #onboarding-submit-btn,
+                #ai-submit-btn,
+                #wizard-generate-btn {
+                    background: linear-gradient(to right, ${branding.button_color || '#9333EA'}, ${branding.secondary_color || branding.button_color || '#EC4899'}) !important;
+                }
+
+                .bg-gradient-to-r.from-purple-600:hover,
+                button.bg-gradient-to-r.from-purple-600:hover,
+                #onboarding-submit-btn:hover,
+                #ai-submit-btn:hover,
+                #wizard-generate-btn:hover {
+                    background: linear-gradient(to right, ${hoverColor}, ${adjustBrightness(branding.secondary_color || branding.button_color || '#EC4899', -20)}) !important;
+                }
+
+                /* Camera and upload buttons */
+                .bg-gray-600 {
+                    background-color: ${branding.text_color || '#1F2937'} !important;
+                }
+
+                .bg-gray-600:hover {
+                    background-color: ${adjustBrightness(branding.text_color || '#1F2937', -20)} !important;
                 }
 
                 /* Body background */
