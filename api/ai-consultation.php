@@ -385,10 +385,15 @@ if (!$generatedImageBase64) {
     error_log("Full API Response: " . json_encode($apiResponse));
 
     // Create detailed error message showing what was returned
+    $refusalReason = isset($apiResponse['choices'][0]['message']['refusal']) ? $apiResponse['choices'][0]['message']['refusal'] : null;
+    $reasoning = isset($apiResponse['choices'][0]['message']['reasoning']) ? $apiResponse['choices'][0]['message']['reasoning'] : null;
+
     $errorDetails = [
         'message_keys' => isset($apiResponse['choices'][0]['message']) ? array_keys($apiResponse['choices'][0]['message']) : [],
         'has_images_array' => isset($apiResponse['choices'][0]['message']['images']),
         'has_content' => isset($apiResponse['choices'][0]['message']['content']),
+        'refusal' => $refusalReason,
+        'reasoning' => $reasoning,
         'content_preview' => substr($textResponse, 0, 200)
     ];
     error_log("Error details: " . json_encode($errorDetails));
@@ -403,7 +408,15 @@ if (!$generatedImageBase64) {
     $conn->close();
 
     // Return detailed error to help diagnose
-    sendErrorResponse('Image generation failed. Model: ' . $aiModel . '. Response had ' . json_encode($errorDetails['message_keys']) . '. Text: ' . substr($textResponse, 0, 100), 500);
+    $errorMsg = 'Image generation failed. Model: ' . $aiModel;
+    if ($refusalReason) {
+        $errorMsg .= '. REFUSAL: ' . $refusalReason;
+    } elseif ($reasoning) {
+        $errorMsg .= '. REASONING: ' . $reasoning;
+    } else {
+        $errorMsg .= '. Response had ' . json_encode($errorDetails['message_keys']) . '. Text: ' . substr($textResponse, 0, 100);
+    }
+    sendErrorResponse($errorMsg, 500);
 }
 
 error_log("=== AI CONSULTATION END - SUCCESS ===");
