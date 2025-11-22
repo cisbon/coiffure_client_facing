@@ -195,10 +195,10 @@ if (!$isImageGenerationModel) {
 }
 
 // Create prompt for hairstyle transformation
-// CRITICAL: Keep it simple and direct - focus on EDITING the provided image
-$prompt = "Edit this person's hairstyle to: {$stylePrompt}
+// Research shows Gemini needs very specific instructions about preserving the person
+$prompt = "The person in this photo should have their hairstyle changed to: {$stylePrompt}
 
-Keep everything else identical - same person, same face, same features, same background. Only change the hair.";
+CRITICAL: Do not change the person. Do not replace the person. This is the SAME person with a different hairstyle. Keep the exact same face, same facial features, same skin tone, same identity. ONLY modify the hair/hairstyle. Everything else must remain identical to the input image.";
 
 error_log("AI Prompt: " . $prompt);
 
