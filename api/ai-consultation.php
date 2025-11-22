@@ -195,32 +195,38 @@ if (!$isImageGenerationModel) {
 }
 
 // Create prompt for hairstyle transformation
-$prompt = "A professional salon photograph of a person with a {$stylePrompt} hairstyle. The person should look natural and professional, with high-quality lighting and a clean background. Photorealistic, front-facing portrait, salon quality.";
+$prompt = "Transform this person's hairstyle to: {$stylePrompt}. Generate a professional salon photograph showing them with this new hairstyle. Keep their face and features the same, only change the hairstyle. The result should look natural and professional, with high-quality lighting and a clean background. Photorealistic, front-facing portrait, salon quality.";
 
 error_log("AI Prompt: " . $prompt);
 
-// Prepare image generation API payload
+// Gemini image models use chat/completions endpoint with messages format
 $apiPayload = [
     'model' => $aiModel,
-    'prompt' => $prompt,
-    'n' => 1,
-    'size' => '1024x1024'
+    'messages' => [
+        [
+            'role' => 'user',
+            'content' => [
+                [
+                    'type' => 'text',
+                    'text' => $prompt
+                ],
+                [
+                    'type' => 'image_url',
+                    'image_url' => [
+                        'url' => $imageData
+                    ]
+                ]
+            ]
+        ]
+    ],
+    'max_tokens' => 4096
 ];
 
-// For OpenRouter image generation models, include the input image for transformation
-// All these models support img2img (input image + output image)
-if (in_array($aiModel, $imageGenerationModels)) {
-    $apiPayload['image'] = $imageData;
-    $apiPayload['strength'] = 0.75; // How much to transform (0-1)
-    error_log("Using img2img mode with strength 0.75");
-}
+error_log("API Request: Image Generation via Chat Completions");
+error_log("Model: " . $aiModel);
+error_log("Using chat/completions endpoint for Gemini image generation");
 
-error_log("API Request: Image Generation");
-error_log("Model: " . $aiPayload['model']);
-error_log("Prompt: " . $prompt);
-error_log("Has input image: " . (isset($apiPayload['image']) ? 'YES' : 'NO'));
-
-$ch = curl_init('https://openrouter.ai/api/v1/images/generations');
+$ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
@@ -281,37 +287,54 @@ if ($httpCode !== 200) {
     sendErrorResponse('AI service error: ' . $errorMsg, 500);
 }
 
-// Extract generated image from response
+// Extract generated image from chat response
 $generatedImageBase64 = null;
 $tokensUsed = 0;
+$textResponse = '';
 
-// Image generation responses come in 'data' array
-if (isset($apiResponse['data']) && is_array($apiResponse['data']) && count($apiResponse['data']) > 0) {
-    error_log("Response has 'data' array with " . count($apiResponse['data']) . " items");
+// Chat completions return content in choices[0].message.content
+if (isset($apiResponse['choices'][0]['message']['content'])) {
+    $content = $apiResponse['choices'][0]['message']['content'];
+    error_log("Response content type: " . gettype($content));
 
-    $imageData = $apiResponse['data'][0];
+    // Content can be a string or an array of content parts
+    if (is_array($content)) {
+        error_log("Response has " . count($content) . " content parts");
 
-    // Check for base64 encoded image
-    if (isset($imageData['b64_json'])) {
-        $generatedImageBase64 = 'data:image/png;base64,' . $imageData['b64_json'];
-        error_log("Found base64 image in data[0].b64_json");
-    }
-    // Check for image URL
-    elseif (isset($imageData['url'])) {
-        $imageUrl = $imageData['url'];
-        error_log("Found image URL in data[0].url: " . $imageUrl);
+        // Loop through content parts looking for images
+        foreach ($content as $part) {
+            if (isset($part['type']) && $part['type'] === 'image_url') {
+                if (isset($part['image_url']['url'])) {
+                    $imageUrl = $part['image_url']['url'];
+                    error_log("Found image URL in content parts: " . substr($imageUrl, 0, 100) . "...");
 
-        // Download and convert to base64
-        $imageContent = @file_get_contents($imageUrl);
-        if ($imageContent !== false) {
-            $generatedImageBase64 = 'data:image/png;base64,' . base64_encode($imageContent);
-            error_log("Successfully downloaded and encoded image (" . strlen($imageContent) . " bytes)");
-        } else {
-            error_log("ERROR: Failed to download image from URL");
+                    // Check if it's a data URI or external URL
+                    if (strpos($imageUrl, 'data:image/') === 0) {
+                        $generatedImageBase64 = $imageUrl;
+                        error_log("Image is data URI, length: " . strlen($imageUrl));
+                    } else {
+                        // Download external URL
+                        $imageContent = @file_get_contents($imageUrl);
+                        if ($imageContent !== false) {
+                            $generatedImageBase64 = 'data:image/png;base64,' . base64_encode($imageContent);
+                            error_log("Downloaded and encoded image (" . strlen($imageContent) . " bytes)");
+                        } else {
+                            error_log("ERROR: Failed to download image from URL");
+                        }
+                    }
+                    break;
+                }
+            } elseif (isset($part['type']) && $part['type'] === 'text') {
+                $textResponse .= $part['text'] . "\n";
+            }
         }
+    } else {
+        // Content is a string - this is the text response, not an image
+        $textResponse = $content;
+        error_log("Response is text only: " . substr($textResponse, 0, 200) . "...");
     }
 } else {
-    error_log("ERROR: No 'data' array found in response!");
+    error_log("ERROR: No choices[0].message.content in response!");
     error_log("Response keys: " . json_encode(array_keys($apiResponse)));
 }
 
@@ -321,6 +344,7 @@ if (isset($apiResponse['usage']['total_tokens'])) {
 }
 
 error_log("Generated Image: " . ($generatedImageBase64 ? 'YES (' . strlen($generatedImageBase64) . ' chars)' : 'NO'));
+error_log("Text Response: " . ($textResponse ? 'YES (' . strlen($textResponse) . ' chars)' : 'NO'));
 
 // CRITICAL: If no image was generated, this is a failure
 if (!$generatedImageBase64) {
@@ -328,20 +352,21 @@ if (!$generatedImageBase64) {
     error_log("Full API Response: " . json_encode($apiResponse));
 
     $failStmt = $conn->prepare(
-        "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = 'No image generated', processing_time_ms = ?, ai_response_data = ? WHERE consultation_id = ?"
+        "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = 'No image generated - model returned text only', processing_time_ms = ?, ai_response_data = ? WHERE consultation_id = ?"
     );
     $responseJson = json_encode($apiResponse);
     $failStmt->bind_param("isi", $processingTime, $responseJson, $consultationId);
     $failStmt->execute();
     $failStmt->close();
     $conn->close();
-    sendErrorResponse('Image generation failed - no image returned by AI model', 500);
+    sendErrorResponse('Image generation failed - model returned text instead of image. Text response: ' . substr($textResponse, 0, 200), 500);
 }
 
 error_log("=== AI CONSULTATION END - SUCCESS ===");
 $generatedContent = "Generated image for: {$stylePrompt}";
 
 // Update consultation record with results
+$generatedImageUrl = null; // We're using base64, not URLs
 $completeStmt = $conn->prepare(
     "UPDATE coiffure_ai_consultations
     SET
