@@ -39,7 +39,7 @@
         // Load available migrations
         async function loadMigrations() {
             try {
-                const response = await fetch('api/migration-manager.php?action=list');
+                const response = await fetch('migration-manager.php?action=list');
                 const data = await response.json();
 
                 if (data.success) {
@@ -90,7 +90,7 @@
             logMessage(`========================================\n`, 'info');
 
             try {
-                const response = await fetch('api/migration-manager.php?action=run&migration=' + number, {
+                const response = await fetch('migration-manager.php?action=run&migration=' + number, {
                     method: 'POST'
                 });
                 const data = await response.json();
