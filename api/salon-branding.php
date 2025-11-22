@@ -184,12 +184,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Move uploaded file
         if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetPath)) {
-            // Delete old logo if exists
-            if (!empty($oldLogoPath) && file_exists($oldLogoPath)) {
-                unlink($oldLogoPath);
+            // Delete old logo if exists (handle both absolute and relative paths)
+            if (!empty($oldLogoPath)) {
+                $oldLogoAbsolutePath = strpos($oldLogoPath, '/') === 0 ? $oldLogoPath : __DIR__ . '/../' . $oldLogoPath;
+                if (file_exists($oldLogoAbsolutePath)) {
+                    unlink($oldLogoAbsolutePath);
+                }
             }
 
-            $logoPath = $targetPath;
+            // Store relative path in database (not absolute server path)
+            $logoPath = 'uploads/logos/' . $filename;
         } else {
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => 'Failed to upload logo']);
@@ -199,8 +203,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Handle logo removal
     if (isset($_POST['remove_logo']) && $_POST['remove_logo'] === 'true') {
-        if (!empty($oldLogoPath) && file_exists($oldLogoPath)) {
-            unlink($oldLogoPath);
+        if (!empty($oldLogoPath)) {
+            // Handle both absolute and relative paths
+            $oldLogoAbsolutePath = strpos($oldLogoPath, '/') === 0 ? $oldLogoPath : __DIR__ . '/../' . $oldLogoPath;
+            if (file_exists($oldLogoAbsolutePath)) {
+                unlink($oldLogoAbsolutePath);
+            }
         }
         $logoPath = null;
     }

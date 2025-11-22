@@ -936,33 +936,57 @@
             }
             if (branding.background_color) {
                 root.style.setProperty('--color-background', branding.background_color);
-                document.body.style.backgroundColor = branding.background_color;
+                document.body.style.setProperty('background-color', branding.background_color, 'important');
             }
             if (branding.button_color) {
                 root.style.setProperty('--color-button', branding.button_color);
-
-                // Apply button color to all primary buttons (purple buttons)
-                const primaryButtons = document.querySelectorAll('.bg-purple-600, .bg-purple-700, #quick-mode-btn, .tab-active');
-                primaryButtons.forEach(btn => {
-                    btn.style.backgroundColor = branding.button_color;
-                    // Adjust hover color (slightly darker)
-                    btn.addEventListener('mouseenter', function() {
-                        this.style.backgroundColor = adjustBrightness(branding.button_color, -20);
-                    });
-                    btn.addEventListener('mouseleave', function() {
-                        this.style.backgroundColor = branding.button_color;
-                    });
-                });
-
-                // Apply to gradient backgrounds
-                const gradients = document.querySelectorAll('.tab-active');
-                gradients.forEach(el => {
-                    el.style.background = `linear-gradient(to right, ${branding.button_color}, ${branding.secondary_color || branding.button_color})`;
-                });
             }
             if (branding.text_color) {
                 root.style.setProperty('--color-text', branding.text_color);
             }
+
+            // Inject dynamic CSS to override Tailwind classes
+            let styleEl = document.getElementById('salon-branding-styles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'salon-branding-styles';
+                document.head.appendChild(styleEl);
+            }
+
+            const hoverColor = adjustBrightness(branding.button_color || '#9333EA', -20);
+
+            styleEl.textContent = `
+                /* Override Tailwind purple button classes with salon branding */
+                .bg-purple-600,
+                .bg-purple-700,
+                button.bg-purple-600,
+                button.bg-purple-700 {
+                    background-color: ${branding.button_color || '#9333EA'} !important;
+                }
+
+                .bg-purple-600:hover,
+                .bg-purple-700:hover,
+                button.bg-purple-600:hover,
+                button.bg-purple-700:hover {
+                    background-color: ${hoverColor} !important;
+                }
+
+                /* Tab active gradient */
+                .tab-active {
+                    background: linear-gradient(to right, ${branding.button_color || '#9333EA'}, ${branding.secondary_color || branding.button_color || '#EC4899'}) !important;
+                }
+
+                /* Mode buttons */
+                #quick-mode-btn.bg-purple-600,
+                #guided-mode-btn.bg-purple-600 {
+                    background-color: ${branding.button_color || '#9333EA'} !important;
+                }
+
+                /* Body background */
+                body {
+                    background-color: ${branding.background_color || '#FFFFFF'} !important;
+                }
+            `;
 
             // Apply logo if available
             if (branding.logo_url) {
@@ -1000,23 +1024,15 @@
             document.querySelectorAll('[id^="tab-"]').forEach(tab => {
                 tab.classList.remove('tab-active');
                 tab.classList.add('hover:bg-gray-100');
-                tab.style.background = ''; // Reset background
             });
 
             // Show selected tab content
             document.getElementById(`${tabName}-content`).classList.remove('hidden');
 
-            // Add active class to selected tab
+            // Add active class to selected tab (CSS handles the branding color)
             const activeTab = document.getElementById(`tab-${tabName}`);
             activeTab.classList.add('tab-active');
             activeTab.classList.remove('hover:bg-gray-100');
-
-            // Reapply branding to active tab
-            const buttonColor = getComputedStyle(document.documentElement).getPropertyValue('--color-button').trim();
-            const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim();
-            if (buttonColor) {
-                activeTab.style.background = `linear-gradient(to right, ${buttonColor}, ${secondaryColor || buttonColor})`;
-            }
         }
 
         // ==================== SIGNATURE CANVAS ====================
@@ -1257,23 +1273,17 @@
             const quickContainer = document.getElementById('quick-mode-container');
             const guidedContainer = document.getElementById('guided-mode-container');
 
-            // Get branding color
-            const buttonColor = getComputedStyle(document.documentElement).getPropertyValue('--color-button').trim() || '#9333EA';
-
             if (mode === 'quick') {
-                quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all text-white';
-                quickBtn.style.backgroundColor = buttonColor;
+                // CSS handles the branding color via .bg-purple-600 override
+                quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white';
                 guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
-                guidedBtn.style.backgroundColor = '';
                 quickContainer.classList.remove('hidden');
                 guidedContainer.classList.add('hidden');
                 stopWizardCamera();
                 resetWizard();
             } else {
                 quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
-                quickBtn.style.backgroundColor = '';
-                guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all text-white';
-                guidedBtn.style.backgroundColor = buttonColor;
+                guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white';
                 quickContainer.classList.add('hidden');
                 guidedContainer.classList.remove('hidden');
                 resetWizard();
