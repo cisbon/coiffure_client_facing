@@ -911,9 +911,18 @@
         }
 
         function renderSocialLinks(links) {
+            console.log('=== renderSocialLinks() called with', links.length, 'links ===');
             const grid = document.getElementById('social-links-grid');
 
-            grid.innerHTML = links.map(link => {
+            grid.innerHTML = links.map((link, index) => {
+                console.log(`Link ${index}:`, {
+                    display_name: link.display_name,
+                    link_type: link.link_type,
+                    has_qr_code_data: !!link.qr_code_data,
+                    qr_code_data_length: link.qr_code_data?.length,
+                    qr_code_data_preview: link.qr_code_data?.substring(0, 50) + '...'
+                });
+
                 const icon = getSocialIcon(link.link_type);
                 const color = getSocialColor(link.link_type);
 
