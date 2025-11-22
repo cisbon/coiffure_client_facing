@@ -8,6 +8,18 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Authentication Check - Must run before page renders -->
+    <script>
+        // Immediate authentication check - redirect if not logged in
+        (function() {
+            const token = localStorage.getItem('session_token');
+            const userData = localStorage.getItem('user_data');
+            if (!token || !userData) {
+                window.location.href = 'login.html';
+            }
+        })();
+    </script>
+
     <!-- i18n Support - Skip auto-init, we'll use salon's default language -->
     <script>window.skipI18nAutoInit = true;</script>
     <script src="js/i18n.js"></script>
@@ -364,23 +376,10 @@
         const API_BASE_URL = 'https://clouedo.com/coiffure/api';
         const POLICY_VERSION = '1.0';
 
-        // Authentication
-        let currentUser = null;
-        let sessionToken = null;
+        // Authentication - Initialize from localStorage (already checked in <head>)
+        let sessionToken = localStorage.getItem('session_token');
+        let currentUser = JSON.parse(localStorage.getItem('user_data'));
         let userSalonId = null;
-
-        // Immediate authentication check - redirect if not logged in
-        (function() {
-            const token = localStorage.getItem('session_token');
-            const userData = localStorage.getItem('user_data');
-            if (!token || !userData) {
-                window.location.href = 'login.html';
-            } else {
-                // Initialize currentUser and sessionToken immediately
-                sessionToken = token;
-                currentUser = JSON.parse(userData);
-            }
-        })();
 
         // ==================== AUTHENTICATION ====================
         async function checkAuthentication() {
