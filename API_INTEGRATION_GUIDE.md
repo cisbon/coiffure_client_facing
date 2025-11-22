@@ -7,20 +7,36 @@ This document describes how to update the backend API at `https://clouedo.com/co
 1. Add to `.env` file:
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-AI_MODEL=google/gemini-3-pro-image-preview
-# Alternative models:
-# black-forest-labs/flux-1.1-pro (good for image generation)
+
+# CRITICAL: Use ONLY image generation models (not vision/chat models)
+AI_MODEL=black-forest-labs/flux-1.1-pro
+
+# Alternative image generation models:
+# black-forest-labs/flux-1-pro (high quality)
+# black-forest-labs/flux-dev (development version)
 # stability-ai/stable-diffusion-xl (budget option)
-# openai/dall-e-3 (high quality but no img2img)
+# openai/dall-e-3 (high quality, no img2img support)
+# openai/dall-e-2 (lower quality, faster)
+
+# ⚠️ DO NOT USE vision/chat models like:
+# ❌ google/gemini-2.5-flash-image (vision model - analyzes images only)
+# ❌ anthropic/claude-3.5-sonnet (chat model - no image generation)
+# ❌ openai/gpt-4-vision-preview (vision model - analyzes images only)
 ```
 
 2. Update `ai-consultation.php` to use OpenRouter API with image generation
 
 ## Backend Implementation (ai-consultation.php)
 
-This implementation uses a two-step approach:
-1. Analyze the photo and hairstyle request using a vision model
-2. Generate a new image with the hairstyle applied using an image generation model
+**IMPORTANT: The backend now enforces that ONLY image generation models can be used.**
+
+The implementation:
+1. Validates that the AI_MODEL is an image generation model (flux, dall-e, stable-diffusion)
+2. Rejects requests with vision/chat models that cannot generate images
+3. Generates a new hairstyle image using the OpenRouter `/images/generations` endpoint
+4. Returns the generated image as base64 data URI for display in the frontend
+
+If a non-image-generation model is configured, the API will return a 400 error with a clear message listing compatible models.
 
 ```php
 <?php
@@ -263,3 +279,69 @@ Choose based on your budget and quality requirements.
 2. Implement rate limiting to prevent API abuse
 3. Validate image size before sending to API (max 5MB recommended)
 4. Sanitize user prompts to prevent injection attacks
+
+## Current Implementation Features
+
+### Model Validation (api/ai-consultation.php:165-200)
+The backend validates that AI_MODEL is one of these approved image generation models:
+- `black-forest-labs/flux-1.1-pro`
+- `black-forest-labs/flux-1-pro`
+- `black-forest-labs/flux-pro`
+- `black-forest-labs/flux-dev`
+- `stability-ai/stable-diffusion-xl`
+- `stability-ai/sdxl-turbo`
+- `openai/dall-e-3`
+- `openai/dall-e-2`
+- `midjourney/midjourney`
+- `runway/gen-2`
+
+**If the model is not on this list, the request fails immediately with a 400 error.**
+
+### Image Generation Endpoint (api/ai-consultation.php:227)
+Uses OpenRouter's image generation endpoint:
+```php
+$ch = curl_init('https://openrouter.ai/api/v1/images/generations');
+```
+
+NOT the chat completions endpoint (which would only return text).
+
+### Mandatory Image Output (api/ai-consultation.php:329-343)
+After the API call, the code REQUIRES a generated image:
+```php
+if (!$generatedImageBase64) {
+    error_log("CRITICAL ERROR: No image was generated!");
+    sendErrorResponse('Image generation failed - no image returned by AI model', 500);
+}
+```
+
+This ensures you never pay for API calls that don't produce the expected image output.
+
+### Frontend Display (index.html:811-814)
+The frontend properly displays base64 image data:
+```javascript
+if (result.generated_image) {
+    const generatedImage = document.getElementById('ai-generated-image');
+    generatedImage.src = result.generated_image;
+    imageContainer.classList.remove('hidden');
+}
+```
+
+## Testing the Implementation
+
+1. Update `.env` with a valid image generation model:
+   ```env
+   AI_MODEL=black-forest-labs/flux-1.1-pro
+   ```
+
+2. Upload a photo and enter a hairstyle description (e.g., "like Tom Cruise")
+
+3. Expected behavior:
+   - Loading indicator appears
+   - API generates new hairstyle image (5-15 seconds)
+   - Generated image displays in the frontend
+   - Processing time and model name shown below
+
+4. If using wrong model type:
+   - Request fails immediately with 400 error
+   - Error message lists compatible models
+   - No API costs incurred
