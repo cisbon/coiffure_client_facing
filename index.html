@@ -861,27 +861,60 @@
 
         // Load social links when page loads
         window.addEventListener('DOMContentLoaded', async () => {
+            console.log('=== DOMContentLoaded - Starting initialization ===');
+
             // Check authentication first
             const isAuthenticated = await checkAuthentication();
+            console.log('Authentication check result:', isAuthenticated);
+
             if (isAuthenticated) {
-                // Initialize i18n with user's preferred language (from salon default language)
+                // Initialize i18n with user's preferred language
                 if (typeof i18n !== 'undefined') {
-                    // Wait for salon language to be determined
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    console.log('i18n object found:', i18n);
 
-                    // Check if user has a preferred language override
+                    // Determine which language to use
+                    let targetLang = 'de'; // Default to German
+
+                    // Check if user has a preferred language
                     const userLang = currentUser?.preferred_language;
-                    if (userLang && (userLang === 'de' || userLang === 'en')) {
-                        await i18n.loadLanguage(userLang);
-                    }
-                    // Otherwise, getUserSalonAssignments() already set the language from salon default
+                    console.log('User preferred_language from currentUser:', userLang);
 
+                    if (userLang && (userLang === 'de' || userLang === 'en')) {
+                        targetLang = userLang;
+                        console.log('Using user preferred language:', targetLang);
+                    } else {
+                        // Check if salon has a default language (will be set by getUserSalonAssignments)
+                        await new Promise(resolve => setTimeout(resolve, 150));
+                        const salonLang = i18n.currentLang;
+                        console.log('Salon language from i18n.currentLang:', salonLang);
+                        if (salonLang && (salonLang === 'de' || salonLang === 'en')) {
+                            targetLang = salonLang;
+                        }
+                        console.log('Using final target language:', targetLang);
+                    }
+
+                    // Load the determined language
+                    console.log('Loading language:', targetLang);
+                    const loadSuccess = await i18n.loadLanguage(targetLang);
+                    console.log('Language load success:', loadSuccess);
+                    console.log('i18n.translations loaded:', Object.keys(i18n.translations).length > 0);
+
+                    // Apply translations to the page
+                    console.log('Applying translations...');
                     i18n.applyTranslations();
+                    console.log('Translations applied');
+
+                    // Update language buttons
                     updateLanguageButtons();
+                    console.log('Language buttons updated');
+                } else {
+                    console.error('i18n object NOT found!');
                 }
 
                 loadSocialLinks();
             }
+
+            console.log('=== DOMContentLoaded - Initialization complete ===');
         });
 
         async function loadSocialLinks() {
