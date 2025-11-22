@@ -18,9 +18,9 @@ if (!$conn) {
 // Require authentication
 $currentUser = requireAuth($conn);
 
-// Allow admin, admin_delegate, customer_admin, and customer_admin_delegate to access salons
-// customer_admin roles can only view their assigned salons (read-only for them)
-$allowedRoles = ['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate'];
+// Allow admin, admin_delegate, customer_admin, customer_admin_delegate, and customer_facing_tablet_user to access salons
+// customer_admin and customer_facing_tablet_user roles can only view their assigned salons (read-only)
+$allowedRoles = ['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate', 'customer_facing_tablet_user'];
 requireRole($currentUser, $allowedRoles);
 
 // Get request method and parse input
@@ -70,8 +70,8 @@ switch ($method) {
  * Get salons
  */
 function handleGetSalons($conn, $currentUser, $salonId) {
-    // Determine if user is customer_admin or customer_admin_delegate
-    $isCustomerRole = in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate']);
+    // Determine if user is customer_admin, customer_admin_delegate, or customer_facing_tablet_user
+    $isCustomerRole = in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate', 'customer_facing_tablet_user']);
 
     if ($salonId) {
         // Get single salon
