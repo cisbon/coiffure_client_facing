@@ -14,9 +14,17 @@
         (function() {
             const token = localStorage.getItem('session_token');
             const userData = localStorage.getItem('user_data');
+
+            console.log('Auth check - token:', token ? 'EXISTS' : 'MISSING');
+            console.log('Auth check - userData:', userData ? 'EXISTS' : 'MISSING');
+
             if (!token || !userData) {
-                window.location.href = 'login.html';
+                console.log('Redirecting to login.html...');
+                window.location.replace('login.html');
+                return;
             }
+
+            console.log('User authenticated, loading page...');
         })();
     </script>
 
