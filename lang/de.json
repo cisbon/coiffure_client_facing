@@ -187,9 +187,9 @@
     "submit_button": "KI-Frisurvorschau generieren",
     "loading_title": "Ihre Frisurvorschau wird generiert...",
     "loading_hint": "Dies kann 10-30 Sekunden dauern",
-    "results_title": "KI-Antwort",
-    "results_recommendation": "KI-Stylisten-Empfehlung:",
-    "results_note": "Hinweis: Diese KI bietet professionelle Frisur-Analysen und Empfehlungen. Für visuelle Generierung erwägen Sie ein Upgrade auf Bildgenerierungsmodelle.",
+    "results_title": "KI-Generiertes Ergebnis",
+    "generated_preview": "Ihre neue Frisurvorschau",
+    "results_recommendation": "KI-Stylisten-Analyse:",
     "error_no_image": "Bitte laden Sie zuerst ein Bild hoch",
     "error_no_prompt": "Bitte beschreiben Sie die gewünschte Frisur"
   },

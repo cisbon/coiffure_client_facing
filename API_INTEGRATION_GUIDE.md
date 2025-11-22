@@ -1,18 +1,26 @@
 # AI Consultation Backend Integration Guide
 
-This document describes how to update the backend API at `https://clouedo.com/coiffure/api/ai-consultation.php` to integrate with OpenRouter API for hairstyle visualization.
+This document describes how to update the backend API at `https://clouedo.com/coiffure/api/ai-consultation.php` to integrate with OpenRouter API for hairstyle image generation.
 
 ## Requirements
 
 1. Add to `.env` file:
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-AI_MODEL=anthropic/claude-3.5-sonnet # or any vision-capable model
+AI_MODEL=google/gemini-3-pro-image-preview
+# Alternative models:
+# black-forest-labs/flux-1.1-pro (good for image generation)
+# stability-ai/stable-diffusion-xl (budget option)
+# openai/dall-e-3 (high quality but no img2img)
 ```
 
-2. Update `ai-consultation.php` to use OpenRouter API
+2. Update `ai-consultation.php` to use OpenRouter API with image generation
 
 ## Backend Implementation (ai-consultation.php)
+
+This implementation uses a two-step approach:
+1. Analyze the photo and hairstyle request using a vision model
+2. Generate a new image with the hairstyle applied using an image generation model
 
 ```php
 <?php
@@ -29,51 +37,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Verify authentication
-$auth = verifySession();
-if (!$auth['success']) {
-    http_response_code(401);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Unauthorized'
-    ]);
-    exit();
-}
+// Verify authentication (optional - remove if you want public access)
+// $auth = verifySession();
+// if (!$auth['success']) {
+//     http_response_code(401);
+//     echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+//     exit();
+// }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Method not allowed'
-    ]);
+    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
     exit();
 }
 
 try {
-    // Get request data
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
 
-    if (!isset($data['image']) || !isset($data['style_prompt'])) {
-        throw new Exception('Missing required fields: image and style_prompt');
+    if (!isset($data['image_base64']) || !isset($data['style_prompt'])) {
+        throw new Exception('Missing required fields: image_base64 and style_prompt');
     }
 
-    $imageData = $data['image'];
+    $imageData = $data['image_base64'];
     $stylePrompt = $data['style_prompt'];
-    $userId = $auth['user_id'];
+    // $userId = $auth['user_id'] ?? null;
 
-    // Extract base64 image data
-    // Image comes as data:image/jpeg;base64,/9j/4AAQSkZJRg...
-    if (preg_match('/^data:image\/(\w+);base64,(.+)$/', $imageData, $matches)) {
-        $imageType = $matches[1];
-        $imageBase64 = $matches[2];
-    } else {
-        throw new Exception('Invalid image format');
-    }
-
-    // Prepare OpenRouter API request
     $openrouterApiKey = getenv('OPENROUTER_API_KEY');
-    $aiModel = getenv('AI_MODEL') ?: 'anthropic/claude-3.5-sonnet';
+    $aiModel = getenv('AI_MODEL') ?: 'google/gemini-pro-1.5';
 
     if (!$openrouterApiKey) {
         throw new Exception('OPENROUTER_API_KEY not configured');
@@ -81,106 +72,140 @@ try {
 
     $startTime = microtime(true);
 
-    // Construct the prompt for hairstyle transformation
-    $systemPrompt = "You are an expert hairstylist AI assistant. Analyze the person's photo and their desired hairstyle request. Provide detailed professional recommendations for achieving the requested look, including:
-1. Feasibility assessment based on their current hair
-2. Specific steps and techniques needed
-3. Products and tools required
-4. Maintenance advice
-5. Alternative suggestions if the requested style may not suit their face shape or hair type
+    // STEP 1: Analyze the photo with vision model to understand face features
+    $analysisPrompt = "Analyze this person's face and hair. Describe their:
+1. Face shape
+2. Current hair length, texture, and color
+3. Skin tone
+4. Facial features relevant to hairstyling
+Be concise and focus on details needed for hairstyle recommendations.";
 
-Be encouraging but honest about what's achievable.";
-
-    $userPrompt = "The customer wants: {$stylePrompt}
-
-Please analyze their photo and provide professional hairstyling recommendations.";
-
-    // OpenRouter API request
-    $apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-
-    $requestBody = [
-        'model' => $aiModel,
+    $analysisRequest = [
+        'model' => 'anthropic/claude-3-5-sonnet', // Use vision model for analysis
         'messages' => [
-            [
-                'role' => 'system',
-                'content' => $systemPrompt
-            ],
             [
                 'role' => 'user',
                 'content' => [
-                    [
-                        'type' => 'text',
-                        'text' => $userPrompt
-                    ],
-                    [
-                        'type' => 'image_url',
-                        'image_url' => [
-                            'url' => $imageData // Send the full data URI
-                        ]
-                    ]
+                    ['type' => 'text', 'text' => $analysisPrompt],
+                    ['type' => 'image_url', 'image_url' => ['url' => $imageData]]
                 ]
             ]
         ],
-        'max_tokens' => 1000,
-        'temperature' => 0.7
+        'max_tokens' => 500
     ];
 
-    $ch = curl_init($apiUrl);
+    $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $openrouterApiKey,
             'Content-Type: application/json',
-            'HTTP-Referer: https://salonlyft.com', // Replace with your domain
+            'HTTP-Referer: https://clouedo.com',
             'X-Title: SalonLyft AI Consultation'
         ],
-        CURLOPT_POSTFIELDS => json_encode($requestBody)
+        CURLOPT_POSTFIELDS => json_encode($analysisRequest)
     ]);
 
-    $response = curl_exec($ch);
+    $analysisResponse = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $endTime = microtime(true);
-    $processingTime = round(($endTime - $startTime) * 1000); // ms
-
     if ($httpCode !== 200) {
-        $errorResponse = json_decode($response, true);
-        throw new Exception('OpenRouter API error: ' . ($errorResponse['error']['message'] ?? 'Unknown error'));
+        throw new Exception('Analysis failed: ' . $analysisResponse);
     }
 
-    $apiResponse = json_decode($response, true);
+    $analysisResult = json_decode($analysisResponse, true);
+    $faceAnalysis = $analysisResult['choices'][0]['message']['content'] ?? '';
 
-    if (!isset($apiResponse['choices'][0]['message']['content'])) {
-        throw new Exception('Invalid response from AI service');
+    // STEP 2: Generate image with the new hairstyle
+    // Create a detailed prompt combining the analysis and user's request
+    $generationPrompt = "Professional salon photograph of a person with the following features: {$faceAnalysis}
+
+Transform their hairstyle to: {$stylePrompt}
+
+Style: Professional photography, salon quality, natural lighting, high detail, photorealistic, front-facing portrait.";
+
+    // Use an image generation model
+    $imageGenRequest = [
+        'model' => $aiModel, // Use the model from .env
+        'prompt' => $generationPrompt,
+        'n' => 1,
+        'size' => '1024x1024',
+        'response_format' => 'url' // or 'b64_json' for base64
+    ];
+
+    // For models that support img2img, include the reference image
+    if (strpos($aiModel, 'flux') !== false || strpos($aiModel, 'stable-diffusion') !== false) {
+        $imageGenRequest['image'] = $imageData;
+        $imageGenRequest['strength'] = 0.75; // How much to transform (0.0 to 1.0)
     }
 
-    $aiRecommendation = $apiResponse['choices'][0]['message']['content'];
+    $ch = curl_init('https://openrouter.ai/api/v1/images/generations');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 60, // Image generation can take time
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $openrouterApiKey,
+            'Content-Type: application/json',
+            'HTTP-Referer: https://clouedo.com',
+            'X-Title: SalonLyft AI Consultation'
+        ],
+        CURLOPT_POSTFIELDS => json_encode($imageGenRequest)
+    ]);
 
-    // Store consultation in database (optional)
-    try {
-        $stmt = $pdo->prepare("
-            INSERT INTO ai_consultations
-            (user_id, style_prompt, ai_response, model_used, processing_time_ms, created_at)
-            VALUES (?, ?, ?, ?, ?, NOW())
-        ");
-        $stmt->execute([
-            $userId,
-            $stylePrompt,
-            $aiRecommendation,
-            $aiModel,
-            $processingTime
+    $imageResponse = curl_exec($ch);
+    $imageHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $endTime = microtime(true);
+    $processingTime = round(($endTime - $startTime) * 1000);
+
+    if ($imageHttpCode !== 200) {
+        // If image generation fails, return text analysis only
+        echo json_encode([
+            'success' => true,
+            'ai_response' => "Face Analysis: {$faceAnalysis}\n\nRecommendation: {$stylePrompt} would be a great choice based on your features!",
+            'model_used' => $aiModel,
+            'processing_time_ms' => $processingTime,
+            'note' => 'Image generation unavailable - showing text analysis only'
         ]);
-    } catch (PDOException $e) {
-        // Log but don't fail if database insert fails
-        error_log('Failed to store AI consultation: ' . $e->getMessage());
+        exit();
     }
 
-    // Return success response
+    $imageResult = json_decode($imageResponse, true);
+    $generatedImageUrl = $imageResult['data'][0]['url'] ?? null;
+    $generatedImageBase64 = $imageResult['data'][0]['b64_json'] ?? null;
+
+    // Prepare the image for frontend
+    $generatedImage = null;
+    if ($generatedImageBase64) {
+        $generatedImage = 'data:image/png;base64,' . $generatedImageBase64;
+    } elseif ($generatedImageUrl) {
+        // Download the image and convert to base64 for consistent delivery
+        $imageContent = file_get_contents($generatedImageUrl);
+        if ($imageContent) {
+            $generatedImage = 'data:image/png;base64,' . base64_encode($imageContent);
+        }
+    }
+
+    // Store in database (optional)
+    // try {
+    //     $stmt = $pdo->prepare("
+    //         INSERT INTO ai_consultations
+    //         (user_id, style_prompt, ai_response, generated_image, model_used, processing_time_ms, created_at)
+    //         VALUES (?, ?, ?, ?, ?, ?, NOW())
+    //     ");
+    //     $stmt->execute([$userId, $stylePrompt, $faceAnalysis, $generatedImage, $aiModel, $processingTime]);
+    // } catch (PDOException $e) {
+    //     error_log('Failed to store AI consultation: ' . $e->getMessage());
+    // }
+
     echo json_encode([
         'success' => true,
-        'ai_response' => $aiRecommendation,
+        'generated_image' => $generatedImage,
+        'ai_response' => $faceAnalysis,
         'model_used' => $aiModel,
         'processing_time_ms' => $processingTime
     ]);

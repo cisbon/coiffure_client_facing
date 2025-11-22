@@ -187,9 +187,9 @@
     "submit_button": "Generate AI Hairstyle Preview",
     "loading_title": "Generating your hairstyle preview...",
     "loading_hint": "This may take 10-30 seconds",
-    "results_title": "AI Response",
-    "results_recommendation": "AI Stylist Recommendation:",
-    "results_note": "Note: This AI provides professional hairstyle analysis and recommendations. For visual generation, consider upgrading to image generation models.",
+    "results_title": "AI Generated Result",
+    "generated_preview": "Your new hairstyle preview",
+    "results_recommendation": "AI Stylist Analysis:",
     "error_no_image": "Please upload an image first",
     "error_no_prompt": "Please describe the hairstyle you want"
   },
