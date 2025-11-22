@@ -200,8 +200,10 @@ $prompt = "Transform this person's hairstyle to: {$stylePrompt}. Generate a prof
 error_log("AI Prompt: " . $prompt);
 
 // Gemini image models use chat/completions endpoint with messages format
+// CRITICAL: Must include modalities parameter for image generation
 $apiPayload = [
     'model' => $aiModel,
+    'modalities' => ['text', 'image'],  // Required for image generation
     'messages' => [
         [
             'role' => 'user',
@@ -219,7 +221,10 @@ $apiPayload = [
             ]
         ]
     ],
-    'max_tokens' => 4096
+    'max_tokens' => 4096,
+    'image_config' => [
+        'aspect_ratio' => '1:1'  // 1024x1024, can be changed to other ratios
+    ]
 ];
 
 error_log("API Request: Image Generation via Chat Completions");
@@ -288,54 +293,60 @@ if ($httpCode !== 200) {
 }
 
 // Extract generated image from chat response
+// According to OpenRouter docs, images are in message.images array
 $generatedImageBase64 = null;
 $tokensUsed = 0;
 $textResponse = '';
 
-// Chat completions return content in choices[0].message.content
-if (isset($apiResponse['choices'][0]['message']['content'])) {
-    $content = $apiResponse['choices'][0]['message']['content'];
-    error_log("Response content type: " . gettype($content));
+error_log("=== PARSING API RESPONSE ===");
+error_log("Response structure: " . json_encode(array_keys($apiResponse)));
 
-    // Content can be a string or an array of content parts
-    if (is_array($content)) {
-        error_log("Response has " . count($content) . " content parts");
+if (isset($apiResponse['choices'][0]['message'])) {
+    $message = $apiResponse['choices'][0]['message'];
+    error_log("Message keys: " . json_encode(array_keys($message)));
 
-        // Loop through content parts looking for images
-        foreach ($content as $part) {
-            if (isset($part['type']) && $part['type'] === 'image_url') {
-                if (isset($part['image_url']['url'])) {
-                    $imageUrl = $part['image_url']['url'];
-                    error_log("Found image URL in content parts: " . substr($imageUrl, 0, 100) . "...");
+    // Get text content if present
+    if (isset($message['content'])) {
+        $textResponse = is_string($message['content']) ? $message['content'] : json_encode($message['content']);
+        error_log("Text content: " . substr($textResponse, 0, 200) . "...");
+    }
 
-                    // Check if it's a data URI or external URL
-                    if (strpos($imageUrl, 'data:image/') === 0) {
-                        $generatedImageBase64 = $imageUrl;
-                        error_log("Image is data URI, length: " . strlen($imageUrl));
+    // Check for images array (OpenRouter image generation format)
+    if (isset($message['images']) && is_array($message['images'])) {
+        error_log("Found images array with " . count($message['images']) . " images");
+
+        foreach ($message['images'] as $index => $image) {
+            error_log("Image $index structure: " . json_encode(array_keys($image)));
+
+            // Images are in format: { "type": "image_url", "image_url": { "url": "data:image/png;base64,..." } }
+            if (isset($image['image_url']['url'])) {
+                $imageUrl = $image['image_url']['url'];
+                error_log("Found image URL: " . substr($imageUrl, 0, 100) . "...");
+
+                // Check if it's a data URI (base64)
+                if (strpos($imageUrl, 'data:image/') === 0) {
+                    $generatedImageBase64 = $imageUrl;
+                    error_log("SUCCESS! Got base64 image, length: " . strlen($imageUrl));
+                    break; // Use first image
+                } else {
+                    // External URL - download it
+                    error_log("Downloading external image URL...");
+                    $imageContent = @file_get_contents($imageUrl);
+                    if ($imageContent !== false) {
+                        $generatedImageBase64 = 'data:image/png;base64,' . base64_encode($imageContent);
+                        error_log("SUCCESS! Downloaded image (" . strlen($imageContent) . " bytes)");
+                        break;
                     } else {
-                        // Download external URL
-                        $imageContent = @file_get_contents($imageUrl);
-                        if ($imageContent !== false) {
-                            $generatedImageBase64 = 'data:image/png;base64,' . base64_encode($imageContent);
-                            error_log("Downloaded and encoded image (" . strlen($imageContent) . " bytes)");
-                        } else {
-                            error_log("ERROR: Failed to download image from URL");
-                        }
+                        error_log("ERROR: Failed to download external image");
                     }
-                    break;
                 }
-            } elseif (isset($part['type']) && $part['type'] === 'text') {
-                $textResponse .= $part['text'] . "\n";
             }
         }
     } else {
-        // Content is a string - this is the text response, not an image
-        $textResponse = $content;
-        error_log("Response is text only: " . substr($textResponse, 0, 200) . "...");
+        error_log("WARNING: No images array in message!");
     }
 } else {
-    error_log("ERROR: No choices[0].message.content in response!");
-    error_log("Response keys: " . json_encode(array_keys($apiResponse)));
+    error_log("ERROR: No choices[0].message in response!");
 }
 
 if (isset($apiResponse['usage']['total_tokens'])) {
