@@ -168,14 +168,19 @@ const i18n = {
             const key = element.getAttribute('data-i18n');
             const translation = this.t(key);
 
-            // Check if we should translate placeholder, value, or textContent
-            if (element.hasAttribute('data-i18n-placeholder')) {
-                element.placeholder = translation;
-            } else if (element.tagName === 'INPUT' && element.type === 'button') {
+            // Update text content
+            if (element.tagName === 'INPUT' && element.type === 'button') {
                 element.value = translation;
             } else {
                 element.textContent = translation;
             }
+        });
+
+        // Translate placeholder attributes separately
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+            const key = element.getAttribute('data-i18n-placeholder');
+            const translation = this.t(key);
+            element.placeholder = translation;
         });
 
         // Translate elements with data-i18n-html attribute (for HTML content)

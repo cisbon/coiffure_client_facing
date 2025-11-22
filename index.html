@@ -103,6 +103,21 @@
             border-color: #8b5cf6;
             background-color: #f3e8ff;
         }
+
+        /* Language switcher */
+        .lang-active {
+            background-color: #8b5cf6;
+            color: white;
+        }
+
+        .lang-inactive {
+            color: #6b7280;
+        }
+
+        .lang-inactive:hover {
+            color: #374151;
+            background-color: #e5e7eb;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
@@ -110,10 +125,24 @@
     <!-- Header -->
     <header class="bg-white shadow-md">
         <div class="container mx-auto px-4 py-6">
-            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600" data-i18n="app.title">
-                SalonLyft
-            </h1>
-            <p class="text-gray-600 mt-1" data-i18n="app.subtitle">Complete Salon Customer Experience Suite</p>
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600" data-i18n="app.title">
+                        SalonLyft
+                    </h1>
+                    <p class="text-gray-600 mt-1" data-i18n="app.subtitle">Complete Salon Customer Experience Suite</p>
+                </div>
+
+                <!-- Language Switcher -->
+                <div class="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                    <button onclick="switchLanguage('de')" id="lang-de" class="px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                        DE
+                    </button>
+                    <button onclick="switchLanguage('en')" id="lang-en" class="px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                        EN
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -129,7 +158,7 @@
                 <button onclick="switchTab('social')" id="tab-social" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100" data-i18n="tabs.social">
                     Social
                 </button>
-                <button onclick="switchTab('ai-consultation')" id="tab-ai-consultation" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100">
+                <button onclick="switchTab('ai-consultation')" id="tab-ai-consultation" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-100" data-i18n="tabs.ai_consultation">
                     AI Hairstyle Consultation
                 </button>
             </div>
@@ -275,12 +304,12 @@
             <!-- ==================== AI CONSULTATION TAB ==================== -->
             <div id="ai-consultation-content" class="tab-content hidden">
                 <div class="bg-white rounded-lg shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">AI Virtual Hairstyle Consultation</h2>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6" data-i18n="ai_consultation.title">AI Virtual Hairstyle Consultation</h2>
 
                     <div class="space-y-6">
                         <!-- Upload Section -->
                         <div>
-                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Upload Your Photo</h3>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4" data-i18n="ai_consultation.upload_section">Upload Your Photo</h3>
 
                             <!-- Drop Zone -->
                             <div id="drop-zone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
@@ -289,15 +318,15 @@
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                                 <p class="mt-2 text-sm text-gray-600">
-                                    <span class="font-semibold">Click to upload</span> or drag and drop
+                                    <span class="font-semibold" data-i18n="ai_consultation.upload_prompt">Click to upload</span> <span data-i18n="ai_consultation.upload_drag">or drag and drop</span>
                                 </p>
-                                <p class="text-xs text-gray-500">PNG, JPG, WEBP up to 5MB</p>
+                                <p class="text-xs text-gray-500" data-i18n="ai_consultation.upload_hint">PNG, JPG, WEBP up to 5MB</p>
                             </div>
 
                             <!-- Image Preview -->
                             <div id="image-preview-container" class="hidden mt-4">
                                 <img id="image-preview" class="image-preview mx-auto rounded-lg shadow-md" alt="Preview">
-                                <button onclick="clearImage()" class="mt-2 px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
+                                <button onclick="clearImage()" class="mt-2 px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" data-i18n="ai_consultation.remove_image">
                                     Remove Image
                                 </button>
                             </div>
@@ -306,19 +335,19 @@
                         <!-- Style Prompt -->
                         <div>
                             <label for="style_prompt" class="block text-sm font-medium text-gray-700 mb-1">
-                                Describe the Hairstyle <span class="text-red-500">*</span>
+                                <span data-i18n="ai_consultation.style_prompt_label">Describe the Hairstyle</span> <span class="text-red-500">*</span>
                             </label>
                             <textarea id="style_prompt" name="style_prompt" rows="4" required
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="Examples:&#10;- Long wavy hair with highlights&#10;- Short pixie cut&#10;- Bob with bangs&#10;- Celebrity hairstyle like Jennifer Aniston"></textarea>
-                            <p class="text-xs text-gray-500 mt-1">
+                                data-i18n-placeholder="ai_consultation.style_prompt_placeholder"></textarea>
+                            <p class="text-xs text-gray-500 mt-1" data-i18n="ai_consultation.style_prompt_hint">
                                 Be specific about length, style, color, and any celebrity inspirations
                             </p>
                         </div>
 
                         <!-- Submit Button -->
                         <button onclick="submitAIConsultation()" id="ai-submit-btn"
-                            class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="ai_consultation.submit_button">
                             Generate AI Hairstyle Preview
                         </button>
 
@@ -328,17 +357,17 @@
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <p class="mt-4 text-gray-600 font-semibold">Generating your hairstyle preview...</p>
-                            <p class="text-sm text-gray-500">This may take 10-30 seconds</p>
+                            <p class="mt-4 text-gray-600 font-semibold" data-i18n="ai_consultation.loading_title">Generating your hairstyle preview...</p>
+                            <p class="text-sm text-gray-500" data-i18n="ai_consultation.loading_hint">This may take 10-30 seconds</p>
                         </div>
 
                         <!-- Results -->
                         <div id="ai-results" class="hidden space-y-4">
-                            <h3 class="text-lg font-semibold text-gray-700">AI Response</h3>
+                            <h3 class="text-lg font-semibold text-gray-700" data-i18n="ai_consultation.results_title">AI Response</h3>
                             <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
                                 <div id="ai-response-text" class="text-sm text-gray-700"></div>
                             </div>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-500" data-i18n="ai_consultation.results_note">
                                 Note: This AI provides professional hairstyle analysis and recommendations. For visual generation,
                                 consider upgrading to image generation models.
                             </p>
@@ -388,6 +417,28 @@
         let sessionToken = localStorage.getItem('session_token');
         let currentUser = JSON.parse(localStorage.getItem('user_data'));
         let userSalonId = null;
+
+        // ==================== LANGUAGE SWITCHING ====================
+        async function switchLanguage(lang) {
+            if (typeof i18n !== 'undefined') {
+                await i18n.setLanguage(lang);
+                updateLanguageButtons();
+            }
+        }
+
+        function updateLanguageButtons() {
+            const currentLang = i18n.getCurrentLanguage();
+            document.querySelectorAll('[id^="lang-"]').forEach(btn => {
+                const btnLang = btn.id.replace('lang-', '');
+                if (btnLang === currentLang) {
+                    btn.classList.add('lang-active');
+                    btn.classList.remove('lang-inactive');
+                } else {
+                    btn.classList.remove('lang-active');
+                    btn.classList.add('lang-inactive');
+                }
+            });
+        }
 
         // ==================== AUTHENTICATION ====================
         async function checkAuthentication() {
@@ -731,12 +782,14 @@
 
             // Validate inputs
             if (!uploadedImage) {
-                showMessage(messageDiv, 'Please upload an image first', 'error');
+                const errorMsg = i18n ? i18n.t('ai_consultation.error_no_image') : 'Please upload an image first';
+                showMessage(messageDiv, errorMsg, 'error');
                 return;
             }
 
             if (!stylePrompt.trim()) {
-                showMessage(messageDiv, 'Please describe the hairstyle you want', 'error');
+                const errorMsg = i18n ? i18n.t('ai_consultation.error_no_prompt') : 'Please describe the hairstyle you want';
+                showMessage(messageDiv, errorMsg, 'error');
                 return;
             }
 
@@ -767,8 +820,9 @@
 
                 if (result.success) {
                     // Show results
+                    const recommendationLabel = i18n ? i18n.t('ai_consultation.results_recommendation') : 'AI Stylist Recommendation:';
                     document.getElementById('ai-response-text').innerHTML = `
-                        <p class="font-semibold mb-2">AI Stylist Recommendation:</p>
+                        <p class="font-semibold mb-2">${recommendationLabel}</p>
                         <p>${result.ai_response || 'Analysis completed successfully.'}</p>
                         <p class="mt-4 text-xs text-gray-600">
                             Processing time: ${result.processing_time_ms}ms |
@@ -810,6 +864,22 @@
             // Check authentication first
             const isAuthenticated = await checkAuthentication();
             if (isAuthenticated) {
+                // Initialize i18n with user's preferred language (from salon default language)
+                if (typeof i18n !== 'undefined') {
+                    // Wait for salon language to be determined
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                    // Check if user has a preferred language override
+                    const userLang = currentUser?.preferred_language;
+                    if (userLang && (userLang === 'de' || userLang === 'en')) {
+                        await i18n.loadLanguage(userLang);
+                    }
+                    // Otherwise, getUserSalonAssignments() already set the language from salon default
+
+                    i18n.applyTranslations();
+                    updateLanguageButtons();
+                }
+
                 loadSocialLinks();
             }
         });

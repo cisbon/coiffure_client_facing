@@ -6,7 +6,8 @@
   "tabs": {
     "onboarding": "Customer Form",
     "qr_generator": "QR Generator",
-    "social": "Social"
+    "social": "Social",
+    "ai_consultation": "AI Hairstyle Consultation"
   },
   "onboarding": {
     "title": "Customer Registration",
@@ -165,5 +166,29 @@
     "copyright": "© 2025 SalonLyft. All rights reserved.",
     "gdpr_compliant": "GDPR Compliant",
     "secure": "Secure & Private"
+  },
+  "ai_consultation": {
+    "title": "AI Virtual Hairstyle Consultation",
+    "upload_section": "Upload Your Photo",
+    "upload_prompt": "Click to upload",
+    "upload_drag": "or drag and drop",
+    "upload_hint": "PNG, JPG, WEBP up to 5MB",
+    "remove_image": "Remove Image",
+    "style_prompt_label": "Describe the Hairstyle",
+    "style_prompt_placeholder": "Examples:\n- Long wavy hair with highlights\n- Short pixie cut\n- Bob with bangs\n- Celebrity hairstyle like Jennifer Aniston",
+    "style_prompt_hint": "Be specific about length, style, color, and any celebrity inspirations",
+    "submit_button": "Generate AI Hairstyle Preview",
+    "loading_title": "Generating your hairstyle preview...",
+    "loading_hint": "This may take 10-30 seconds",
+    "results_title": "AI Response",
+    "results_recommendation": "AI Stylist Recommendation:",
+    "results_note": "Note: This AI provides professional hairstyle analysis and recommendations. For visual generation, consider upgrading to image generation models.",
+    "error_no_image": "Please upload an image first",
+    "error_no_prompt": "Please describe the hairstyle you want"
+  },
+  "language_switcher": {
+    "title": "Language",
+    "german": "Deutsch",
+    "english": "English"
   }
 }
