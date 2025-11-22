@@ -859,20 +859,39 @@
         }
 
         async function getUserSalonAssignments() {
+            console.log('════════════════════════════════════════════════════');
+            console.log('🔍 FETCHING SALON ASSIGNMENTS');
+            console.log('════════════════════════════════════════════════════');
+            console.log('Current user:', currentUser);
+            console.log('Session token exists:', !!sessionToken);
+
             try {
                 // For customer_facing_tablet_user, get their assigned salon(s) from user_salons junction table
-                const response = await fetch(`${API_BASE_URL}/salon-management.php`, {
+                const url = `${API_BASE_URL}/salon-management.php`;
+                console.log('Fetching from URL:', url);
+
+                const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${sessionToken}`
                     }
                 });
 
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
                 const data = await response.json();
+                console.log('Salon assignments response data:', data);
 
                 if (data.success && data.salons && data.salons.length > 0) {
                     // Use the first assigned salon
                     const salon = data.salons[0];
                     userSalonId = salon.salon_id;
+
+                    console.log('✅ User assigned to salon:');
+                    console.log('  - Salon ID:', userSalonId);
+                    console.log('  - Salon Name:', salon.salon_name);
+                    console.log('  - Default Language:', salon.default_language);
+                    console.log('  - Full salon data:', salon);
 
                     // Load salon's default language for customer-facing UI
                     const salonLanguage = salon.default_language || 'de';
@@ -884,78 +903,144 @@
                     }
 
                     // Load and apply salon branding
+                    console.log('>>> About to load branding for salon ID:', userSalonId);
                     await loadSalonBranding();
                 } else {
                     // Fallback to default salon ID 1
+                    console.warn('⚠️ WARNING: No salon assignments found!');
+                    console.warn('Data received:', data);
+                    console.warn('Falling back to salon ID 1');
                     userSalonId = 1;
                     await loadSalonBranding();
                 }
             } catch (error) {
-                console.error('Error fetching salon assignments:', error);
+                console.error('❌ ERROR fetching salon assignments:', error);
+                console.error('Error details:', error.message);
+                console.error('Error stack:', error.stack);
                 // Fallback to default salon ID 1
+                console.warn('⚠️ Using fallback salon ID 1 due to error');
                 userSalonId = 1;
                 await loadSalonBranding();
             }
         }
 
         async function loadSalonBranding() {
+            console.log('════════════════════════════════════════════════════');
+            console.log('🎨 LOADING SALON BRANDING');
+            console.log('════════════════════════════════════════════════════');
+            console.log('Salon ID to load branding for:', userSalonId);
+
             if (!userSalonId) {
-                console.warn('No salon ID available for branding');
+                console.error('❌ No salon ID available for branding');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/salon-branding.php?salon_id=${userSalonId}`, {
+                const url = `${API_BASE_URL}/salon-branding.php?salon_id=${userSalonId}`;
+                console.log('Fetching branding from URL:', url);
+                console.log('Session token exists:', !!sessionToken);
+
+                const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${sessionToken}`
                     }
                 });
 
+                console.log('Branding response status:', response.status);
+                console.log('Branding response ok:', response.ok);
+
                 const data = await response.json();
+                console.log('Branding response data:', data);
 
                 if (data.success && data.branding) {
+                    console.log('✅ Branding loaded successfully!');
+                    console.log('Branding details:');
+                    console.log('  - Salon Name:', data.branding.salon_name);
+                    console.log('  - Logo Path:', data.branding.logo_path);
+                    console.log('  - Logo URL:', data.branding.logo_url);
+                    console.log('  - Primary Color:', data.branding.primary_color);
+                    console.log('  - Secondary Color:', data.branding.secondary_color);
+                    console.log('  - Background Color:', data.branding.background_color);
+                    console.log('  - Button Color:', data.branding.button_color);
+                    console.log('  - Text Color:', data.branding.text_color);
+                    console.log('Full branding object:', data.branding);
+
+                    console.log('>>> Now applying salon branding...');
                     applySalonBranding(data.branding);
                 } else {
-                    console.warn('Failed to load salon branding, using defaults');
+                    console.warn('⚠️ Failed to load salon branding, using defaults');
+                    console.warn('Response data:', data);
                 }
             } catch (error) {
-                console.error('Error loading salon branding:', error);
+                console.error('❌ ERROR loading salon branding:', error);
+                console.error('Error details:', error.message);
+                console.error('Error stack:', error.stack);
                 // Continue with default branding
             }
         }
 
         function applySalonBranding(branding) {
+            console.log('════════════════════════════════════════════════════');
+            console.log('✨ APPLYING SALON BRANDING');
+            console.log('════════════════════════════════════════════════════');
+
             // Apply CSS variables for colors
             const root = document.documentElement;
 
+            console.log('Step 1: Setting CSS variables...');
             if (branding.primary_color) {
+                console.log('  ✓ Primary color:', branding.primary_color);
                 root.style.setProperty('--color-primary', branding.primary_color);
-            }
-            if (branding.secondary_color) {
-                root.style.setProperty('--color-secondary', branding.secondary_color);
-            }
-            if (branding.background_color) {
-                root.style.setProperty('--color-background', branding.background_color);
-                document.body.style.setProperty('background-color', branding.background_color, 'important');
-            }
-            if (branding.button_color) {
-                root.style.setProperty('--color-button', branding.button_color);
-            }
-            if (branding.text_color) {
-                root.style.setProperty('--color-text', branding.text_color);
+            } else {
+                console.log('  ⚠ No primary color provided');
             }
 
+            if (branding.secondary_color) {
+                console.log('  ✓ Secondary color:', branding.secondary_color);
+                root.style.setProperty('--color-secondary', branding.secondary_color);
+            } else {
+                console.log('  ⚠ No secondary color provided');
+            }
+
+            if (branding.background_color) {
+                console.log('  ✓ Background color:', branding.background_color);
+                root.style.setProperty('--color-background', branding.background_color);
+                document.body.style.setProperty('background-color', branding.background_color, 'important');
+            } else {
+                console.log('  ⚠ No background color provided');
+            }
+
+            if (branding.button_color) {
+                console.log('  ✓ Button color:', branding.button_color);
+                root.style.setProperty('--color-button', branding.button_color);
+            } else {
+                console.log('  ⚠ No button color provided');
+            }
+
+            if (branding.text_color) {
+                console.log('  ✓ Text color:', branding.text_color);
+                root.style.setProperty('--color-text', branding.text_color);
+            } else {
+                console.log('  ⚠ No text color provided');
+            }
+
+            console.log('Step 2: Injecting dynamic CSS styles...');
             // Inject dynamic CSS to override Tailwind classes
             let styleEl = document.getElementById('salon-branding-styles');
             if (!styleEl) {
+                console.log('  Creating new <style> element for branding');
                 styleEl = document.createElement('style');
                 styleEl.id = 'salon-branding-styles';
                 document.head.appendChild(styleEl);
+            } else {
+                console.log('  Updating existing <style> element');
             }
 
             const hoverColor = adjustBrightness(branding.button_color || '#9333EA', -20);
+            console.log('  Button color:', branding.button_color || '#9333EA');
+            console.log('  Hover color (calculated):', hoverColor);
 
-            styleEl.textContent = `
+            const cssContent = `
                 /* Override Tailwind purple button classes with salon branding */
                 .bg-purple-600,
                 .bg-purple-700,
@@ -988,16 +1073,51 @@
                 }
             `;
 
-            // Apply logo if available
+            styleEl.textContent = cssContent;
+            console.log('  ✓ CSS injected into page');
+            console.log('  CSS content preview:', cssContent.substring(0, 200) + '...');
+
+            console.log('Step 3: Applying logo...');
+            // Apply logo if available - ensure correct URL prefix
             if (branding.logo_url) {
+                // Add correct base URL if not already present
+                let fullLogoUrl = branding.logo_url;
+                if (!fullLogoUrl.startsWith('http')) {
+                    fullLogoUrl = 'https://clouedo.com/coiffure/' + branding.logo_url;
+                }
+
+                console.log('  Logo URL from API:', branding.logo_url);
+                console.log('  Full logo URL:', fullLogoUrl);
+
                 const logoElements = document.querySelectorAll('.salon-logo');
-                logoElements.forEach(logoEl => {
-                    logoEl.src = branding.logo_url;
+                console.log('  Found', logoElements.length, 'logo elements');
+
+                logoElements.forEach((logoEl, index) => {
+                    console.log(`  Setting logo ${index + 1} src to:`, fullLogoUrl);
+                    logoEl.src = fullLogoUrl;
                     logoEl.classList.remove('hidden');
+                    console.log(`  Logo ${index + 1} visibility set to visible`);
                 });
+            } else {
+                console.log('  ⚠ No logo URL provided in branding data');
             }
 
-            console.log('Salon branding applied:', branding);
+            console.log('════════════════════════════════════════════════════');
+            console.log('✅ BRANDING APPLICATION COMPLETE');
+            console.log('════════════════════════════════════════════════════');
+
+            // Verify CSS was applied
+            console.log('Verification:');
+            console.log('  --color-button value:', getComputedStyle(document.documentElement).getPropertyValue('--color-button'));
+            console.log('  Body background color:', getComputedStyle(document.body).backgroundColor);
+
+            // Check if any purple buttons exist on the page
+            const purpleButtons = document.querySelectorAll('.bg-purple-600, .bg-purple-700');
+            console.log('  Found', purpleButtons.length, 'purple buttons on page');
+            if (purpleButtons.length > 0) {
+                const firstButton = purpleButtons[0];
+                console.log('  First button computed background:', getComputedStyle(firstButton).backgroundColor);
+            }
         }
 
         // Helper function to adjust color brightness
