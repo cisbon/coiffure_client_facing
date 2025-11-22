@@ -122,17 +122,28 @@ function setCorsHeaders($origin = null) {
         $origin = $_SERVER['HTTP_ORIGIN'];
     }
 
+    // Debug logging
+    error_log("CORS Debug - Origin: " . ($origin ?? 'NULL'));
+    error_log("CORS Debug - Allowed Origins: " . $allowedOrigins);
+    error_log("CORS Debug - Request Method: " . $_SERVER['REQUEST_METHOD']);
+
     // Check if origin is allowed
     // NOTE: Cannot use '*' with Access-Control-Allow-Credentials: true
     // So when ALLOWED_ORIGINS is '*', we echo back the requesting origin
     if ($allowedOrigins === '*') {
         if ($origin) {
             header("Access-Control-Allow-Origin: $origin");
+            error_log("CORS Debug - Set header: Access-Control-Allow-Origin: $origin");
+        } else {
+            error_log("CORS Debug - WARNING: No origin provided, cannot set CORS header!");
         }
     } else {
         $allowed = array_map('trim', explode(',', $allowedOrigins));
         if (in_array($origin, $allowed)) {
             header("Access-Control-Allow-Origin: $origin");
+            error_log("CORS Debug - Set header: Access-Control-Allow-Origin: $origin");
+        } else {
+            error_log("CORS Debug - WARNING: Origin not in allowed list!");
         }
     }
 
