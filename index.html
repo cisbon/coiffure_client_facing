@@ -151,11 +151,24 @@
 
                 <!-- Language Switcher -->
                 <div class="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                    <button onclick="switchLanguage('de')" id="lang-de" class="px-3 py-2 rounded-md text-2xl transition-colors" title="Deutsch">
-                        🇩🇪
+                    <button onclick="switchLanguage('de')" id="lang-de" class="px-3 py-2 rounded-md transition-colors flex items-center" title="Deutsch">
+                        <!-- German Flag SVG -->
+                        <svg width="24" height="18" viewBox="0 0 5 3" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="5" height="3" fill="#000"/>
+                            <rect width="5" height="2" y="1" fill="#D00"/>
+                            <rect width="5" height="1" y="2" fill="#FFCE00"/>
+                        </svg>
                     </button>
-                    <button onclick="switchLanguage('en')" id="lang-en" class="px-3 py-2 rounded-md text-2xl transition-colors" title="English">
-                        🇬🇧
+                    <button onclick="switchLanguage('en')" id="lang-en" class="px-3 py-2 rounded-md transition-colors flex items-center" title="English">
+                        <!-- UK Flag SVG -->
+                        <svg width="24" height="18" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg">
+                            <clipPath id="t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
+                            <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
+                            <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
+                            <path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#t)" stroke="#C8102E" stroke-width="4"/>
+                            <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
+                            <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -1096,6 +1109,23 @@
                 body {
                     background-color: ${branding.background_color || '#FFFFFF'} !important;
                 }
+
+                /* Language switcher buttons */
+                #lang-de,
+                #lang-en {
+                    background-color: transparent;
+                }
+
+                #lang-de:hover,
+                #lang-en:hover {
+                    background-color: ${branding.button_color || '#9333EA'} !important;
+                }
+
+                /* Active language button */
+                #lang-de.bg-purple-600,
+                #lang-en.bg-purple-600 {
+                    background-color: ${branding.button_color || '#9333EA'} !important;
+                }
             `;
 
             styleEl.textContent = cssContent;
@@ -1108,14 +1138,10 @@
                 const titleEl = document.getElementById('salon-title');
                 if (titleEl) {
                     titleEl.textContent = branding.salon_name;
-                    // Apply gradient colors from branding
-                    titleEl.style.background = `linear-gradient(to right, ${branding.primary_color || '#9333EA'}, ${branding.secondary_color || '#EC4899'})`;
-                    titleEl.style.webkitBackgroundClip = 'text';
-                    titleEl.style.backgroundClip = 'text';
-                    titleEl.style.webkitTextFillColor = 'transparent';
-                    titleEl.style.color = 'transparent';
+                    // Apply primary color to title
+                    titleEl.style.color = branding.primary_color || '#9333EA';
                     console.log('  ✓ Salon name set to:', branding.salon_name);
-                    console.log('  ✓ Title gradient colors applied');
+                    console.log('  ✓ Title color applied:', branding.primary_color);
                 }
             } else {
                 console.log('  ⚠ No salon name provided in branding data');
