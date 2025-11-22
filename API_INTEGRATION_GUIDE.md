@@ -8,20 +8,23 @@ This document describes how to update the backend API at `https://clouedo.com/co
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 
-# CRITICAL: Use ONLY image generation models (not vision/chat models)
-AI_MODEL=black-forest-labs/flux-1.1-pro
+# CRITICAL: Use ONLY OpenRouter models that support input=image AND output=image
+# These are the ONLY available models on OpenRouter for image-to-image generation:
 
-# Alternative image generation models:
-# black-forest-labs/flux-1-pro (high quality)
-# black-forest-labs/flux-dev (development version)
-# stability-ai/stable-diffusion-xl (budget option)
-# openai/dall-e-3 (high quality, no img2img support)
-# openai/dall-e-2 (lower quality, faster)
+# Recommended (balance of quality and cost):
+AI_MODEL=google/gemini-2.5-flash-image
 
-# ⚠️ DO NOT USE vision/chat models like:
-# ❌ google/gemini-2.5-flash-image (vision model - analyzes images only)
+# Available OpenRouter Image Generation Models:
+# google/gemini-2.5-flash-image (GA version, $0.30/M input, $2.50/M output)
+# google/gemini-2.5-flash-image-preview (Preview version, $0.30/M input, $2.50/M output)
+# google/gemini-3-pro-image-preview (Most advanced, $2/M input, $12/M output)
+# openai/gpt-5-image-mini (Efficient, $2.50/M input, $2/M output)
+# openai/gpt-5-image (Highest quality, $10/M input, $10/M output)
+
+# ⚠️ DO NOT USE models that don't support image generation:
 # ❌ anthropic/claude-3.5-sonnet (chat model - no image generation)
-# ❌ openai/gpt-4-vision-preview (vision model - analyzes images only)
+# ❌ openai/gpt-4-vision-preview (vision model - analyzes images only, no generation)
+# ❌ google/gemini-pro (text only)
 ```
 
 2. Update `ai-consultation.php` to use OpenRouter API with image generation
@@ -283,19 +286,16 @@ Choose based on your budget and quality requirements.
 ## Current Implementation Features
 
 ### Model Validation (api/ai-consultation.php:165-200)
-The backend validates that AI_MODEL is one of these approved image generation models:
-- `black-forest-labs/flux-1.1-pro`
-- `black-forest-labs/flux-1-pro`
-- `black-forest-labs/flux-pro`
-- `black-forest-labs/flux-dev`
-- `stability-ai/stable-diffusion-xl`
-- `stability-ai/sdxl-turbo`
-- `openai/dall-e-3`
-- `openai/dall-e-2`
-- `midjourney/midjourney`
-- `runway/gen-2`
+The backend validates that AI_MODEL is one of these approved OpenRouter image generation models (input=image, output=image):
+- `google/gemini-3-pro-image-preview` (Nano Banana Pro - most advanced)
+- `openai/gpt-5-image-mini` (GPT-5 Image Mini - efficient)
+- `openai/gpt-5-image` (GPT-5 Image - highest quality)
+- `google/gemini-2.5-flash-image` (Nano Banana - GA version)
+- `google/gemini-2.5-flash-image-preview` (Nano Banana - preview)
 
 **If the model is not on this list, the request fails immediately with a 400 error.**
+
+These are the ONLY models available on OpenRouter that support both image input AND image output for img2img transformation.
 
 ### Image Generation Endpoint (api/ai-consultation.php:227)
 Uses OpenRouter's image generation endpoint:
@@ -328,9 +328,9 @@ if (result.generated_image) {
 
 ## Testing the Implementation
 
-1. Update `.env` with a valid image generation model:
+1. Update `.env` with a valid OpenRouter image generation model:
    ```env
-   AI_MODEL=black-forest-labs/flux-1.1-pro
+   AI_MODEL=google/gemini-2.5-flash-image
    ```
 
 2. Upload a photo and enter a hairstyle description (e.g., "like Tom Cruise")
@@ -343,5 +343,12 @@ if (result.generated_image) {
 
 4. If using wrong model type:
    - Request fails immediately with 400 error
-   - Error message lists compatible models
+   - Error message: "Model 'xxx' cannot generate images. Please use an OpenRouter image generation model like: google/gemini-2.5-flash-image, openai/gpt-5-image-mini, or google/gemini-3-pro-image-preview"
    - No API costs incurred
+
+## Cost Comparison
+
+- **google/gemini-2.5-flash-image**: $0.30/M input + $2.50/M output = **Most affordable**
+- **openai/gpt-5-image-mini**: $2.50/M input + $2/M output = **Balanced**
+- **google/gemini-3-pro-image-preview**: $2/M input + $12/M output = **Premium quality**
+- **openai/gpt-5-image**: $10/M input + $10/M output = **Highest quality**

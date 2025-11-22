@@ -162,18 +162,13 @@ error_log("Model: " . $aiModel);
 error_log("Style Prompt: " . $stylePrompt);
 error_log("Image Data Length: " . strlen($imageData));
 
-// Validate that the model is an image generation model
+// Validate that the model is an image generation model (OpenRouter models with input=image, output=image)
 $imageGenerationModels = [
-    'black-forest-labs/flux-1.1-pro',
-    'black-forest-labs/flux-1-pro',
-    'black-forest-labs/flux-pro',
-    'black-forest-labs/flux-dev',
-    'stability-ai/stable-diffusion-xl',
-    'stability-ai/sdxl-turbo',
-    'openai/dall-e-3',
-    'openai/dall-e-2',
-    'midjourney/midjourney',
-    'runway/gen-2'
+    'google/gemini-3-pro-image-preview',     // Nano Banana Pro - most advanced
+    'openai/gpt-5-image-mini',               // GPT-5 Image Mini - efficient
+    'openai/gpt-5-image',                    // GPT-5 Image - highest quality
+    'google/gemini-2.5-flash-image',         // Nano Banana - GA version
+    'google/gemini-2.5-flash-image-preview'  // Nano Banana - preview version
 ];
 
 $isImageGenerationModel = false;
@@ -191,7 +186,7 @@ if (!$isImageGenerationModel) {
     $failStmt = $conn->prepare(
         "UPDATE coiffure_ai_consultations SET status = 'failed', error_message = ?, processing_time_ms = 0 WHERE consultation_id = ?"
     );
-    $errorMsg = "Model '$aiModel' cannot generate images. Please use an image generation model like: black-forest-labs/flux-1.1-pro, openai/dall-e-3, or stability-ai/stable-diffusion-xl";
+    $errorMsg = "Model '$aiModel' cannot generate images. Please use an OpenRouter image generation model like: google/gemini-2.5-flash-image, openai/gpt-5-image-mini, or google/gemini-3-pro-image-preview";
     $failStmt->bind_param("si", $errorMsg, $consultationId);
     $failStmt->execute();
     $failStmt->close();
@@ -212,8 +207,9 @@ $apiPayload = [
     'size' => '1024x1024'
 ];
 
-// For models that support img2img (input image transformation)
-if (stripos($aiModel, 'flux') !== false || stripos($aiModel, 'stable-diffusion') !== false) {
+// For OpenRouter image generation models, include the input image for transformation
+// All these models support img2img (input image + output image)
+if (in_array($aiModel, $imageGenerationModels)) {
     $apiPayload['image'] = $imageData;
     $apiPayload['strength'] = 0.75; // How much to transform (0-1)
     error_log("Using img2img mode with strength 0.75");
