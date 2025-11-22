@@ -895,9 +895,16 @@
         });
 
         async function loadSocialLinks() {
+            console.log('=== loadSocialLinks() called ===');
             const loadingDiv = document.getElementById('social-loading');
             const gridDiv = document.getElementById('social-links-grid');
             const noLinksDiv = document.getElementById('social-no-links');
+
+            console.log('DOM elements found:', {
+                loadingDiv: !!loadingDiv,
+                gridDiv: !!gridDiv,
+                noLinksDiv: !!noLinksDiv
+            });
 
             try {
                 loadingDiv.classList.remove('hidden');
@@ -905,39 +912,77 @@
                 noLinksDiv.classList.add('hidden');
 
                 // Use the user's assigned salon ID directly from currentUser
+                console.log('currentUser object:', currentUser);
                 const salonId = currentUser.assigned_salons && currentUser.assigned_salons.length > 0
                     ? currentUser.assigned_salons[0].salon_id
                     : (currentUser.salon_id || userSalonId);
 
-                const salonParam = salonId ? `salon_id=${salonId}` : '';
-                console.log('Loading social links for salon_id:', salonId);
-                console.log('API URL:', `${API_BASE_URL}/social-links.php?${salonParam}&include_inactive=false`);
+                console.log('Determined salon_id:', salonId);
+                console.log('sessionToken exists:', !!sessionToken);
 
-                const response = await fetch(`${API_BASE_URL}/social-links.php?${salonParam}&include_inactive=false`, {
+                const salonParam = salonId ? `salon_id=${salonId}` : '';
+                const apiUrl = `${API_BASE_URL}/social-links.php?${salonParam}&include_inactive=false`;
+                console.log('Full API URL:', apiUrl);
+
+                console.log('Making fetch request...');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    console.error('Fetch request timed out after 10 seconds!');
+                    controller.abort();
+                }, 10000);
+
+                const response = await fetch(apiUrl, {
                     headers: {
                         'Authorization': `Bearer ${sessionToken}`
-                    }
+                    },
+                    signal: controller.signal
                 });
 
-                console.log('Social links API response status:', response.status);
-                const result = await response.json();
+                clearTimeout(timeoutId);
+                console.log('Fetch completed!');
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
 
-                console.log('Social links API response:', result);
+                const responseText = await response.text();
+                console.log('Raw response text:', responseText);
+
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                    console.log('Parsed JSON result:', result);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', e);
+                    console.error('Response was:', responseText);
+                    throw new Error('Invalid JSON response');
+                }
 
                 if (result.success && result.data && result.data.length > 0) {
-                    console.log('Found', result.data.length, 'social links');
+                    console.log('SUCCESS! Found', result.data.length, 'social links');
+                    console.log('Social links data:', result.data);
                     socialLinksData = result.data;
                     renderSocialLinks(result.data);
                     gridDiv.classList.remove('hidden');
+                    console.log('Grid displayed');
                 } else {
-                    console.log('No social links found or API returned success=false');
+                    console.warn('No social links found or API returned success=false');
+                    console.log('Result details:', {
+                        success: result.success,
+                        hasData: !!result.data,
+                        dataLength: result.data?.length,
+                        error: result.error
+                    });
                     noLinksDiv.classList.remove('hidden');
                 }
             } catch (error) {
-                console.error('Error loading social links:', error);
+                console.error('ERROR in loadSocialLinks:', error);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
                 noLinksDiv.classList.remove('hidden');
             } finally {
+                console.log('Hiding loading spinner');
                 loadingDiv.classList.add('hidden');
+                console.log('=== loadSocialLinks() complete ===');
             }
         }
 
