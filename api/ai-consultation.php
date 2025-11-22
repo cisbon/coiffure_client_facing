@@ -323,10 +323,12 @@ $tokensUsed = 0;
 $textResponse = '';
 
 error_log("=== PARSING API RESPONSE ===");
+error_log("Full API Response: " . $response);
 error_log("Response structure: " . json_encode(array_keys($apiResponse)));
 
 if (isset($apiResponse['choices'][0]['message'])) {
     $message = $apiResponse['choices'][0]['message'];
+    error_log("Full message object: " . json_encode($message));
     error_log("Message keys: " . json_encode(array_keys($message)));
 
     // Get text content if present
