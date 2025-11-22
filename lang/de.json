@@ -83,7 +83,8 @@
     "user_management": "Benutzerverwaltung",
     "salon_management": "Salonverwaltung",
     "social_links": "Social Links",
-    "customer_entries": "Kundeneinträge"
+    "customer_entries": "Kundeneinträge",
+    "salon_profile": "Salon-Profil"
   },
   "user_management": {
     "title": "Benutzerverwaltung",
@@ -118,6 +119,31 @@
     "website": "Website",
     "is_active": "Aktiv",
     "default_language": "Standardsprache (für Tablets)"
+  },
+  "salon_profile": {
+    "title": "Salon-Profil & Branding",
+    "description": "Passen Sie das Branding Ihres Salons für die Kunden-App an",
+    "select_salon": "Salon auswählen",
+    "logo": "Salon-Logo",
+    "upload_logo": "Logo hochladen",
+    "logo_hint": "Empfohlen: Quadratisches Bild, mindestens 200x200px. PNG- oder JPG-Format.",
+    "no_logo": "Kein Logo hochgeladen",
+    "remove_logo": "Logo entfernen",
+    "color_scheme": "Farbschema",
+    "primary_color": "Primärfarbe",
+    "primary_hint": "Hauptmarkenfarbe (Schaltflächen, Hervorhebungen)",
+    "secondary_color": "Sekundärfarbe",
+    "secondary_hint": "Akzentfarbe (Verläufe, Hervorhebungen)",
+    "background_color": "Hintergrundfarbe",
+    "background_hint": "Seitenhintergrundfarbe",
+    "button_color": "Schaltflächenfarbe",
+    "button_hint": "Primäre Schaltflächenfarbe",
+    "text_color": "Textfarbe",
+    "text_hint": "Haupttextfarbe",
+    "reset_colors": "Auf Standardfarben zurücksetzen",
+    "preview": "Vorschau",
+    "preview_text": "Willkommen in unserem Salon!",
+    "preview_button": "Termin buchen"
   },
   "social_links": {
     "title": "Social Links",

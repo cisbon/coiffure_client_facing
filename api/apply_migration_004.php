@@ -18,7 +18,8 @@ $result = $conn->query($checkQuery);
 
 if ($result->num_rows === 0) {
     echo "INFO: Column 'salon_id' already removed. Skipping migration.\n";
-    exit(0);
+    $conn->close();
+    return;
 }
 
 echo "Removing 'salon_id' column from coiffure_users table...\n";

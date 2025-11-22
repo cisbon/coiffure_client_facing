@@ -18,7 +18,8 @@ $result = $conn->query($checkQuery);
 
 if ($result->num_rows > 0) {
     echo "INFO: Column 'preferred_language' already exists. Skipping migration.\n";
-    exit(0);
+    $conn->close();
+    return;
 }
 
 echo "Adding 'preferred_language' column...\n";

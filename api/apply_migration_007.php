@@ -18,7 +18,8 @@ $result = $conn->query($checkQuery);
 
 if ($result->num_rows > 0) {
     echo "INFO: Branding columns already exist. Skipping migration.\n";
-    exit(0);
+    $conn->close();
+    return;
 }
 
 echo "Adding branding columns (logo_path, primary_color, secondary_color, background_color, button_color, text_color)...\n";

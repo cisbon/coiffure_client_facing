@@ -52,14 +52,7 @@ $user = $result->fetch_assoc();
 $userId = $user['user_id'];
 $userRole = $user['role'];
 
-// Only admin users can manage salon branding
-if ($userRole !== 'admin') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Insufficient permissions']);
-    exit();
-}
-
-// Handle GET request - Fetch salon branding
+// Handle GET request - Fetch salon branding (allowed for all authenticated users)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $salonId = $_GET['salon_id'] ?? null;
 
@@ -108,8 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     exit();
 }
 
-// Handle POST request - Update salon branding
+// Handle POST request - Update salon branding (admin only)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Only admin users can update salon branding
+    if ($userRole !== 'admin') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Insufficient permissions. Only admins can update salon branding.']);
+        exit();
+    }
+
     $salonId = $_POST['salon_id'] ?? null;
 
     if (empty($salonId)) {

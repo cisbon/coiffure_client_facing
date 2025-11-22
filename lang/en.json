@@ -83,7 +83,8 @@
     "user_management": "User Management",
     "salon_management": "Salon Management",
     "social_links": "Social Links",
-    "customer_entries": "Customer Entries"
+    "customer_entries": "Customer Entries",
+    "salon_profile": "Salon Profile"
   },
   "user_management": {
     "title": "User Management",
@@ -118,6 +119,31 @@
     "website": "Website",
     "is_active": "Active",
     "default_language": "Default Language (for Tablets)"
+  },
+  "salon_profile": {
+    "title": "Salon Profile & Branding",
+    "description": "Customize your salon's branding for the customer-facing application",
+    "select_salon": "Select Salon",
+    "logo": "Salon Logo",
+    "upload_logo": "Upload Logo",
+    "logo_hint": "Recommended: Square image, at least 200x200px. PNG or JPG format.",
+    "no_logo": "No logo uploaded",
+    "remove_logo": "Remove Logo",
+    "color_scheme": "Color Scheme",
+    "primary_color": "Primary Color",
+    "primary_hint": "Main brand color (buttons, highlights)",
+    "secondary_color": "Secondary Color",
+    "secondary_hint": "Accent color (gradients, highlights)",
+    "background_color": "Background Color",
+    "background_hint": "Page background color",
+    "button_color": "Button Color",
+    "button_hint": "Primary button color",
+    "text_color": "Text Color",
+    "text_hint": "Main text color",
+    "reset_colors": "Reset to Default Colors",
+    "preview": "Preview",
+    "preview_text": "Welcome to our salon!",
+    "preview_button": "Book Appointment"
   },
   "social_links": {
     "title": "Social Links",
