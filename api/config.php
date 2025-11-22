@@ -123,8 +123,12 @@ function setCorsHeaders($origin = null) {
     }
 
     // Check if origin is allowed
+    // NOTE: Cannot use '*' with Access-Control-Allow-Credentials: true
+    // So when ALLOWED_ORIGINS is '*', we echo back the requesting origin
     if ($allowedOrigins === '*') {
-        header('Access-Control-Allow-Origin: *');
+        if ($origin) {
+            header("Access-Control-Allow-Origin: $origin");
+        }
     } else {
         $allowed = array_map('trim', explode(',', $allowedOrigins));
         if (in_array($origin, $allowed)) {
