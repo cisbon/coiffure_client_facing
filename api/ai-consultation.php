@@ -211,6 +211,13 @@ The result should be a professional salon photograph with natural lighting and c
 
 error_log("AI Prompt: " . $prompt);
 
+// Verify uploaded image data
+error_log("=== UPLOADED IMAGE VERIFICATION ===");
+error_log("Image data length: " . strlen($imageData));
+error_log("Image data start: " . substr($imageData, 0, 100));
+$imageDataFormat = preg_match('/^data:image\/([a-z]+);base64,/', $imageData, $matches) ? $matches[1] : 'unknown';
+error_log("Image format detected: " . $imageDataFormat);
+
 // Gemini image models use chat/completions endpoint with messages format
 // CRITICAL: Must include modalities parameter for image generation
 $apiPayload = [
@@ -239,11 +246,14 @@ $apiPayload = [
     ]
 ];
 
-error_log("API Request: Image Generation via Chat Completions");
+error_log("=== API REQUEST PAYLOAD ===");
 error_log("Model: " . $aiModel);
-error_log("Using chat/completions endpoint for Gemini image generation");
-error_log("Image input provided: YES (length: " . strlen($imageData) . ")");
-error_log("Request payload modalities: " . json_encode($apiPayload['modalities']));
+error_log("Modalities: " . json_encode($apiPayload['modalities']));
+error_log("Message content items: " . count($apiPayload['messages'][0]['content']));
+error_log("Content[0] type: " . $apiPayload['messages'][0]['content'][0]['type']);
+error_log("Content[1] type: " . $apiPayload['messages'][0]['content'][1]['type']);
+error_log("Content[1] has image_url: " . (isset($apiPayload['messages'][0]['content'][1]['image_url']['url']) ? 'YES' : 'NO'));
+error_log("Image URL in payload length: " . strlen($apiPayload['messages'][0]['content'][1]['image_url']['url']));
 
 $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
