@@ -195,10 +195,10 @@ if (!$isImageGenerationModel) {
 }
 
 // Create prompt for hairstyle transformation
-// Research shows Gemini needs very specific instructions about preserving the person
-$prompt = "The person in this photo should have their hairstyle changed to: {$stylePrompt}
+// Use simple, positive, action-oriented instructions
+$prompt = "Generate a photo-realistic image of this same person with a new hairstyle: {$stylePrompt}
 
-CRITICAL: Do not change the person. Do not replace the person. This is the SAME person with a different hairstyle. Keep the exact same face, same facial features, same skin tone, same identity. ONLY modify the hair/hairstyle. Everything else must remain identical to the input image.";
+Keep their face, skin tone, and features identical. Only change the hair.";
 
 error_log("AI Prompt: " . $prompt);
 
@@ -211,7 +211,7 @@ error_log("Image format detected: " . $imageDataFormat);
 
 // Gemini image models use chat/completions endpoint with messages format
 // CRITICAL: Must include modalities parameter for image generation
-// CRITICAL: Put image FIRST, then instruction to make it clear we're editing THIS image
+// Send text prompt first, then the image
 $apiPayload = [
     'model' => $aiModel,
     'modalities' => ['text', 'image'],  // Required for image generation/editing
@@ -220,24 +220,20 @@ $apiPayload = [
             'role' => 'user',
             'content' => [
                 [
+                    'type' => 'text',
+                    'text' => $prompt
+                ],
+                [
                     'type' => 'image_url',
                     'image_url' => [
                         'url' => $imageData
                     ]
-                ],
-                [
-                    'type' => 'text',
-                    'text' => $prompt
                 ]
             ]
         ]
     ],
-    'max_tokens' => 1024,  // Lower tokens to discourage text-only responses
-    'temperature' => 0.7,  // Control creativity
-    'image_config' => [
-        'aspect_ratio' => '1:1',
-        'quality' => 'high'
-    ]
+    'max_tokens' => 2048,
+    'temperature' => 0.7
 ];
 
 error_log("=== API REQUEST PAYLOAD ===");
@@ -246,10 +242,10 @@ error_log("Modalities: " . json_encode($apiPayload['modalities']));
 error_log("Message content items: " . count($apiPayload['messages'][0]['content']));
 error_log("Content[0] type: " . $apiPayload['messages'][0]['content'][0]['type']);
 error_log("Content[1] type: " . $apiPayload['messages'][0]['content'][1]['type']);
-// Image is now at [0], text is at [1]
-error_log("Content[0] has image_url: " . (isset($apiPayload['messages'][0]['content'][0]['image_url']['url']) ? 'YES' : 'NO'));
-error_log("Image URL in payload length: " . strlen($apiPayload['messages'][0]['content'][0]['image_url']['url']));
-error_log("Image config: " . json_encode($apiPayload['image_config']));
+// Text is now at [0], image is at [1]
+error_log("Content[1] has image_url: " . (isset($apiPayload['messages'][0]['content'][1]['image_url']['url']) ? 'YES' : 'NO'));
+error_log("Image URL in payload length: " . strlen($apiPayload['messages'][0]['content'][1]['image_url']['url']));
+error_log("Max tokens: " . $apiPayload['max_tokens']);
 
 $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
