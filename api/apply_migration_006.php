@@ -9,7 +9,8 @@ echo "Applying migration 006: Add default_language to salons table\n";
 
 $conn = getDbConnection();
 if (!$conn) {
-    die("ERROR: Database connection failed\n");
+    echo "ERROR: Database connection failed\n";
+    return;
 }
 
 // Check if column already exists
@@ -27,7 +28,9 @@ echo "Adding 'default_language' column...\n";
 // Add the column
 $alterQuery = "ALTER TABLE coiffure_salons ADD COLUMN default_language VARCHAR(5) DEFAULT 'de' AFTER is_active";
 if (!$conn->query($alterQuery)) {
-    die("ERROR: Failed to add column: " . $conn->error . "\n");
+    echo "ERROR: Failed to add column: " . $conn->error . "\n";
+    $conn->close();
+    return;
 }
 
 echo "SUCCESS: Column 'default_language' added.\n";
@@ -36,7 +39,9 @@ echo "SUCCESS: Column 'default_language' added.\n";
 echo "Setting default language to 'de' for existing salons...\n";
 $updateQuery = "UPDATE coiffure_salons SET default_language = 'de' WHERE default_language IS NULL";
 if (!$conn->query($updateQuery)) {
-    die("ERROR: Failed to update existing salons: " . $conn->error . "\n");
+    echo "ERROR: Failed to update existing salons: " . $conn->error . "\n";
+    $conn->close();
+    return;
 }
 
 echo "SUCCESS: Migration 006 applied successfully!\n";

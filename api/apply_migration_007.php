@@ -9,7 +9,8 @@ echo "Applying migration 007: Add branding/white-labeling to salons table\n";
 
 $conn = getDbConnection();
 if (!$conn) {
-    die("ERROR: Database connection failed\n");
+    echo "ERROR: Database connection failed\n";
+    return;
 }
 
 // Check if columns already exist
@@ -34,7 +35,9 @@ $alterQuery = "ALTER TABLE coiffure_salons
     ADD COLUMN text_color VARCHAR(7) DEFAULT '#1F2937' AFTER button_color";
 
 if (!$conn->query($alterQuery)) {
-    die("ERROR: Failed to add branding columns: " . $conn->error . "\n");
+    echo "ERROR: Failed to add branding columns: " . $conn->error . "\n";
+    $conn->close();
+    return;
 }
 
 echo "SUCCESS: Branding columns added.\n";
@@ -50,7 +53,9 @@ $updateQuery = "UPDATE coiffure_salons SET
 WHERE primary_color IS NULL";
 
 if (!$conn->query($updateQuery)) {
-    die("ERROR: Failed to update existing salons: " . $conn->error . "\n");
+    echo "ERROR: Failed to update existing salons: " . $conn->error . "\n";
+    $conn->close();
+    return;
 }
 
 echo "SUCCESS: Migration 007 applied successfully!\n";

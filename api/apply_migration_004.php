@@ -9,7 +9,8 @@ echo "Applying migration 004: Remove salon_id column from users table\n";
 
 $conn = getDbConnection();
 if (!$conn) {
-    die("ERROR: Database connection failed\n");
+    echo "ERROR: Database connection failed\n";
+    return;
 }
 
 // Check if column still exists
@@ -27,7 +28,9 @@ echo "Removing 'salon_id' column from coiffure_users table...\n";
 // Remove the column
 $alterQuery = "ALTER TABLE coiffure_users DROP COLUMN salon_id";
 if (!$conn->query($alterQuery)) {
-    die("ERROR: Failed to remove column: " . $conn->error . "\n");
+    echo "ERROR: Failed to remove column: " . $conn->error . "\n";
+    $conn->close();
+    return;
 }
 
 echo "SUCCESS: Column 'salon_id' removed from coiffure_users table.\n";

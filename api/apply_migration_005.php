@@ -9,7 +9,8 @@ echo "Applying migration 005: Add preferred_language to users table\n";
 
 $conn = getDbConnection();
 if (!$conn) {
-    die("ERROR: Database connection failed\n");
+    echo "ERROR: Database connection failed\n";
+    return;
 }
 
 // Check if column already exists
@@ -27,7 +28,9 @@ echo "Adding 'preferred_language' column...\n";
 // Add the column
 $alterQuery = "ALTER TABLE coiffure_users ADD COLUMN preferred_language VARCHAR(5) DEFAULT 'de' AFTER role";
 if (!$conn->query($alterQuery)) {
-    die("ERROR: Failed to add column: " . $conn->error . "\n");
+    echo "ERROR: Failed to add column: " . $conn->error . "\n";
+    $conn->close();
+    return;
 }
 
 echo "SUCCESS: Column 'preferred_language' added.\n";
@@ -36,7 +39,9 @@ echo "SUCCESS: Column 'preferred_language' added.\n";
 echo "Setting default language to 'de' for existing users...\n";
 $updateQuery = "UPDATE coiffure_users SET preferred_language = 'de' WHERE preferred_language IS NULL";
 if (!$conn->query($updateQuery)) {
-    die("ERROR: Failed to update existing users: " . $conn->error . "\n");
+    echo "ERROR: Failed to update existing users: " . $conn->error . "\n";
+    $conn->close();
+    return;
 }
 
 echo "SUCCESS: Migration 005 applied successfully!\n";
