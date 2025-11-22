@@ -1,6 +1,6 @@
 /**
  * i18n Translation System
- * Simple internationalization for SalonLyft
+ * Simple internationalization for Coiffure AI
  */
 
 const i18n = {

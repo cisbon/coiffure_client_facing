@@ -1,6 +1,6 @@
 <?php
 /**
- * SalonLyft API - Customer Entries
+ * Coiffure AI API - Customer Entries
  * Fetch customer onboarding entries with search/filter capabilities
  */
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * SalonLyft API - Social Links Management
+ * Coiffure AI API - Social Links Management
  * Handles CRUD operations for salon social media and review links
  */
 

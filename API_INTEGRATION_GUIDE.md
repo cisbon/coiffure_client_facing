@@ -121,7 +121,7 @@ Be concise and focus on details needed for hairstyle recommendations.";
             'Authorization: Bearer ' . $openrouterApiKey,
             'Content-Type: application/json',
             'HTTP-Referer: https://clouedo.com',
-            'X-Title: SalonLyft AI Consultation'
+            'X-Title: Coiffure AI AI Consultation'
         ],
         CURLOPT_POSTFIELDS => json_encode($analysisRequest)
     ]);
@@ -169,7 +169,7 @@ Style: Professional photography, salon quality, natural lighting, high detail, p
             'Authorization: Bearer ' . $openrouterApiKey,
             'Content-Type: application/json',
             'HTTP-Referer: https://clouedo.com',
-            'X-Title: SalonLyft AI Consultation'
+            'X-Title: Coiffure AI AI Consultation'
         ],
         CURLOPT_POSTFIELDS => json_encode($imageGenRequest)
     ]);

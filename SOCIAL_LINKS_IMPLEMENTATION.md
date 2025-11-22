@@ -1,7 +1,7 @@
 # Social Links & Customer Management Implementation
 
 ## Overview
-This document describes the implementation of social links management and customer entries viewing features for the SalonLyft application.
+This document describes the implementation of social links management and customer entries viewing features for the Coiffure AI application.
 
 ## Features Implemented
 

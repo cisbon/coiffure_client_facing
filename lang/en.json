@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "SalonLyft",
+    "title": "Coiffure AI",
     "subtitle": "Your Digital Salon Assistant"
   },
   "tabs": {
@@ -165,7 +165,7 @@
     "customer_facing_tablet_user": "Tablet User"
   },
   "footer": {
-    "copyright": "© 2025 SalonLyft. All rights reserved.",
+    "copyright": "© 2025 Coiffure AI. All rights reserved.",
     "gdpr_compliant": "GDPR Compliant",
     "secure": "Secure & Private"
   },

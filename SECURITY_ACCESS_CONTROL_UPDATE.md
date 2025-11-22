@@ -1,7 +1,7 @@
 # Security & Access Control Updates
 
 ## Overview
-This document describes the security improvements, authentication requirements, and data isolation features implemented for the SalonLyft application.
+This document describes the security improvements, authentication requirements, and data isolation features implemented for the Coiffure AI application.
 
 ## Changes Implemented
 

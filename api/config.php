@@ -1,6 +1,6 @@
 <?php
 /**
- * SalonLyft API Configuration
+ * Coiffure AI API Configuration
  * Database connection and utility functions
  */
 

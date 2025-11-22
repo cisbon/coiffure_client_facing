@@ -1,5 +1,5 @@
 -- ============================================================
--- SalonLyft Database Schema
+-- Coiffure AI Database Schema
 -- Database: salonlyft
 -- Description: GDPR-compliant salon management system
 -- ============================================================

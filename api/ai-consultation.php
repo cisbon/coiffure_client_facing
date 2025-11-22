@@ -234,7 +234,7 @@ curl_setopt_array($ch, [
         'Authorization: Bearer ' . OPENROUTER_API_KEY,
         'Content-Type: application/json',
         'HTTP-Referer: https://clouedo.com',
-        'X-Title: SalonLyft Virtual Consultation'
+        'X-Title: Coiffure AI Virtual Consultation'
     ],
     CURLOPT_POSTFIELDS => json_encode($apiPayload),
     CURLOPT_TIMEOUT => 60

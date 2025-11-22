@@ -1,4 +1,4 @@
-# SalonLyft - Web App Suite for Hairdressing Salons
+# Coiffure AI - Web App Suite for Hairdressing Salons
 
 A complete, GDPR-compliant customer experience suite for hairdressing salons, featuring customer onboarding, QR code generation for reviews, and AI-powered virtual hairstyle consultations.
 
@@ -185,7 +185,7 @@ coiffure/
    ```bash
    git init
    git add index.html README.md
-   git commit -m "Initial commit: SalonLyft frontend"
+   git commit -m "Initial commit: Coiffure AI frontend"
    git branch -M main
    git remote add origin https://github.com/yourusername/salonlyft.git
    git push -u origin main
@@ -603,7 +603,7 @@ If you're experiencing 500 errors, the `coiffure_audit_log` table may be missing
 
 ## License
 
-Copyright © 2025 SalonLyft. All rights reserved.
+Copyright © 2025 Coiffure AI. All rights reserved.
 
 ## Support
 
