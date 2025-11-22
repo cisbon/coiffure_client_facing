@@ -51,6 +51,9 @@
                 <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="users" data-i18n="admin_tabs.user_management">
                     Users
                 </button>
+                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="salon-profile" data-i18n="admin_tabs.salon_profile">
+                    Salon Profile
+                </button>
                 <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="profile">
                     My Profile
                 </button>
@@ -208,6 +211,127 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <!-- Salon Profile Tab -->
+        <div id="salon-profile-tab" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6" data-i18n="salon_profile.title">Salon Profile & Branding</h2>
+                <p class="text-gray-600 mb-6" data-i18n="salon_profile.description">Customize your salon's branding for the customer-facing application</p>
+
+                <form id="salonProfileForm" class="space-y-8 max-w-4xl">
+                    <!-- Current Salon Selection (for admins managing multiple salons) -->
+                    <div id="salonSelectorSection" class="bg-gray-50 p-4 rounded-lg hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.select_salon">Select Salon</label>
+                        <select id="salonProfileSelector" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                            <option value="">Loading salons...</option>
+                        </select>
+                    </div>
+
+                    <!-- Logo Upload -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="salon_profile.logo">Salon Logo</h3>
+                        <div class="flex items-start gap-6">
+                            <div class="flex-shrink-0">
+                                <div id="logoPreview" class="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                                    <span class="text-gray-400 text-sm text-center px-2" data-i18n="salon_profile.no_logo">No logo uploaded</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.upload_logo">Upload Logo</label>
+                                <input type="file" id="logoUpload" accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                                <p class="text-xs text-gray-500 mt-2" data-i18n="salon_profile.logo_hint">Recommended: Square image, at least 200x200px. PNG or JPG format.</p>
+                                <button type="button" id="removeLogo" class="mt-2 text-red-600 text-sm hover:text-red-700 hidden" data-i18n="salon_profile.remove_logo">Remove Logo</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Color Scheme -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="salon_profile.color_scheme">Color Scheme</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.primary_color">Primary Color</label>
+                                <div class="flex gap-2">
+                                    <input type="color" id="primaryColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#9333EA" />
+                                    <input type="text" id="primaryColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#9333EA" pattern="^#[0-9A-Fa-f]{6}$" />
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.primary_hint">Main brand color (buttons, highlights)</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.secondary_color">Secondary Color</label>
+                                <div class="flex gap-2">
+                                    <input type="color" id="secondaryColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#EC4899" />
+                                    <input type="text" id="secondaryColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#EC4899" pattern="^#[0-9A-Fa-f]{6}$" />
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.secondary_hint">Accent color (gradients, highlights)</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.background_color">Background Color</label>
+                                <div class="flex gap-2">
+                                    <input type="color" id="backgroundColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#FFFFFF" />
+                                    <input type="text" id="backgroundColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#FFFFFF" pattern="^#[0-9A-Fa-f]{6}$" />
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.background_hint">Page background color</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.button_color">Button Color</label>
+                                <div class="flex gap-2">
+                                    <input type="color" id="buttonColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#9333EA" />
+                                    <input type="text" id="buttonColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#9333EA" pattern="^#[0-9A-Fa-f]{6}$" />
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.button_hint">Primary button color</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.text_color">Text Color</label>
+                                <div class="flex gap-2">
+                                    <input type="color" id="textColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#1F2937" />
+                                    <input type="text" id="textColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#1F2937" pattern="^#[0-9A-Fa-f]{6}$" />
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.text_hint">Main text color</p>
+                            </div>
+                        </div>
+
+                        <!-- Reset to Defaults -->
+                        <div class="mt-4">
+                            <button type="button" id="resetColors" class="text-purple-600 text-sm hover:text-purple-700" data-i18n="salon_profile.reset_colors">
+                                Reset to Default Colors
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="salon_profile.preview">Preview</h3>
+                        <div id="brandingPreview" class="border-2 border-gray-200 rounded-lg p-8" style="background-color: #FFFFFF;">
+                            <div class="text-center mb-6">
+                                <div id="previewLogo" class="w-24 h-24 mx-auto mb-4 hidden">
+                                    <!-- Logo will be displayed here -->
+                                </div>
+                                <h1 id="previewTitle" class="text-3xl font-bold mb-2" style="color: #1F2937;">Salon Name</h1>
+                                <p class="text-gray-600" data-i18n="salon_profile.preview_text">Welcome to our salon!</p>
+                            </div>
+                            <button type="button" id="previewButton" class="px-6 py-3 text-white font-semibold rounded-lg transition-all" style="background-color: #9333EA;">
+                                <span data-i18n="salon_profile.preview_button">Book Appointment</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div class="flex gap-4">
+                        <button type="submit" class="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition duration-200 font-semibold" data-i18n="admin.save">
+                            Save Salon Profile
+                        </button>
+                        <button type="button" id="cancelSalonProfile" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 transition duration-200 font-semibold" data-i18n="admin.cancel">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

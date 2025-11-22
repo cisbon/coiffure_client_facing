@@ -954,3 +954,276 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
+
+// ===== SALON PROFILE & BRANDING =====
+
+let salonProfileData = null;
+let uploadedLogoFile = null;
+
+// Initialize Salon Profile tab
+document.addEventListener('DOMContentLoaded', function() {
+    // Load salon profile when tab is clicked
+    const salonProfileTab = document.querySelector('[data-tab="salon-profile"]');
+    if (salonProfileTab) {
+        salonProfileTab.addEventListener('click', loadSalonProfile);
+    }
+
+    // Handle color picker changes (sync with hex input)
+    setupColorPickers();
+
+    // Handle logo upload
+    const logoUpload = document.getElementById('logoUpload');
+    if (logoUpload) {
+        logoUpload.addEventListener('change', handleLogoUpload);
+    }
+
+    // Handle remove logo
+    const removeLogo = document.getElementById('removeLogo');
+    if (removeLogo) {
+        removeLogo.addEventListener('click', handleRemoveLogo);
+    }
+
+    // Handle reset colors
+    const resetColors = document.getElementById('resetColors');
+    if (resetColors) {
+        resetColors.addEventListener('click', resetToDefaultColors);
+    }
+
+    // Handle form submission
+    const salonProfileForm = document.getElementById('salonProfileForm');
+    if (salonProfileForm) {
+        salonProfileForm.addEventListener('submit', saveSalonProfile);
+    }
+
+    // Handle cancel
+    const cancelBtn = document.getElementById('cancelSalonProfile');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', loadSalonProfile);
+    }
+});
+
+function setupColorPickers() {
+    const colorPairs = [
+        { picker: 'primaryColor', hex: 'primaryColorHex' },
+        { picker: 'secondaryColor', hex: 'secondaryColorHex' },
+        { picker: 'backgroundColor', hex: 'backgroundColorHex' },
+        { picker: 'buttonColor', hex: 'buttonColorHex' },
+        { picker: 'textColor', hex: 'textColorHex' }
+    ];
+
+    colorPairs.forEach(pair => {
+        const picker = document.getElementById(pair.picker);
+        const hexInput = document.getElementById(pair.hex);
+
+        if (picker && hexInput) {
+            // Sync picker -> hex input
+            picker.addEventListener('input', () => {
+                hexInput.value = picker.value.toUpperCase();
+                updatePreview();
+            });
+
+            // Sync hex input -> picker
+            hexInput.addEventListener('input', () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
+                    picker.value = hexInput.value;
+                    updatePreview();
+                }
+            });
+        }
+    });
+}
+
+async function loadSalonProfile() {
+    try {
+        const sessionToken = localStorage.getItem('session_token');
+
+        if (!window.currentSalon || !window.currentSalon.salon_id) {
+            alert('No salon selected. Please ensure you are assigned to a salon.');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/salon-branding.php?salon_id=${window.currentSalon.salon_id}`, {
+            headers: {
+                'Authorization': `Bearer ${sessionToken}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            salonProfileData = result.branding;
+            populateSalonProfileForm(result.branding);
+        } else {
+            alert('Failed to load salon profile: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error loading salon profile:', error);
+        alert('Error loading salon profile. Please try again.');
+    }
+}
+
+function populateSalonProfileForm(branding) {
+    // Set colors
+    document.getElementById('primaryColor').value = branding.primary_color || '#9333EA';
+    document.getElementById('primaryColorHex').value = branding.primary_color || '#9333EA';
+
+    document.getElementById('secondaryColor').value = branding.secondary_color || '#EC4899';
+    document.getElementById('secondaryColorHex').value = branding.secondary_color || '#EC4899';
+
+    document.getElementById('backgroundColor').value = branding.background_color || '#FFFFFF';
+    document.getElementById('backgroundColorHex').value = branding.background_color || '#FFFFFF';
+
+    document.getElementById('buttonColor').value = branding.button_color || '#9333EA';
+    document.getElementById('buttonColorHex').value = branding.button_color || '#9333EA';
+
+    document.getElementById('textColor').value = branding.text_color || '#1F2937';
+    document.getElementById('textColorHex').value = branding.text_color || '#1F2937';
+
+    // Set logo
+    if (branding.logo_path) {
+        displayLogoPreview(branding.logo_path);
+    } else {
+        clearLogoPreview();
+    }
+
+    // Update preview
+    updatePreview();
+}
+
+function handleLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match('image.*')) {
+        alert('Please select an image file');
+        return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        alert('Image size must be less than 2MB');
+        return;
+    }
+
+    uploadedLogoFile = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        displayLogoPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+}
+
+function displayLogoPreview(imageSrc) {
+    const logoPreview = document.getElementById('logoPreview');
+    const previewLogo = document.getElementById('previewLogo');
+    const removeLogo = document.getElementById('removeLogo');
+
+    logoPreview.innerHTML = `<img src="${imageSrc}" class="w-full h-full object-contain rounded-lg" />`;
+    previewLogo.innerHTML = `<img src="${imageSrc}" class="w-full h-full object-contain" />`;
+    previewLogo.classList.remove('hidden');
+    removeLogo.classList.remove('hidden');
+}
+
+function clearLogoPreview() {
+    const logoPreview = document.getElementById('logoPreview');
+    const previewLogo = document.getElementById('previewLogo');
+    const removeLogo = document.getElementById('removeLogo');
+
+    logoPreview.innerHTML = '<span class="text-gray-400 text-sm text-center px-2">No logo uploaded</span>';
+    previewLogo.innerHTML = '';
+    previewLogo.classList.add('hidden');
+    removeLogo.classList.add('hidden');
+}
+
+function handleRemoveLogo() {
+    uploadedLogoFile = null;
+    document.getElementById('logoUpload').value = '';
+    clearLogoPreview();
+}
+
+function resetToDefaultColors() {
+    document.getElementById('primaryColor').value = '#9333EA';
+    document.getElementById('primaryColorHex').value = '#9333EA';
+    document.getElementById('secondaryColor').value = '#EC4899';
+    document.getElementById('secondaryColorHex').value = '#EC4899';
+    document.getElementById('backgroundColor').value = '#FFFFFF';
+    document.getElementById('backgroundColorHex').value = '#FFFFFF';
+    document.getElementById('buttonColor').value = '#9333EA';
+    document.getElementById('buttonColorHex').value = '#9333EA';
+    document.getElementById('textColor').value = '#1F2937';
+    document.getElementById('textColorHex').value = '#1F2937';
+
+    updatePreview();
+}
+
+function updatePreview() {
+    const bgColor = document.getElementById('backgroundColor').value;
+    const textColor = document.getElementById('textColor').value;
+    const buttonColor = document.getElementById('buttonColor').value;
+
+    const preview = document.getElementById('brandingPreview');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewButton = document.getElementById('previewButton');
+
+    preview.style.backgroundColor = bgColor;
+    previewTitle.style.color = textColor;
+    previewButton.style.backgroundColor = buttonColor;
+}
+
+async function saveSalonProfile(event) {
+    event.preventDefault();
+
+    if (!window.currentSalon || !window.currentSalon.salon_id) {
+        alert('No salon selected.');
+        return;
+    }
+
+    try {
+        const sessionToken = localStorage.getItem('session_token');
+        const formData = new FormData();
+
+        // Add salon ID
+        formData.append('salon_id', window.currentSalon.salon_id);
+
+        // Add colors
+        formData.append('primary_color', document.getElementById('primaryColorHex').value);
+        formData.append('secondary_color', document.getElementById('secondaryColorHex').value);
+        formData.append('background_color', document.getElementById('backgroundColorHex').value);
+        formData.append('button_color', document.getElementById('buttonColorHex').value);
+        formData.append('text_color', document.getElementById('textColorHex').value);
+
+        // Add logo if uploaded
+        if (uploadedLogoFile) {
+            formData.append('logo', uploadedLogoFile);
+        }
+
+        // Add remove logo flag if logo was removed
+        if (document.getElementById('removeLogo').classList.contains('hidden') === false && !uploadedLogoFile) {
+            formData.append('remove_logo', 'true');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/salon-branding.php`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${sessionToken}`
+            },
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert('Salon profile updated successfully!');
+            uploadedLogoFile = null;
+            loadSalonProfile();
+        } else {
+            alert('Failed to update salon profile: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error saving salon profile:', error);
+        alert('Error saving salon profile. Please try again.');
+    }
+}
