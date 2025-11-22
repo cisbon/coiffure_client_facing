@@ -116,10 +116,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     exit();
 }
 
-// Handle POST request - Update salon branding (admin only)
+// Handle POST request - Update salon branding (admin and customer_admin only)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Only admin users can update salon branding
-    if ($userRole !== 'admin') {
+    // Only admin and customer_admin users can update salon branding
+    if (!hasRole($user, ['admin', 'customer_admin'])) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Insufficient permissions. Only admins can update salon branding.']);
         exit();
