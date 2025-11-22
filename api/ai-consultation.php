@@ -195,7 +195,19 @@ if (!$isImageGenerationModel) {
 }
 
 // Create prompt for hairstyle transformation
-$prompt = "Transform this person's hairstyle to: {$stylePrompt}. Generate a professional salon photograph showing them with this new hairstyle. Keep their face and features the same, only change the hairstyle. The result should look natural and professional, with high-quality lighting and a clean background. Photorealistic, front-facing portrait, salon quality.";
+// CRITICAL: Emphasize preserving the person's identity and only changing hair
+$prompt = "IMPORTANT: This is an image transformation task. You MUST keep this exact same person with their exact same face, skin tone, facial features, and expression. ONLY change their hairstyle to: {$stylePrompt}.
+
+The person in the photo should look exactly the same, with:
+- Same face shape and facial features
+- Same skin tone and complexion
+- Same eyes, nose, mouth
+- Same facial expression
+- Same person, same identity
+
+ONLY modify: The hairstyle to match '{$stylePrompt}' style
+
+The result should be a professional salon photograph with natural lighting and clean background. Photorealistic, front-facing portrait, salon quality. This is the SAME person with a new hairstyle, not a different person.";
 
 error_log("AI Prompt: " . $prompt);
 
@@ -230,6 +242,8 @@ $apiPayload = [
 error_log("API Request: Image Generation via Chat Completions");
 error_log("Model: " . $aiModel);
 error_log("Using chat/completions endpoint for Gemini image generation");
+error_log("Image input provided: YES (length: " . strlen($imageData) . ")");
+error_log("Request payload modalities: " . json_encode($apiPayload['modalities']));
 
 $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
 curl_setopt_array($ch, [
