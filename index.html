@@ -434,13 +434,6 @@
                                 <p class="text-sm text-purple-600 text-center mt-2 font-medium" data-i18n="ai_consultation.generated_preview">Your new hairstyle preview</p>
                             </div>
 
-                            <!-- Text Response (if any) -->
-                            <div id="ai-text-response-container" class="hidden">
-                                <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
-                                    <div id="ai-response-text" class="text-sm text-gray-700"></div>
-                                </div>
-                            </div>
-
                             <!-- Processing Info -->
                             <div id="ai-processing-info" class="text-xs text-gray-600 text-center"></div>
                         </div>
@@ -2023,7 +2016,6 @@
                 if (result.success) {
                     // Show results
                     const imageContainer = document.getElementById('ai-generated-image-container');
-                    const textContainer = document.getElementById('ai-text-response-container');
                     const processingInfo = document.getElementById('ai-processing-info');
 
                     // Display generated image if available
@@ -2033,18 +2025,6 @@
                         imageContainer.classList.remove('hidden');
                     } else {
                         imageContainer.classList.add('hidden');
-                    }
-
-                    // Display text response if available
-                    if (result.ai_response) {
-                        const recommendationLabel = i18n ? i18n.t('ai_consultation.results_recommendation') : 'AI Stylist Recommendation:';
-                        document.getElementById('ai-response-text').innerHTML = `
-                            <p class="font-semibold mb-2">${recommendationLabel}</p>
-                            <p>${result.ai_response}</p>
-                        `;
-                        textContainer.classList.remove('hidden');
-                    } else {
-                        textContainer.classList.add('hidden');
                     }
 
                     // Display processing info
