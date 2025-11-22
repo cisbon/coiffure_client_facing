@@ -102,9 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $branding = $result->fetch_assoc();
 
-    // Convert logo path to full URL if exists
+    // Convert logo path to relative URL if exists
     if (!empty($branding['logo_path'])) {
-        $branding['logo_url'] = '/uploads/logos/' . basename($branding['logo_path']);
+        $branding['logo_url'] = 'uploads/logos/' . basename($branding['logo_path']);
     } else {
         $branding['logo_url'] = null;
     }
@@ -253,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'success' => true,
             'message' => 'Salon branding updated successfully',
             'logo_path' => $logoPath,
-            'logo_url' => $logoPath ? '/uploads/logos/' . basename($logoPath) : null
+            'logo_url' => $logoPath ? 'uploads/logos/' . basename($logoPath) : null
         ]);
     } else {
         http_response_code(500);

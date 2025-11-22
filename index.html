@@ -940,6 +940,25 @@
             }
             if (branding.button_color) {
                 root.style.setProperty('--color-button', branding.button_color);
+
+                // Apply button color to all primary buttons (purple buttons)
+                const primaryButtons = document.querySelectorAll('.bg-purple-600, .bg-purple-700, #quick-mode-btn, .tab-active');
+                primaryButtons.forEach(btn => {
+                    btn.style.backgroundColor = branding.button_color;
+                    // Adjust hover color (slightly darker)
+                    btn.addEventListener('mouseenter', function() {
+                        this.style.backgroundColor = adjustBrightness(branding.button_color, -20);
+                    });
+                    btn.addEventListener('mouseleave', function() {
+                        this.style.backgroundColor = branding.button_color;
+                    });
+                });
+
+                // Apply to gradient backgrounds
+                const gradients = document.querySelectorAll('.tab-active');
+                gradients.forEach(el => {
+                    el.style.background = `linear-gradient(to right, ${branding.button_color}, ${branding.secondary_color || branding.button_color})`;
+                });
             }
             if (branding.text_color) {
                 root.style.setProperty('--color-text', branding.text_color);
@@ -957,6 +976,19 @@
             console.log('Salon branding applied:', branding);
         }
 
+        // Helper function to adjust color brightness
+        function adjustBrightness(hex, percent) {
+            const num = parseInt(hex.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            return '#' + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
+                (G<255?G<1?0:G:255)*0x100 +
+                (B<255?B<1?0:B:255))
+                .toString(16).slice(1);
+        }
+
         // ==================== TAB SWITCHING ====================
         function switchTab(tabName) {
             // Hide all tab contents
@@ -968,6 +1000,7 @@
             document.querySelectorAll('[id^="tab-"]').forEach(tab => {
                 tab.classList.remove('tab-active');
                 tab.classList.add('hover:bg-gray-100');
+                tab.style.background = ''; // Reset background
             });
 
             // Show selected tab content
@@ -977,6 +1010,13 @@
             const activeTab = document.getElementById(`tab-${tabName}`);
             activeTab.classList.add('tab-active');
             activeTab.classList.remove('hover:bg-gray-100');
+
+            // Reapply branding to active tab
+            const buttonColor = getComputedStyle(document.documentElement).getPropertyValue('--color-button').trim();
+            const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim();
+            if (buttonColor) {
+                activeTab.style.background = `linear-gradient(to right, ${buttonColor}, ${secondaryColor || buttonColor})`;
+            }
         }
 
         // ==================== SIGNATURE CANVAS ====================
@@ -1217,16 +1257,23 @@
             const quickContainer = document.getElementById('quick-mode-container');
             const guidedContainer = document.getElementById('guided-mode-container');
 
+            // Get branding color
+            const buttonColor = getComputedStyle(document.documentElement).getPropertyValue('--color-button').trim() || '#9333EA';
+
             if (mode === 'quick') {
-                quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all text-white';
+                quickBtn.style.backgroundColor = buttonColor;
                 guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+                guidedBtn.style.backgroundColor = '';
                 quickContainer.classList.remove('hidden');
                 guidedContainer.classList.add('hidden');
                 stopWizardCamera();
                 resetWizard();
             } else {
                 quickBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
-                guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white';
+                quickBtn.style.backgroundColor = '';
+                guidedBtn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all text-white';
+                guidedBtn.style.backgroundColor = buttonColor;
                 quickContainer.classList.add('hidden');
                 guidedContainer.classList.remove('hidden');
                 resetWizard();
