@@ -143,10 +143,9 @@
                     <img src="" alt="Salon Logo" class="salon-logo hidden" />
 
                     <div>
-                        <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600" data-i18n="app.title">
-                            Coiffure AI TEST
+                        <h1 id="salon-title" class="text-3xl font-bold">
+                            <!-- Salon name will be loaded dynamically -->
                         </h1>
-                        <p class="text-gray-600 mt-1" data-i18n="app.subtitle">Complete Salon Customer Experience Suite</p>
                     </div>
                 </div>
 
@@ -1077,7 +1076,26 @@
             console.log('  ✓ CSS injected into page');
             console.log('  CSS content preview:', cssContent.substring(0, 200) + '...');
 
-            console.log('Step 3: Applying logo...');
+            console.log('Step 3: Applying salon name...');
+            // Apply salon name to title
+            if (branding.salon_name) {
+                const titleEl = document.getElementById('salon-title');
+                if (titleEl) {
+                    titleEl.textContent = branding.salon_name;
+                    // Apply gradient colors from branding
+                    titleEl.style.background = `linear-gradient(to right, ${branding.primary_color || '#9333EA'}, ${branding.secondary_color || '#EC4899'})`;
+                    titleEl.style.webkitBackgroundClip = 'text';
+                    titleEl.style.backgroundClip = 'text';
+                    titleEl.style.webkitTextFillColor = 'transparent';
+                    titleEl.style.color = 'transparent';
+                    console.log('  ✓ Salon name set to:', branding.salon_name);
+                    console.log('  ✓ Title gradient colors applied');
+                }
+            } else {
+                console.log('  ⚠ No salon name provided in branding data');
+            }
+
+            console.log('Step 4: Applying logo...');
             // Apply logo if available - ensure correct URL prefix
             if (branding.logo_url) {
                 // Add correct base URL if not already present

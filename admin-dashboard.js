@@ -1081,7 +1081,12 @@ function populateSalonProfileForm(branding) {
 
     // Set logo
     if (branding.logo_path) {
-        displayLogoPreview(branding.logo_path);
+        // Convert relative path to full URL using correct base URL
+        let logoUrl = branding.logo_path;
+        if (!logoUrl.startsWith('http')) {
+            logoUrl = 'https://clouedo.com/coiffure/' + logoUrl;
+        }
+        displayLogoPreview(logoUrl);
     } else {
         clearLogoPreview();
     }
