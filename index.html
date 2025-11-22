@@ -959,11 +959,6 @@
                     gridDiv.classList.remove('hidden');
                 } else {
                     console.warn('No social links found or API returned success=false');
-                        success: result.success,
-                        hasData: !!result.data,
-                        dataLength: result.data?.length,
-                        error: result.error
-                    });
                     noLinksDiv.classList.remove('hidden');
                 }
             } catch (error) {
@@ -981,11 +976,6 @@
             const grid = document.getElementById('social-links-grid');
 
             grid.innerHTML = links.map((link, index) => {
-                    display_name: link.display_name,
-                    link_type: link.link_type,
-                    link_url: link.link_url
-                });
-
                 const icon = getSocialIcon(link.link_type);
                 const color = getSocialColor(link.link_type);
                 const qrId = `qr-code-${index}`;
