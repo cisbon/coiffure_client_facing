@@ -38,11 +38,11 @@
     "download_button": "Download QR Code"
   },
   "social": {
-    "title": "Social Media",
-    "description": "Follow us on our social media channels",
+    "title": "Connect With Us",
+    "description": "Follow us on social media or leave us a review!",
     "loading": "Loading social links...",
     "no_links": "No social links available",
-    "tap_to_scan": "Tap to scan QR"
+    "scan_to_visit": "Scan to visit"
   },
   "social_qr_modal": {
     "title": "Scan QR Code",

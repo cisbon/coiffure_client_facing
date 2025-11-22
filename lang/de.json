@@ -38,11 +38,11 @@
     "download_button": "QR-Code herunterladen"
   },
   "social": {
-    "title": "Social Media",
-    "description": "Folgen Sie uns auf unseren Social-Media-Kanälen",
+    "title": "Folgen Sie uns",
+    "description": "Folgen Sie uns auf Social Media oder hinterlassen Sie eine Bewertung!",
     "loading": "Social Links werden geladen...",
     "no_links": "Keine Social Links verfügbar",
-    "tap_to_scan": "Zum Scannen tippen"
+    "scan_to_visit": "Scannen zum Besuchen"
   },
   "social_qr_modal": {
     "title": "QR-Code scannen",
