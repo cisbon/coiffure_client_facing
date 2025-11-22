@@ -388,6 +388,14 @@ if (!$generatedImageBase64) {
     $refusalReason = isset($apiResponse['choices'][0]['message']['refusal']) ? $apiResponse['choices'][0]['message']['refusal'] : null;
     $reasoning = isset($apiResponse['choices'][0]['message']['reasoning']) ? $apiResponse['choices'][0]['message']['reasoning'] : null;
 
+    error_log("=== REFUSAL DETAILS ===");
+    error_log("Refusal field type: " . gettype($refusalReason));
+    error_log("Refusal value: " . json_encode($refusalReason));
+    error_log("Reasoning field type: " . gettype($reasoning));
+    error_log("Reasoning value: " . json_encode($reasoning));
+    error_log("Text response type: " . gettype($textResponse));
+    error_log("Text response: " . $textResponse);
+
     $errorDetails = [
         'message_keys' => isset($apiResponse['choices'][0]['message']) ? array_keys($apiResponse['choices'][0]['message']) : [],
         'has_images_array' => isset($apiResponse['choices'][0]['message']['images']),
@@ -409,13 +417,26 @@ if (!$generatedImageBase64) {
 
     // Return detailed error to help diagnose
     $errorMsg = 'Image generation failed. Model: ' . $aiModel;
+
+    // Build detailed debug info
+    $debugInfo = [
+        'refusal_type' => gettype($refusalReason),
+        'refusal_value' => $refusalReason,
+        'reasoning_type' => gettype($reasoning),
+        'reasoning_value' => $reasoning,
+        'text_response' => substr($textResponse, 0, 300),
+        'message_keys' => $errorDetails['message_keys']
+    ];
+
     if ($refusalReason) {
-        $errorMsg .= '. REFUSAL: ' . $refusalReason;
+        $errorMsg .= '. REFUSAL: ' . json_encode($refusalReason);
     } elseif ($reasoning) {
-        $errorMsg .= '. REASONING: ' . $reasoning;
+        $errorMsg .= '. REASONING: ' . json_encode($reasoning);
     } else {
         $errorMsg .= '. Response had ' . json_encode($errorDetails['message_keys']) . '. Text: ' . substr($textResponse, 0, 100);
     }
+
+    $errorMsg .= '. DEBUG: ' . json_encode($debugInfo);
     sendErrorResponse($errorMsg, 500);
 }
 
