@@ -195,6 +195,32 @@ function handleCreateSalon($conn, $currentUser, $data) {
         sendErrorResponse($validation['message'], 400, ['missing_fields' => $validation['missing_fields']]);
     }
 
+    // Check for onboarding fields (owner and tablet account creation)
+    $createOwnerAccount = isset($data['owner_email']) && isset($data['owner_full_name']) && isset($data['initial_password']);
+    $createTabletAccount = isset($data['tablet_username']) && isset($data['initial_password']);
+
+    if ($createOwnerAccount || $createTabletAccount) {
+        // Validate onboarding fields
+        if ($createOwnerAccount) {
+            if (!validateEmail($data['owner_email'])) {
+                sendErrorResponse('Invalid owner email address', 400);
+            }
+            if (strlen(trim($data['owner_full_name'])) < 2) {
+                sendErrorResponse('Owner full name must be at least 2 characters', 400);
+            }
+        }
+
+        if ($createTabletAccount) {
+            if (!preg_match('/^[a-zA-Z0-9_-]{3,50}$/', $data['tablet_username'])) {
+                sendErrorResponse('Invalid tablet username. Must be 3-50 alphanumeric characters', 400);
+            }
+        }
+
+        if (strlen($data['initial_password']) < 8) {
+            sendErrorResponse('Initial password must be at least 8 characters', 400);
+        }
+    }
+
     $salonName = trim($data['salon_name']);
     $email = trim($data['email']);
     $phone = trim($data['phone']);
@@ -222,50 +248,214 @@ function handleCreateSalon($conn, $currentUser, $data) {
         sendErrorResponse('Invalid phone number', 400);
     }
 
-    // Insert salon
-    $stmt = $conn->prepare(
-        "INSERT INTO coiffure_salons
-        (salon_name, email, phone, address, google_reviews_url, facebook_url,
-         policy_version, cancellation_policy, data_processing_policy, is_active, default_language)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    );
+    // Start transaction for salon + user creation
+    $conn->begin_transaction();
 
-    if (!$stmt) {
-        error_log("Failed to prepare salon insert: " . $conn->error);
-        sendErrorResponse('Failed to create salon', 500);
+    try {
+        // Insert salon
+        $stmt = $conn->prepare(
+            "INSERT INTO coiffure_salons
+            (salon_name, email, phone, address, google_reviews_url, facebook_url,
+             policy_version, cancellation_policy, data_processing_policy, is_active, default_language)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+
+        if (!$stmt) {
+            throw new Exception("Failed to prepare salon insert: " . $conn->error);
+        }
+
+        $stmt->bind_param(
+            "sssssssssiss",
+            $salonName,
+            $email,
+            $phone,
+            $address,
+            $googleReviewsUrl,
+            $facebookUrl,
+            $policyVersion,
+            $cancellationPolicy,
+            $dataProcessingPolicy,
+            $isActive,
+            $defaultLanguage
+        );
+
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to create salon: " . $stmt->error);
+        }
+
+        $newSalonId = $stmt->insert_id;
+        $stmt->close();
+
+        // Create user accounts if onboarding data is provided
+        $createdAccounts = [];
+
+        if ($createOwnerAccount) {
+            $ownerEmail = trim($data['owner_email']);
+            $ownerFullName = trim($data['owner_full_name']);
+            $initialPassword = $data['initial_password'];
+
+            // Check if email already exists
+            $checkStmt = $conn->prepare("SELECT user_id FROM coiffure_users WHERE email = ?");
+            $checkStmt->bind_param("s", $ownerEmail);
+            $checkStmt->execute();
+            if ($checkStmt->get_result()->num_rows > 0) {
+                $checkStmt->close();
+                throw new Exception("Owner email already exists");
+            }
+            $checkStmt->close();
+
+            // Generate username from email
+            $ownerUsername = strtolower(explode('@', $ownerEmail)[0]) . '_' . substr(md5($ownerEmail), 0, 6);
+
+            // Create customer_admin account
+            $passwordHash = password_hash($initialPassword, PASSWORD_ARGON2ID);
+            $stmt = $conn->prepare(
+                "INSERT INTO coiffure_users
+                (username, email, password_hash, full_name, role, is_active, force_password_change, created_at)
+                VALUES (?, ?, ?, ?, 'customer_admin', 1, 1, NOW())"
+            );
+            $stmt->bind_param("ssss", $ownerUsername, $ownerEmail, $passwordHash, $ownerFullName);
+
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to create owner account: " . $stmt->error);
+            }
+
+            $ownerUserId = $stmt->insert_id;
+            $stmt->close();
+
+            // Link owner to salon
+            $stmt = $conn->prepare("INSERT INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)");
+            $stmt->bind_param("ii", $ownerUserId, $newSalonId);
+            $stmt->execute();
+            $stmt->close();
+
+            $createdAccounts['owner'] = [
+                'user_id' => $ownerUserId,
+                'username' => $ownerUsername,
+                'email' => $ownerEmail,
+                'role' => 'customer_admin'
+            ];
+
+            // Send welcome email to owner
+            sendOwnerWelcomeEmail($ownerEmail, $ownerFullName, $salonName, $ownerUsername, $initialPassword);
+        }
+
+        if ($createTabletAccount) {
+            $tabletUsername = trim($data['tablet_username']);
+            $initialPassword = $data['initial_password'];
+
+            // Check if username already exists
+            $checkStmt = $conn->prepare("SELECT user_id FROM coiffure_users WHERE username = ?");
+            $checkStmt->bind_param("s", $tabletUsername);
+            $checkStmt->execute();
+            if ($checkStmt->get_result()->num_rows > 0) {
+                $checkStmt->close();
+                throw new Exception("Tablet username already exists");
+            }
+            $checkStmt->close();
+
+            // Create tablet account (no email needed for kiosk)
+            $passwordHash = password_hash($initialPassword, PASSWORD_ARGON2ID);
+            $tabletEmail = $tabletUsername . '@kiosk.local'; // Dummy email for tablets
+            $tabletFullName = $salonName . ' - Kiosk';
+
+            $stmt = $conn->prepare(
+                "INSERT INTO coiffure_users
+                (username, email, password_hash, full_name, role, is_active, force_password_change, created_at)
+                VALUES (?, ?, ?, ?, 'customer_facing_tablet_user', 1, 1, NOW())"
+            );
+            $stmt->bind_param("ssss", $tabletUsername, $tabletEmail, $passwordHash, $tabletFullName);
+
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to create tablet account: " . $stmt->error);
+            }
+
+            $tabletUserId = $stmt->insert_id;
+            $stmt->close();
+
+            // Link tablet to salon
+            $stmt = $conn->prepare("INSERT INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)");
+            $stmt->bind_param("ii", $tabletUserId, $newSalonId);
+            $stmt->execute();
+            $stmt->close();
+
+            $createdAccounts['tablet'] = [
+                'user_id' => $tabletUserId,
+                'username' => $tabletUsername,
+                'role' => 'customer_facing_tablet_user'
+            ];
+        }
+
+        // Commit transaction
+        $conn->commit();
+
+        // Log audit
+        logAudit($conn, 'salon', $newSalonId, 'create', "Salon created: $salonName with " . count($createdAccounts) . " user accounts", $currentUser['username']);
+
+        $response = [
+            'success' => true,
+            'message' => 'Salon created successfully',
+            'salon_id' => $newSalonId
+        ];
+
+        if (!empty($createdAccounts)) {
+            $response['created_accounts'] = $createdAccounts;
+            $response['message'] .= ' with ' . count($createdAccounts) . ' user account(s)';
+        }
+
+        sendJsonResponse($response, 201);
+
+    } catch (Exception $e) {
+        // Rollback on error
+        $conn->rollback();
+        error_log("Salon creation error: " . $e->getMessage());
+        sendErrorResponse('Failed to create salon: ' . $e->getMessage(), 500);
     }
+}
 
-    $stmt->bind_param(
-        "sssssssssiss",
-        $salonName,
-        $email,
-        $phone,
-        $address,
-        $googleReviewsUrl,
-        $facebookUrl,
-        $policyVersion,
-        $cancellationPolicy,
-        $dataProcessingPolicy,
-        $isActive,
-        $defaultLanguage
-    );
+/**
+ * Send welcome email to salon owner
+ */
+function sendOwnerWelcomeEmail($email, $fullName, $salonName, $username, $initialPassword) {
+    $subject = "Welcome to Coiffure AI - Your Salon Account";
 
-    if (!$stmt->execute()) {
-        error_log("Failed to create salon: " . $stmt->error);
-        sendErrorResponse('Failed to create salon', 500);
-    }
+    $message = "
+    <html>
+    <body style='font-family: Arial, sans-serif;'>
+        <h2>Welcome to Coiffure AI!</h2>
+        <p>Dear $fullName,</p>
+        <p>Your salon <strong>$salonName</strong> has been successfully onboarded to Coiffure AI.</p>
 
-    $newSalonId = $stmt->insert_id;
-    $stmt->close();
+        <h3>Your Login Credentials:</h3>
+        <ul>
+            <li><strong>Username:</strong> $username</li>
+            <li><strong>Temporary Password:</strong> $initialPassword</li>
+            <li><strong>Login URL:</strong> <a href='https://coiffureai.com/admin-dashboard.html'>https://coiffureai.com/admin-dashboard.html</a></li>
+        </ul>
 
-    // Log audit
-    logAudit($conn, 'salon', $newSalonId, 'create', "Salon created: $salonName", $currentUser['username']);
+        <p><strong>Important:</strong> You will be required to change your password on first login.</p>
 
-    sendJsonResponse([
-        'success' => true,
-        'message' => 'Salon created successfully',
-        'salon_id' => $newSalonId
-    ], 201);
+        <h3>What's Next?</h3>
+        <ul>
+            <li>Log in to your admin dashboard</li>
+            <li>Set up your salon branding (logo, colors)</li>
+            <li>Configure your social media links</li>
+            <li>Start using the AI hairstyle consultation on your tablets</li>
+        </ul>
+
+        <p>If you have any questions, please contact our support team.</p>
+
+        <p>Best regards,<br>The Coiffure AI Team</p>
+    </body>
+    </html>
+    ";
+
+    $headers = "MIME-Version: 1.0\r\n";
+    $headers .= "Content-type: text/html; charset=UTF-8\r\n";
+    $headers .= "From: Coiffure AI <noreply@coiffureai.com>\r\n";
+
+    // Send email (will fail gracefully if mail server not configured)
+    @mail($email, $subject, $message, $headers);
 }
 
 /**

@@ -415,29 +415,69 @@
             <h3 class="text-2xl font-bold mb-6" id="salonModalTitle" data-i18n="salon_management.add_salon">Add Salon</h3>
             <form id="salonForm" class="space-y-4">
                 <input type="hidden" id="salonId" />
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.salon_name">Salon Name *</label>
-                        <input type="text" id="salonName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+
+                <!-- Salon Information -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Salon Information</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.salon_name">Salon Name *</label>
+                            <input type="text" id="salonName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.email">Salon Email *</label>
+                            <input type="email" id="salonEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone *</label>
+                            <input type="tel" id="salonPhone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Policy Version *</label>
+                            <input type="text" id="salonPolicyVersion" value="1.0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.default_language">Default Language (for Tablets) *</label>
+                            <select id="salonDefaultLanguage" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                <option value="de">🇩🇪 Deutsch</option>
+                                <option value="en">🇬🇧 English</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.email">Email *</label>
-                        <input type="email" id="salonEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                </div>
+
+                <!-- Owner Account Creation (only shown when adding new salon) -->
+                <div id="ownerAccountSection" class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">👤 Salon Owner Account</h4>
+                    <p class="text-sm text-gray-600 mb-4">A customer_admin account will be created for the salon owner</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Owner Email Address *</label>
+                            <input type="email" id="ownerEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="owner@salon.com" />
+                            <p class="text-xs text-gray-500 mt-1">Will receive login credentials</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Owner Full Name *</label>
+                            <input type="text" id="ownerFullName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="John Doe" />
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone *</label>
-                        <input type="tel" id="salonPhone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Policy Version *</label>
-                        <input type="text" id="salonPolicyVersion" value="1.0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.default_language">Default Language (for Tablets) *</label>
-                        <select id="salonDefaultLanguage" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                            <option value="de">🇩🇪 Deutsch</option>
-                            <option value="en">🇬🇧 English</option>
-                        </select>
+                </div>
+
+                <!-- Tablet Account Creation (only shown when adding new salon) -->
+                <div id="tabletAccountSection" class="bg-green-50 p-4 rounded-lg border-2 border-green-200">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">📱 Tablet Kiosk Account</h4>
+                    <p class="text-sm text-gray-600 mb-4">A customer_facing_tablet_user account will be created for the kiosk</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tablet Username *</label>
+                            <input type="text" id="tabletUsername" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="salon_tablet" pattern="[a-zA-Z0-9_-]{3,50}" />
+                            <p class="text-xs text-gray-500 mt-1">Used for kiosk login</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Initial Password (Both Accounts) *</label>
+                            <input type="password" id="initialPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Min 8 characters" minlength="8" />
+                            <p class="text-xs text-gray-500 mt-1">Must be changed on first login</p>
+                        </div>
                     </div>
                 </div>
                 <div>
