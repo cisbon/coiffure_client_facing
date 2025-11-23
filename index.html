@@ -2596,7 +2596,7 @@
 
             try {
                 const requestBody = {
-                    image: imageBase64,
+                    image_base64: imageBase64,  // Changed from 'image' to 'image_base64'
                     style_prompt: stylePrompt
                 };
 
@@ -2605,8 +2605,8 @@
                 const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${sessionToken}`
+                        'Content-Type': 'application/json'
+                        // Removed Authorization header - not needed for this endpoint
                     },
                     body: JSON.stringify(requestBody)
                 });
