@@ -315,137 +315,194 @@
 
             <!-- ==================== AI CONSULTATION TAB ==================== -->
             <div id="ai-consultation-content" class="tab-content hidden">
-                <div class="bg-white rounded-lg shadow-lg p-4 sm:p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4" data-i18n="ai_consultation.title">AI Virtual Hairstyle Consultation</h2>
+                <!-- Kiosk-Style AI Consultation: Full-Screen Steps -->
 
-                    <!-- Mode Selector -->
-                    <div class="flex gap-4 mb-6 p-2 bg-gray-100 rounded-lg">
-                        <button id="quick-mode-btn" onclick="switchMode('quick')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-purple-600 text-white" data-i18n="ai_consultation.mode_quick">
-                            Quick Mode
-                        </button>
-                        <button id="guided-mode-btn" onclick="switchMode('guided')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="ai_consultation.mode_guided">
-                            Guided Wizard
-                        </button>
+                <!-- Progress Indicator (Always Visible) -->
+                <div id="kiosk-progress" class="fixed top-0 left-0 right-0 bg-white shadow-md z-40 py-3 px-4">
+                    <div class="max-w-2xl mx-auto">
+                        <div class="flex items-center justify-center gap-2">
+                            <div id="progress-step-1" class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm">1</div>
+                                <span class="ml-2 text-sm font-semibold text-gray-700 hidden sm:inline" data-i18n="kiosk.step_photo">Photo</span>
+                            </div>
+                            <div class="w-12 h-1 bg-gray-300" id="progress-line-1"></div>
+                            <div id="progress-step-2" class="flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">2</div>
+                                <span class="ml-2 text-sm font-semibold text-gray-600 hidden sm:inline" data-i18n="kiosk.step_style">Style</span>
+                            </div>
+                            <div class="w-12 h-1 bg-gray-300" id="progress-line-2"></div>
+                            <div id="progress-step-3" class="flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">3</div>
+                                <span class="ml-2 text-sm font-semibold text-gray-600 hidden sm:inline" data-i18n="kiosk.step_result">Result</span>
+                            </div>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- Quick Mode (Current Interface) -->
-                    <div id="quick-mode-container" class="space-y-4">
-                        <!-- Upload Section -->
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-700 mb-3" data-i18n="ai_consultation.upload_section">Upload Your Photo</h3>
+                <!-- ========== STEP 1: PHOTO CAPTURE ========== -->
+                <div id="kiosk-step-photo" class="min-h-screen flex items-center justify-center pt-20 pb-8 px-4">
+                    <div class="max-w-lg w-full text-center space-y-6">
+                        <div class="text-6xl mb-4">📸</div>
+                        <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.photo_title">Take Your Photo</h2>
+                        <p class="text-gray-600 text-lg" data-i18n="kiosk.photo_subtitle">Let's start by capturing your current look</p>
 
-                            <!-- Camera and Upload Buttons -->
-                            <div class="flex gap-3 mb-4">
-                                <button type="button" onclick="openCamera()" class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    </svg>
-                                    <span data-i18n="ai_consultation.take_photo">Take Photo</span>
-                                </button>
-                                <button type="button" onclick="document.getElementById('image-input').click()" class="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                                    </svg>
-                                    <span data-i18n="ai_consultation.upload_photo">Upload Photo</span>
-                                </button>
+                        <!-- Photo Options (Before Photo Taken) -->
+                        <div id="kiosk-photo-options" class="space-y-4 mt-8">
+                            <button onclick="kioskOpenCamera()" class="w-full py-6 px-6 bg-purple-600 text-white text-xl font-semibold rounded-xl hover:bg-purple-700 transition-all shadow-lg flex items-center justify-center gap-3">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span data-i18n="kiosk.take_photo">Take Photo</span>
+                            </button>
+                            <button onclick="document.getElementById('kiosk-image-input').click()" class="w-full py-6 px-6 bg-gray-600 text-white text-xl font-semibold rounded-xl hover:bg-gray-700 transition-all shadow-lg flex items-center justify-center gap-3">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                <span data-i18n="kiosk.upload_photo">Upload Photo</span>
+                            </button>
+                            <input type="file" id="kiosk-image-input" accept="image/*" class="hidden" onchange="kioskHandleImageSelect(event)">
+                        </div>
+
+                        <!-- Camera View (Inline) -->
+                        <div id="kiosk-camera-view" class="hidden space-y-4">
+                            <div class="relative bg-black rounded-xl overflow-hidden shadow-2xl">
+                                <video id="kiosk-camera-video" class="w-full" autoplay playsinline></video>
+                                <canvas id="kiosk-camera-canvas" class="hidden"></canvas>
                             </div>
-
-                            <!-- Hidden file input -->
-                            <input type="file" id="image-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
-
-                            <!-- Camera Modal -->
-                            <div id="camera-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-                                <div class="bg-white rounded-lg max-w-2xl w-full p-6">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <h3 class="text-xl font-bold" data-i18n="ai_consultation.camera_title">Take Photo</h3>
-                                        <button onclick="closeCamera()" class="text-gray-500 hover:text-gray-700">
-                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                            </svg>
-                                        </button>
-                                    </div>
-
-                                    <!-- Camera View -->
-                                    <div class="relative bg-black rounded-lg overflow-hidden mb-4">
-                                        <video id="camera-video" class="w-full" autoplay playsinline></video>
-                                        <canvas id="camera-canvas" class="hidden"></canvas>
-                                    </div>
-
-                                    <!-- Camera Controls -->
-                                    <div class="flex gap-3">
-                                        <button onclick="capturePhoto()" class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                                            <span data-i18n="ai_consultation.capture">Capture Photo</span>
-                                        </button>
-                                        <button onclick="closeCamera()" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-                                            <span data-i18n="ai_consultation.cancel">Cancel</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Image Preview -->
-                            <div id="image-preview-container" class="hidden mt-4">
-                                <img id="image-preview" class="image-preview mx-auto rounded-lg shadow-md" alt="Preview">
-                                <button onclick="clearImage()" class="mt-2 px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" data-i18n="ai_consultation.remove_image">
-                                    Remove Image
+                            <div class="flex gap-3">
+                                <button onclick="kioskCapturePhoto()" class="flex-1 py-4 px-6 bg-purple-600 text-white text-lg font-semibold rounded-xl hover:bg-purple-700 transition-all">
+                                    <span data-i18n="kiosk.capture">Capture</span>
+                                </button>
+                                <button onclick="kioskCloseCamera()" class="py-4 px-6 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
+                                    <span data-i18n="kiosk.cancel">Cancel</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Style Prompt -->
-                        <div>
-                            <label for="style_prompt" class="block text-sm font-medium text-gray-700 mb-1">
-                                <span data-i18n="ai_consultation.style_prompt_label">Describe the Hairstyle</span> <span class="text-red-500">*</span>
-                            </label>
-                            <textarea id="style_prompt" name="style_prompt" rows="4" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                data-i18n-placeholder="ai_consultation.style_prompt_placeholder"></textarea>
-                            <p class="text-xs text-gray-500 mt-1" data-i18n="ai_consultation.style_prompt_hint">
-                                Be specific about length, style, color, and any celebrity inspirations
-                            </p>
-                        </div>
-
-                        <!-- Submit Button -->
-                        <button onclick="submitAIConsultation()" id="ai-submit-btn"
-                            class="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="ai_consultation.submit_button">
-                            Generate AI Hairstyle Preview
-                        </button>
-
-                        <!-- Loading State -->
-                        <div id="ai-loading" class="hidden text-center py-8">
-                            <svg class="spinner mx-auto h-12 w-12 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="mt-4 text-gray-600 font-semibold" data-i18n="ai_consultation.loading_title">Generating your hairstyle preview...</p>
-                            <p class="text-sm text-gray-500" data-i18n="ai_consultation.loading_hint">This may take 10-30 seconds</p>
-                        </div>
-
-                        <!-- Results -->
-                        <div id="ai-results" class="hidden space-y-4">
-                            <h3 class="text-lg font-semibold text-gray-700" data-i18n="ai_consultation.results_title">AI Generated Result</h3>
-
-                            <!-- Generated Image -->
-                            <div id="ai-generated-image-container" class="hidden">
-                                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
-                                    <img id="ai-generated-image" class="w-full rounded-lg shadow-lg" alt="AI Generated Hairstyle" />
-                                </div>
-                                <p class="text-sm text-purple-600 text-center mt-2 font-medium" data-i18n="ai_consultation.generated_preview">Your new hairstyle preview</p>
+                        <!-- Photo Preview (After Photo Taken) -->
+                        <div id="kiosk-photo-preview" class="hidden space-y-4">
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-200">
+                                <img id="kiosk-preview-image" class="w-full rounded-lg shadow-lg" alt="Your Photo">
                             </div>
+                            <div class="flex gap-3">
+                                <button onclick="kioskRetakePhoto()" class="py-4 px-6 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
+                                    <span data-i18n="kiosk.retake">← Retake</span>
+                                </button>
+                                <button onclick="kioskGoToStyleSelection()" class="flex-1 py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg">
+                                    <span data-i18n="kiosk.continue">Continue →</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                            <!-- Processing Info -->
-                            <div id="ai-processing-info" class="text-xs text-gray-600 text-center"></div>
+                <!-- ========== STEP 2: STYLE SELECTION ========== -->
+                <div id="kiosk-step-style" class="hidden min-h-screen flex items-center justify-center pt-20 pb-8 px-4">
+                    <div class="max-w-2xl w-full text-center space-y-6">
+                        <div class="text-6xl mb-4">✨</div>
+                        <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.style_title">Choose Your Style</h2>
+                        <p class="text-gray-600 text-lg" data-i18n="kiosk.style_subtitle">Pick the look you want to try</p>
+
+                        <!-- Primary Style Options (6 Main Styles) -->
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
+                            <button onclick="kioskSelectStyle('business')" class="kiosk-style-btn py-8 px-6 border-3 border-gray-300 rounded-2xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl">
+                                <div class="text-5xl mb-3">💼</div>
+                                <div class="text-xl font-bold text-gray-800" data-i18n="kiosk.style_business">Business</div>
+                                <div class="text-sm text-gray-600 mt-1" data-i18n="kiosk.style_business_desc">Professional</div>
+                            </button>
+                            <button onclick="kioskSelectStyle('casual')" class="kiosk-style-btn py-8 px-6 border-3 border-gray-300 rounded-2xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl">
+                                <div class="text-5xl mb-3">👔</div>
+                                <div class="text-xl font-bold text-gray-800" data-i18n="kiosk.style_casual">Casual</div>
+                                <div class="text-sm text-gray-600 mt-1" data-i18n="kiosk.style_casual_desc">Relaxed</div>
+                            </button>
+                            <button onclick="kioskSelectStyle('trendy')" class="kiosk-style-btn py-8 px-6 border-3 border-gray-300 rounded-2xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl">
+                                <div class="text-5xl mb-3">✨</div>
+                                <div class="text-xl font-bold text-gray-800" data-i18n="kiosk.style_trendy">Trendy</div>
+                                <div class="text-sm text-gray-600 mt-1" data-i18n="kiosk.style_trendy_desc">Modern</div>
+                            </button>
+                            <button onclick="kioskSelectStyle('classic')" class="kiosk-style-btn py-8 px-6 border-3 border-gray-300 rounded-2xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl">
+                                <div class="text-5xl mb-3">👑</div>
+                                <div class="text-xl font-bold text-gray-800" data-i18n="kiosk.style_classic">Classic</div>
+                                <div class="text-sm text-gray-600 mt-1" data-i18n="kiosk.style_classic_desc">Timeless</div>
+                            </button>
+                            <button onclick="kioskSelectStyle('edgy')" class="kiosk-style-btn py-8 px-6 border-3 border-gray-300 rounded-2xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl">
+                                <div class="text-5xl mb-3">🎸</div>
+                                <div class="text-xl font-bold text-gray-800" data-i18n="kiosk.style_edgy">Edgy</div>
+                                <div class="text-sm text-gray-600 mt-1" data-i18n="kiosk.style_edgy_desc">Bold</div>
+                            </button>
+                            <button onclick="kioskSelectStyle('natural')" class="kiosk-style-btn py-8 px-6 border-3 border-gray-300 rounded-2xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow-lg hover:shadow-xl">
+                                <div class="text-5xl mb-3">🌿</div>
+                                <div class="text-xl font-bold text-gray-800" data-i18n="kiosk.style_natural">Natural</div>
+                                <div class="text-sm text-gray-600 mt-1" data-i18n="kiosk.style_natural_desc">Effortless</div>
+                            </button>
                         </div>
 
-                        <!-- Error Message -->
-                        <div id="ai-message" class="hidden mt-4"></div>
+                        <!-- Back Button -->
+                        <div class="pt-4">
+                            <button onclick="kioskGoBackToPhoto()" class="py-4 px-8 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
+                                <span data-i18n="kiosk.back">← Back</span>
+                            </button>
+                        </div>
                     </div>
-                    </div>
-                    <!-- End Quick Mode -->
+                </div>
 
-                    <!-- Guided Wizard Mode -->
-                    <div id="guided-mode-container" class="hidden">
+                <!-- ========== STEP 3: GENERATING ========== -->
+                <div id="kiosk-step-generating" class="hidden min-h-screen flex items-center justify-center pt-20 pb-8 px-4">
+                    <div class="max-w-lg w-full text-center space-y-6">
+                        <!-- Large Spinner -->
+                        <svg class="spinner mx-auto h-24 w-24 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+
+                        <h2 class="text-3xl font-bold text-gray-800 mt-8" data-i18n="kiosk.generating_title">Creating Your New Look...</h2>
+                        <p class="text-gray-600 text-lg" data-i18n="kiosk.generating_subtitle">This takes about 15-30 seconds</p>
+
+                        <!-- Progress dots animation -->
+                        <div class="flex justify-center gap-2 pt-4">
+                            <div class="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                            <div class="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            <div class="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== STEP 4: RESULTS ========== -->
+                <div id="kiosk-step-results" class="hidden min-h-screen flex items-center justify-center pt-20 pb-8 px-4">
+                    <div class="max-w-2xl w-full text-center space-y-6">
+                        <div class="text-6xl mb-4">🎉</div>
+                        <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.results_title">Your New Look!</h2>
+
+                        <!-- Generated Image -->
+                        <div id="kiosk-result-image-container" class="mt-6">
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-3 border-purple-200 shadow-2xl">
+                                <img id="kiosk-result-image" class="w-full rounded-xl shadow-lg" alt="AI Generated Hairstyle">
+                            </div>
+                        </div>
+
+                        <!-- Processing Info (small text) -->
+                        <div id="kiosk-processing-info" class="text-xs text-gray-500"></div>
+
+                        <!-- Action Buttons -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-4">
+                            <button onclick="kioskTryDifferentStyle()" class="py-6 px-6 bg-purple-600 text-white text-xl font-semibold rounded-xl hover:bg-purple-700 transition-all shadow-lg">
+                                <span data-i18n="kiosk.try_different">Try Different Style</span>
+                            </button>
+                            <button onclick="kioskStartOver()" class="py-6 px-6 bg-gray-600 text-white text-xl font-semibold rounded-xl hover:bg-gray-700 transition-all shadow-lg">
+                                <span data-i18n="kiosk.start_over">Start Over</span>
+                            </button>
+                        </div>
+
+                        <!-- Error Message Container -->
+                        <div id="kiosk-error-message" class="hidden mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                            <p class="text-red-600 font-semibold"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Old Wizard Mode (Hidden, kept for compatibility) -->
+                <div id="guided-mode-container" class="hidden">
                         <!-- Progress Steps -->
                         <div class="mb-8">
                             <div class="flex items-center justify-between">
@@ -1228,6 +1285,11 @@
             const activeTab = document.getElementById(`tab-${tabName}`);
             activeTab.classList.add('tab-active');
             activeTab.classList.remove('hover:bg-gray-100');
+
+            // Initialize kiosk mode when AI consultation tab is shown
+            if (tabName === 'ai-consultation') {
+                initKioskMode();
+            }
         }
 
         // ==================== SIGNATURE CANVAS ====================
@@ -1970,6 +2032,258 @@
         }
 
         // ===== END WIZARD FUNCTIONS =====
+
+        // ==================== KIOSK MODE FUNCTIONS ====================
+        let kioskCameraStream = null;
+        let kioskSelectedStyle = null;
+
+        // Initialize kiosk mode when AI consultation tab is shown
+        function initKioskMode() {
+            // Show photo step, hide all others
+            document.getElementById('kiosk-step-photo').classList.remove('hidden');
+            document.getElementById('kiosk-step-style').classList.add('hidden');
+            document.getElementById('kiosk-step-generating').classList.add('hidden');
+            document.getElementById('kiosk-step-results').classList.add('hidden');
+
+            // Update progress indicator
+            updateKioskProgress(1);
+
+            // Reset state
+            uploadedImage = null;
+            kioskSelectedStyle = null;
+
+            // Hide preview, show options
+            document.getElementById('kiosk-photo-options').classList.remove('hidden');
+            document.getElementById('kiosk-camera-view').classList.add('hidden');
+            document.getElementById('kiosk-photo-preview').classList.add('hidden');
+        }
+
+        // Progress indicator management
+        function updateKioskProgress(step) {
+            // Reset all steps
+            for (let i = 1; i <= 3; i++) {
+                const stepEl = document.getElementById(`progress-step-${i}`);
+                const lineEl = document.getElementById(`progress-line-${i}`);
+
+                if (i < step) {
+                    // Completed steps
+                    stepEl.classList.remove('opacity-50');
+                    stepEl.querySelector('div').className = 'w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm';
+                    if (lineEl) lineEl.className = 'w-12 h-1 bg-green-600';
+                } else if (i === step) {
+                    // Current step
+                    stepEl.classList.remove('opacity-50');
+                    stepEl.querySelector('div').className = 'w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm';
+                    if (lineEl) lineEl.className = 'w-12 h-1 bg-gray-300';
+                } else {
+                    // Future steps
+                    stepEl.classList.add('opacity-50');
+                    stepEl.querySelector('div').className = 'w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm';
+                    if (lineEl) lineEl.className = 'w-12 h-1 bg-gray-300';
+                }
+            }
+        }
+
+        // STEP 1: Photo Capture Functions
+        async function kioskOpenCamera() {
+            const cameraView = document.getElementById('kiosk-camera-view');
+            const photoOptions = document.getElementById('kiosk-photo-options');
+            const video = document.getElementById('kiosk-camera-video');
+
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+
+                kioskCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = kioskCameraStream;
+
+                photoOptions.classList.add('hidden');
+                cameraView.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('Could not access camera. Please ensure camera permissions are enabled.');
+            }
+        }
+
+        function kioskCloseCamera() {
+            const cameraView = document.getElementById('kiosk-camera-view');
+            const photoOptions = document.getElementById('kiosk-photo-options');
+            const video = document.getElementById('kiosk-camera-video');
+
+            if (kioskCameraStream) {
+                kioskCameraStream.getTracks().forEach(track => track.stop());
+                kioskCameraStream = null;
+            }
+
+            video.srcObject = null;
+            cameraView.classList.add('hidden');
+            photoOptions.classList.remove('hidden');
+        }
+
+        function kioskCapturePhoto() {
+            const video = document.getElementById('kiosk-camera-video');
+            const canvas = document.getElementById('kiosk-camera-canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+
+            uploadedImage = canvas.toDataURL('image/jpeg', 0.9);
+
+            // Stop camera
+            if (kioskCameraStream) {
+                kioskCameraStream.getTracks().forEach(track => track.stop());
+                kioskCameraStream = null;
+            }
+
+            // Show preview
+            document.getElementById('kiosk-camera-view').classList.add('hidden');
+            document.getElementById('kiosk-preview-image').src = uploadedImage;
+            document.getElementById('kiosk-photo-preview').classList.remove('hidden');
+        }
+
+        function kioskHandleImageSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedImage = e.target.result;
+
+                    // Hide options, show preview
+                    document.getElementById('kiosk-photo-options').classList.add('hidden');
+                    document.getElementById('kiosk-preview-image').src = uploadedImage;
+                    document.getElementById('kiosk-photo-preview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function kioskRetakePhoto() {
+            uploadedImage = null;
+
+            // Show options, hide preview
+            document.getElementById('kiosk-photo-preview').classList.add('hidden');
+            document.getElementById('kiosk-photo-options').classList.remove('hidden');
+        }
+
+        function kioskGoToStyleSelection() {
+            if (!uploadedImage) return;
+
+            // Hide photo step, show style step
+            document.getElementById('kiosk-step-photo').classList.add('hidden');
+            document.getElementById('kiosk-step-style').classList.remove('hidden');
+
+            // Update progress
+            updateKioskProgress(2);
+        }
+
+        // STEP 2: Style Selection Functions
+        function kioskGoBackToPhoto() {
+            // Show photo step, hide style step
+            document.getElementById('kiosk-step-style').classList.add('hidden');
+            document.getElementById('kiosk-step-photo').classList.remove('hidden');
+
+            // Update progress
+            updateKioskProgress(1);
+        }
+
+        async function kioskSelectStyle(styleName) {
+            kioskSelectedStyle = styleName;
+
+            // Style descriptions (reusing wizard style descriptions)
+            const styleDescriptions = {
+                'business': 'professional business hairstyle, neat and polished, executive style',
+                'casual': 'casual everyday hairstyle, relaxed and comfortable, natural look',
+                'trendy': 'trendy modern hairstyle, fashionable and contemporary, Instagram-worthy',
+                'classic': 'classic timeless hairstyle, elegant and sophisticated, traditional style',
+                'edgy': 'edgy bold hairstyle, daring and unique, statement-making look',
+                'natural': 'natural effortless hairstyle, easy-going and low-maintenance'
+            };
+
+            const stylePrompt = styleDescriptions[styleName];
+
+            // Hide style step, show generating step
+            document.getElementById('kiosk-step-style').classList.add('hidden');
+            document.getElementById('kiosk-step-generating').classList.remove('hidden');
+
+            // Update progress
+            updateKioskProgress(3);
+
+            // Perform AI consultation
+            await kioskPerformAIConsultation(uploadedImage, stylePrompt);
+        }
+
+        // STEP 3 & 4: AI Generation and Results
+        async function kioskPerformAIConsultation(imageBase64, stylePrompt) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionToken}`
+                    },
+                    body: JSON.stringify({
+                        image: imageBase64,
+                        style_prompt: stylePrompt
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.generated_image) {
+                    // Show results
+                    document.getElementById('kiosk-result-image').src = result.generated_image;
+
+                    // Show processing info
+                    const processingInfo = `Processing time: ${result.processing_time_ms || 'N/A'}ms | Model: ${result.model_used || 'N/A'}`;
+                    document.getElementById('kiosk-processing-info').innerHTML = processingInfo;
+
+                    // Hide generating, show results
+                    document.getElementById('kiosk-step-generating').classList.add('hidden');
+                    document.getElementById('kiosk-step-results').classList.remove('hidden');
+                    document.getElementById('kiosk-error-message').classList.add('hidden');
+                } else {
+                    // Show error
+                    throw new Error(result.message || 'Failed to generate image');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+
+                // Hide generating, show results with error
+                document.getElementById('kiosk-step-generating').classList.add('hidden');
+                document.getElementById('kiosk-step-results').classList.remove('hidden');
+                document.getElementById('kiosk-result-image-container').classList.add('hidden');
+
+                const errorMsg = document.getElementById('kiosk-error-message');
+                errorMsg.querySelector('p').textContent = error.message || 'Failed to generate hairstyle. Please try again.';
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        // STEP 4: Result Actions
+        function kioskTryDifferentStyle() {
+            // Keep photo, go back to style selection
+            document.getElementById('kiosk-step-results').classList.add('hidden');
+            document.getElementById('kiosk-step-style').classList.remove('hidden');
+            document.getElementById('kiosk-result-image-container').classList.remove('hidden');
+
+            // Update progress
+            updateKioskProgress(2);
+        }
+
+        function kioskStartOver() {
+            // Reset everything and go to photo step
+            initKioskMode();
+        }
+
+        // ===== END KIOSK MODE FUNCTIONS =====
 
         // Shared function for both quick and wizard modes
         async function performAIConsultation(imageBase64, stylePrompt) {
