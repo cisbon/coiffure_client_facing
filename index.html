@@ -315,10 +315,23 @@
 
             <!-- ==================== AI CONSULTATION TAB ==================== -->
             <div id="ai-consultation-content" class="tab-content hidden">
-                <!-- Kiosk-Style AI Consultation: Full-Screen Steps -->
+                <!-- Placeholder - actual content is in fullscreen popup -->
+                <div class="text-center py-20">
+                    <p class="text-gray-500">AI Consultation will open in fullscreen mode...</p>
+                </div>
+            </div>
 
-                <!-- Progress Indicator (Always Visible) -->
-                <div id="kiosk-progress" class="fixed top-0 left-0 right-0 bg-white shadow-md z-40 py-3 px-4">
+            <!-- ==================== FULLSCREEN AI CONSULTATION POPUP ==================== -->
+            <div id="kiosk-popup" class="hidden fixed inset-0 bg-white z-50">
+                <!-- Close Button (Top Right) -->
+                <button onclick="closeKioskPopup()" class="fixed top-4 right-4 z-50 w-12 h-12 bg-gray-800 hover:bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+
+                <!-- Progress Indicator (Top) -->
+                <div id="kiosk-progress" class="fixed top-0 left-0 right-0 bg-white shadow-md z-40 py-4 px-4">
                     <div class="max-w-2xl mx-auto">
                         <div class="flex items-center justify-center gap-2">
                             <div id="progress-step-1" class="flex items-center">
@@ -340,7 +353,7 @@
                 </div>
 
                 <!-- ========== STEP 1: PHOTO CAPTURE ========== -->
-                <div id="kiosk-step-photo" class="min-h-screen flex items-center justify-center pt-20 pb-8 px-4">
+                <div id="kiosk-step-photo" class="h-screen flex items-center justify-center pt-20 pb-8 px-4 overflow-hidden">
                     <div class="max-w-lg w-full text-center space-y-6">
                         <div class="text-6xl mb-4">📸</div>
                         <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.photo_title">Take Your Photo</h2>
@@ -398,15 +411,15 @@
                 </div>
 
                 <!-- ========== STEP 2: STYLE SELECTION ========== -->
-                <div id="kiosk-step-style" class="hidden min-h-screen flex flex-col pt-20 pb-8 px-4">
-                    <div class="max-w-2xl w-full mx-auto">
-                        <div class="text-center mb-6">
-                            <div class="text-6xl mb-3">✨</div>
-                            <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.style_title">Choose Your Style</h2>
+                <div id="kiosk-step-style" class="hidden h-screen flex flex-col pt-20 pb-8 px-4 overflow-hidden relative">
+                    <div class="max-w-4xl w-full mx-auto h-full flex flex-col">
+                        <div class="text-center mb-4">
+                            <div class="text-5xl mb-2">✨</div>
+                            <h2 class="text-2xl font-bold text-gray-800" data-i18n="kiosk.style_title">Choose Your Style</h2>
                         </div>
 
                         <!-- Mode Selector -->
-                        <div class="flex gap-2 mb-6 p-2 bg-gray-100 rounded-xl overflow-x-auto">
+                        <div class="flex gap-2 mb-4 p-2 bg-gray-100 rounded-xl overflow-x-auto flex-shrink-0">
                             <button id="kiosk-mode-quick" onclick="kioskSwitchStyleMode('quick')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-purple-600 text-white" data-i18n="kiosk.mode_quick">
                                 Quick Styles
                             </button>
@@ -421,8 +434,8 @@
                             </button>
                         </div>
 
-                        <!-- Scrollable Content Area (fits in viewport) -->
-                        <div class="flex-1 overflow-y-auto" style="max-height: calc(100vh - 340px);">
+                        <!-- Content Area (now with full screen, can scroll if needed) -->
+                        <div class="flex-1 overflow-y-auto pb-20">
                             <!-- Quick Styles Mode -->
                             <div id="kiosk-quick-mode" class="space-y-4">
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -635,16 +648,18 @@
                         </div>
 
                         <!-- Back Button (Fixed at Bottom) -->
-                        <div class="pt-4 mt-4 border-t border-gray-200">
-                            <button onclick="kioskGoBackToPhoto()" class="w-full py-4 px-8 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
-                                <span data-i18n="kiosk.back">← Back to Photo</span>
-                            </button>
+                        <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
+                            <div class="max-w-4xl mx-auto">
+                                <button onclick="kioskGoBackToPhoto()" class="w-full py-4 px-8 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
+                                    <span data-i18n="kiosk.back">← Back to Photo</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- ========== STEP 3: GENERATING ========== -->
-                <div id="kiosk-step-generating" class="hidden min-h-screen flex items-center justify-center pt-20 pb-8 px-4">
+                <div id="kiosk-step-generating" class="hidden h-screen flex items-center justify-center pt-20 pb-8 px-4 overflow-hidden">
                     <div class="max-w-lg w-full text-center space-y-6">
                         <!-- Large Spinner -->
                         <svg class="spinner mx-auto h-24 w-24 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -665,7 +680,7 @@
                 </div>
 
                 <!-- ========== STEP 4: RESULTS ========== -->
-                <div id="kiosk-step-results" class="hidden min-h-screen flex items-center justify-center pt-20 pb-8 px-4">
+                <div id="kiosk-step-results" class="hidden h-screen flex items-center justify-center pt-20 pb-8 px-4 overflow-hidden">
                     <div class="max-w-2xl w-full text-center space-y-6">
                         <div class="text-6xl mb-4">🎉</div>
                         <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.results_title">Your New Look!</h2>
@@ -696,9 +711,11 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <!-- ==================== END FULLSCREEN AI CONSULTATION POPUP ==================== -->
 
-                <!-- Old Wizard Mode (Hidden, kept for compatibility) -->
-                <div id="guided-mode-container" class="hidden">
+            <!-- Hidden compatibility containers -->
+            <div id="guided-mode-container" class="hidden">
                         <!-- Progress Steps -->
                         <div class="mb-8">
                             <div class="flex items-center justify-between">
@@ -1463,6 +1480,12 @@
 
         // ==================== TAB SWITCHING ====================
         function switchTab(tabName) {
+            // Special handling for AI consultation - open fullscreen popup
+            if (tabName === 'ai-consultation') {
+                openKioskPopup();
+                return;
+            }
+
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.add('hidden');
@@ -1481,11 +1504,17 @@
             const activeTab = document.getElementById(`tab-${tabName}`);
             activeTab.classList.add('tab-active');
             activeTab.classList.remove('hover:bg-gray-100');
+        }
 
-            // Initialize kiosk mode when AI consultation tab is shown
-            if (tabName === 'ai-consultation') {
-                initKioskMode();
-            }
+        // Open fullscreen kiosk popup
+        function openKioskPopup() {
+            document.getElementById('kiosk-popup').classList.remove('hidden');
+            initKioskMode();
+        }
+
+        // Close fullscreen kiosk popup
+        function closeKioskPopup() {
+            document.getElementById('kiosk-popup').classList.add('hidden');
         }
 
         // ==================== SIGNATURE CANVAS ====================
@@ -2555,20 +2584,38 @@
 
         // STEP 3 & 4: AI Generation and Results
         async function kioskPerformAIConsultation(imageBase64, stylePrompt) {
+            // Debug logging
+            console.log('=== KIOSK AI CONSULTATION DEBUG ===');
+            console.log('Image Base64 exists:', !!imageBase64);
+            console.log('Image Base64 length:', imageBase64 ? imageBase64.length : 0);
+            console.log('Image Base64 preview:', imageBase64 ? imageBase64.substring(0, 50) + '...' : 'null');
+            console.log('Style Prompt:', stylePrompt);
+            console.log('Style Prompt length:', stylePrompt ? stylePrompt.length : 0);
+            console.log('API URL:', `${API_BASE_URL}/ai-consultation.php`);
+            console.log('Session Token exists:', !!sessionToken);
+
             try {
+                const requestBody = {
+                    image: imageBase64,
+                    style_prompt: stylePrompt
+                };
+
+                console.log('Request body:', JSON.stringify(requestBody).substring(0, 200) + '...');
+
                 const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${sessionToken}`
                     },
-                    body: JSON.stringify({
-                        image: imageBase64,
-                        style_prompt: stylePrompt
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
                 const result = await response.json();
+                console.log('Response result:', result);
 
                 if (result.success && result.generated_image) {
                     // Show results
@@ -2584,10 +2631,11 @@
                     document.getElementById('kiosk-error-message').classList.add('hidden');
                 } else {
                     // Show error
+                    console.error('API returned error:', result);
                     throw new Error(result.message || 'Failed to generate image');
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error in kioskPerformAIConsultation:', error);
 
                 // Hide generating, show results with error
                 document.getElementById('kiosk-step-generating').classList.add('hidden');
