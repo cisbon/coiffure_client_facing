@@ -1,0 +1,219 @@
+/**
+ * Tablet-specific styles
+ * Optimized for iPad and similar tablet devices
+ */
+
+/* Tablet landscape optimization */
+@media screen and (min-width: 768px) and (orientation: landscape) {
+  .tablet-landscape-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+  }
+
+  .tablet-landscape-sidebar {
+    position: sticky;
+    top: var(--spacing-lg);
+    max-height: calc(100vh - var(--spacing-2xl));
+    overflow-y: auto;
+  }
+}
+
+/* Tablet portrait optimization */
+@media screen and (min-width: 768px) and (orientation: portrait) {
+  .tablet-portrait-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+  }
+}
+
+/* Touch-friendly spacing for tablet */
+@media screen and (min-width: 768px) {
+  .touch-friendly-spacing {
+    padding: var(--spacing-lg);
+    gap: var(--spacing-md);
+  }
+
+  .touch-friendly-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+  }
+
+  .touch-friendly-buttons button {
+    min-height: 56px;
+    padding: var(--spacing-md) var(--spacing-xl);
+    font-size: var(--font-size-lg);
+  }
+}
+
+/* Kiosk mode - fullscreen tablet display */
+.kiosk-mode {
+  position: fixed;
+  inset: 0;
+  background: var(--color-surface);
+  z-index: var(--z-popup);
+  overflow: hidden;
+}
+
+.kiosk-content {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-xl);
+}
+
+.kiosk-header {
+  flex-shrink: 0;
+  padding: var(--spacing-md) 0;
+}
+
+.kiosk-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kiosk-footer {
+  flex-shrink: 0;
+  padding: var(--spacing-md) 0;
+}
+
+/* Progress indicator for kiosk */
+.kiosk-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.kiosk-progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.kiosk-progress-step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.kiosk-progress-step.active .kiosk-progress-step-number {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.kiosk-progress-step.completed .kiosk-progress-step-number {
+  background: var(--color-success);
+  color: var(--color-text-inverse);
+}
+
+.kiosk-progress-line {
+  width: 48px;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.kiosk-progress-line.completed {
+  background: var(--color-primary);
+}
+
+/* Large touch buttons for kiosk */
+.kiosk-button-large {
+  width: 100%;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  min-height: 72px;
+}
+
+/* Style selection cards */
+.style-card {
+  padding: var(--spacing-lg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.style-card:hover {
+  border-color: var(--color-primary);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.style-card.selected {
+  border-color: var(--color-primary);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.style-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.style-card-title {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+}
+
+.style-card-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
+}
+
+/* Camera view */
+.camera-container {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  aspect-ratio: 4/3;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Photo preview */
+.photo-preview {
+  background: var(--color-background-gradient);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-md);
+}
+
+.photo-preview img {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}

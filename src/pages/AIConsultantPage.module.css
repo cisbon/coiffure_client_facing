@@ -1,0 +1,452 @@
+/**
+ * AIConsultantPage Styles
+ */
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  background: var(--color-surface);
+  z-index: var(--z-popup);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Close button */
+.closeButton {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-text);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.closeButton:hover {
+  background-color: var(--color-text-muted);
+}
+
+/* Progress */
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.progressStep {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.progressLine {
+  width: 48px;
+  height: 4px;
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+  margin: 0 var(--spacing-xs);
+}
+
+.progressLine.completed {
+  background-color: var(--color-primary);
+}
+
+.progressDot {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: 50%;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+}
+
+.progressDot.active {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.progressDot.completed {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.progressLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  margin-left: var(--spacing-xs);
+}
+
+/* Content */
+.content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.stepContent {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.stepHeader {
+  text-align: center;
+}
+
+.stepEmoji {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: var(--spacing-md);
+}
+
+.stepTitle {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.stepSubtitle {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  margin: var(--spacing-sm) 0 0 0;
+}
+
+/* Photo options */
+.photoOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.uploadButton {
+  display: block;
+  cursor: pointer;
+}
+
+.fileInput {
+  display: none;
+}
+
+/* Camera */
+.cameraContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cameraVideo {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  background: #000;
+  transform: scaleX(-1);
+}
+
+.cameraActions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+}
+
+/* Preview */
+.previewContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.photoPreview {
+  background: var(--color-background-gradient);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-primary);
+}
+
+.photoPreview img {
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.previewActions {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.previewActions > * {
+  flex: 1;
+}
+
+/* Mode selector */
+.modeSelector {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--color-background);
+  border-radius: var(--radius-xl);
+  overflow-x: auto;
+}
+
+.modeButton {
+  flex: 1;
+  padding: var(--spacing-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.modeButton:hover {
+  background-color: var(--color-surface);
+}
+
+.modeButton.active {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Style grid */
+.styleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.styleCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.styleCard:hover {
+  border-color: var(--color-primary);
+  background-color: rgba(139, 92, 246, 0.05);
+  transform: translateY(-2px);
+}
+
+.styleIcon {
+  font-size: 2.5rem;
+}
+
+.styleName {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.styleDesc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* Describe mode */
+.describeMode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.describeHint {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.describeInput {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  resize: vertical;
+}
+
+.describeInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* Haircuts mode */
+.haircutsMode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.genderToggle {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.genderButton {
+  flex: 1;
+  padding: var(--spacing-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  background-color: var(--color-background);
+  border: none;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.genderButton.active {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.haircutGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.haircutButton {
+  padding: var(--spacing-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.haircutButton:hover {
+  border-color: var(--color-primary);
+  background-color: rgba(139, 92, 246, 0.05);
+}
+
+/* Back action */
+.backAction {
+  display: flex;
+  justify-content: center;
+}
+
+/* Result */
+.resultContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.resultImage {
+  background: var(--color-background-gradient);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-xl);
+}
+
+.resultImage img {
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.recommendation {
+  background-color: var(--color-background);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-xl);
+}
+
+.recommendation h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.recommendation p {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.resultActions {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.resultActions > * {
+  flex: 1;
+}
+
+/* Generating state */
+.generatingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  height: 100%;
+  text-align: center;
+}
+
+.generatingContainer h2 {
+  font-size: var(--font-size-2xl);
+  margin: 0;
+}
+
+.generatingContainer p {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Error */
+.error {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.errorOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.errorBox {
+  background-color: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  max-width: 400px;
+}
+
+.errorBox p {
+  margin: 0 0 var(--spacing-lg) 0;
+}

@@ -28,8 +28,18 @@ temp/
 *.backup
 *.sql.gz
 
-# Node modules (if you add any build tools later)
+# Node modules
 node_modules/
+
+# Vite build output
+dist/
+dist-ssr/
+*.local
+
+# Environment files
+.env
+.env.local
+.env.*.local
 
 # PHP composer (if you add later)
 vendor/

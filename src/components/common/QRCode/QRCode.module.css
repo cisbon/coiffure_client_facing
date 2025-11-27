@@ -1,0 +1,47 @@
+/**
+ * QRCode Styles
+ */
+
+.container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  background-color: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.container[role="button"] {
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.container[role="button"]:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-md);
+}
+
+.container[role="button"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.qrcode {
+  display: block;
+}
+
+/* Labeled variant */
+.labeled {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: 0;
+}
