@@ -1,9 +1,0 @@
-# Generated .pkpass files are served through api/wallet.php, never listed.
-Options -Indexes
-
-# Optional pretty URL:  /wallet/{memberId}  ->  api/wallet.php?member_id={memberId}
-# Enable mod_rewrite and set WALLET_BASE_URL to your site root to use this.
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^([A-Za-z0-9_\-]+)/?$ ../api/wallet.php?member_id=$1 [L,QSA]
-</IfModule>

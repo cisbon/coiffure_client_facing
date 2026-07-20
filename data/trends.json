@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "type": "trend",
+    "title": "Glossy Bob – der Trend-Schnitt 2026",
+    "teaser": "Der klassische Bob kommt zurück – jetzt mit extra viel Glanz und Bewegung.",
+    "image_url": "https://placehold.co/600x400/9333EA/FFFFFF/png?text=Glossy+Bob",
+    "text": "Der Glossy Bob ist einer der meistgefragten Schnitte des Jahres. Charakteristisch sind die klaren, kinnlangen Linien und ein spiegelnder Glanz, der durch pflegende Glossing-Behandlungen erzielt wird. Der Look eignet sich für nahezu jede Gesichtsform und lässt sich sowohl glatt als auch leicht gewellt tragen. Fragen Sie Ihr Stylisten-Team nach der passenden Variante für Ihre Haarstruktur.",
+    "video_url": null
+  },
+  {
+    "id": 2,
+    "type": "trend",
+    "title": "Warme Kupfertöne für den Herbst",
+    "teaser": "Von sanftem Erdbeerblond bis zu intensivem Kupfer – warme Rottöne sind angesagt.",
+    "image_url": "https://placehold.co/600x400/EC4899/FFFFFF/png?text=Kupfer+Trend",
+    "text": "Kupfer- und Rottöne dominieren die Trendpalette. Besonders beliebt sind weiche Verläufe, die dem Haar Tiefe und Dimension verleihen. Moderne Coloration-Techniken sorgen für ein natürliches Ergebnis, das mit der richtigen Pflege lange strahlt. Wir beraten Sie gern zu Farbauswahl und Pflege.",
+    "video_url": null
+  },
+  {
+    "id": 3,
+    "type": "trend",
+    "title": "Curtain Bangs – der perfekte Pony",
+    "teaser": "Der wandelbare Pony, der jedes Gesicht schmeichelnd umrahmt.",
+    "image_url": "https://placehold.co/600x400/6D28D9/FFFFFF/png?text=Curtain+Bangs",
+    "text": "Curtain Bangs sind der ideale Einstieg in die Pony-Welt: Sie umrahmen das Gesicht weich und lassen sich problemlos zur Seite stylen, wenn man mal keinen Pony tragen möchte. Perfekt für alle, die Abwechslung lieben.",
+    "video_url": null
+  },
+  {
+    "id": 4,
+    "type": "trend",
+    "title": "Video: Föhn-Techniken für mehr Volumen",
+    "teaser": "In diesem kurzen Video zeigen wir, wie Sie zuhause mehr Volumen zaubern.",
+    "image_url": "https://placehold.co/600x400/9333EA/FFFFFF/png?text=Volumen+Video",
+    "text": "Schritt-für-Schritt-Anleitung für mehr Volumen beim Föhnen.",
+    "video_url": "https://www.youtube.com/embed/ScMzIvxBSi4"
+  },
+  {
+    "id": 5,
+    "type": "trend",
+    "title": "Video: Beach Waves ohne Hitze",
+    "teaser": "Sommerliche Wellen, die die Haare schonen – ganz ohne Lockenstab.",
+    "image_url": "https://placehold.co/600x400/EC4899/FFFFFF/png?text=Beach+Waves",
+    "text": "So gelingen weiche Beach Waves über Nacht.",
+    "video_url": "https://www.youtube.com/embed/ysz5S6PUM-U"
+  },
+  {
+    "id": 101,
+    "type": "tip",
+    "title": "Farbschutz: So bleibt Ihre Coloration länger schön",
+    "teaser": "Fünf einfache Tipps, damit Ihre Haarfarbe wochenlang leuchtet.",
+    "image_url": "https://placehold.co/600x400/1F2937/FFFFFF/png?text=Farbschutz",
+    "text": "1. Waschen Sie coloriertes Haar nicht zu heiß. 2. Verwenden Sie ein Shampoo für coloriertes Haar. 3. Schützen Sie das Haar vor UV-Strahlung. 4. Reduzieren Sie Hitze-Styling. 5. Gönnen Sie dem Haar regelmäßig eine pflegende Maske. Fragen Sie uns nach den passenden Produkten.",
+    "video_url": null
+  },
+  {
+    "id": 102,
+    "type": "tip",
+    "title": "Spliss vermeiden – die besten Pflege-Tricks",
+    "teaser": "Regelmäßiger Spitzenschnitt und die richtige Pflege beugen Spliss vor.",
+    "image_url": "https://placehold.co/600x400/374151/FFFFFF/png?text=Spliss-Pflege",
+    "text": "Spliss entsteht durch mechanische und thermische Belastung. Ein Spitzenschnitt alle 8–10 Wochen, ein Hitzeschutz vor dem Styling und eine wöchentliche Haarkur halten die Längen gesund und geschmeidig.",
+    "video_url": null
+  },
+  {
+    "id": 103,
+    "type": "tip",
+    "title": "Die richtige Bürste für Ihren Haartyp",
+    "teaser": "Nicht jede Bürste passt zu jedem Haar – wir erklären den Unterschied.",
+    "image_url": "https://placehold.co/600x400/4B5563/FFFFFF/png?text=Buersten-Guide",
+    "text": "Wildschweinborsten verteilen den natürlichen Talg und sorgen für Glanz, während Paddle-Brushes langes Haar schonend entwirren. Für lockiges Haar empfehlen wir grobzinkige Kämme. Ihr Stylisten-Team berät Sie gern.",
+    "video_url": null
+  }
+]

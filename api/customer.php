@@ -7,15 +7,13 @@
  * New in the membership refactor:
  *   - Split name, birthday, ZIP/city, optional postal address block
  *   - Channel-specific consents (e-mail marketing, SMS/WhatsApp, postal)
- *   - Membership opt-in → unique member ID + digital wallet card
+ *   - Membership opt-in → unique member ID (status only, no wallet pass)
  *   - Conditional welcome e-mail (membership vs. plain)
- *   - Returns wallet_url / member_id so the tablet can show the QR code
  *
  * GDPR: the postal address is ONLY stored when consent_postal is checked.
  */
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/WalletGenerator.php';
 require_once __DIR__ . '/mailer.php';
 
 setCorsHeaders();
@@ -149,7 +147,7 @@ if ($salonId === null) {
     $salonId = (int)($requestData['salon_id'] ?? DEFAULT_SALON_ID);
 }
 
-// Load salon details for wallet/email branding.
+// Load salon details for e-mail branding.
 $salon = getSalonBranding($conn, $salonId);
 
 $ipAddress = getClientIp();
@@ -265,42 +263,12 @@ if ($existingRow) {
 }
 
 // ------------------------------------------------------------------
-// Membership: generate wallet passes
+// Branding assets for the welcome e-mail
 // ------------------------------------------------------------------
-$walletUrl = null;
-$googleWalletLink = null;
-
 $publicBase = rtrim(getenv('APP_PUBLIC_URL') ?: 'https://clouedo.com/coiffure', '/');
 $logoPublicUrl = null;
-$logoFsPath = null;
 if (!empty($salon['logo_path'])) {
-    $logoFsPath = __DIR__ . '/../' . ltrim($salon['logo_path'], '/');
     $logoPublicUrl = $publicBase . '/' . ltrim($salon['logo_path'], '/');
-}
-
-if ($isMember && $memberId) {
-    $memberData = [
-        'member_id'        => $memberId,
-        'first_name'       => $firstName,
-        'last_name'        => $lastName,
-        'full_name'        => $fullName,
-        'member_since'     => $memberSince,
-        'salon_name'       => $salon['salon_name'] ?? 'Coiffure',
-        'salon_slug'       => slugify($salon['salon_name'] ?? ''),
-        'logo_path'        => $logoFsPath,
-        'primary_color'    => $salon['primary_color'] ?? '#9333EA',
-        'secondary_color'  => $salon['secondary_color'] ?? '#EC4899',
-        'background_color' => $salon['background_color'] ?? '#FFFFFF',
-    ];
-
-    $wallet = new WalletGenerator();
-    try {
-        $wallet->createApplePass($memberData);           // writes .pkpass to wallet/passes
-        $googleWalletLink = $wallet->createGooglePassLink($memberData);
-    } catch (Throwable $e) {
-        error_log('Wallet generation error: ' . $e->getMessage());
-    }
-    $walletUrl = $wallet->getWalletUrl($memberId, $memberData['salon_slug']);
 }
 
 // ------------------------------------------------------------------
@@ -313,7 +281,6 @@ try {
         'first_name'      => $firstName,
         'salon_name'      => $salon['salon_name'] ?? 'unser Salon',
         'is_member'       => $isMember,
-        'wallet_url'      => $walletUrl,
         'member_id'       => $memberId,
         'member_since'    => $memberSince,
         'primary_color'   => $salon['primary_color'] ?? '#9333EA',
@@ -330,19 +297,17 @@ try {
 $conn->close();
 
 sendJsonResponse([
-    'success'            => true,
-    'message'            => $isMember
-        ? 'Willkommen im Club! Ihre digitale Treuekarte ist bereit.'
+    'success'      => true,
+    'message'      => $isMember
+        ? 'Willkommen im Club! Ihre Mitgliedschaft ist aktiv.'
         : 'Registrierung erfolgreich.',
-    'customer_id'        => $customerId,
-    'action'             => $action,
-    'is_member'          => $isMember,
-    'member_id'          => $memberId,
-    'member_since'       => $memberSince,
-    'wallet_url'         => $walletUrl,
-    'google_wallet_link' => $googleWalletLink,
-    'email_sent'         => $emailSent,
-    'salon_name'         => $salon['salon_name'] ?? null,
+    'customer_id'  => $customerId,
+    'action'       => $action,
+    'is_member'    => $isMember,
+    'member_id'    => $memberId,
+    'member_since' => $memberSince,
+    'email_sent'   => $emailSent,
+    'salon_name'   => $salon['salon_name'] ?? null,
 ], $action === 'created' ? 201 : 200);
 
 // ==================================================================
@@ -387,15 +352,4 @@ function generateMemberId(mysqli $conn, int $salonId): string
     }
     // Extremely unlikely fallback.
     return 'M' . date('y') . '-' . strtoupper(bin2hex(random_bytes(5)));
-}
-
-/** URL-friendly slug from salon name. */
-function slugify(string $text): string
-{
-    $text = strtolower(trim($text));
-    $text = preg_replace('/[äöüß]/u', '', $text); // simplistic; ascii fallback below
-    $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text) ?: $text;
-    $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-    $text = trim($text, '-');
-    return $text !== '' ? $text : 'salon';
 }
