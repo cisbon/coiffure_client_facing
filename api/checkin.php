@@ -115,23 +115,45 @@ if ($action === 'candidates') {
 
     $salonId = resolveSalonId($conn, []);
 
-    $stmt = $conn->prepare(
-        "SELECT customer_id, first_name, last_name
-         FROM coiffure_customers
-         WHERE salon_id = ? AND birth_day = ? AND birth_month = ? AND is_deleted = 0
-         ORDER BY first_name ASC, last_name ASC
-         LIMIT 50"
-    );
+    // Optional name filter (first name OR last name, prefix match). Lets the
+    // customer distinguish people who share a birthday and a last initial by
+    // typing part of their pre- or surname — without ever exposing the full
+    // list of surnames (only matching rows come back, still minimally).
+    $q = trim((string)($_GET['q'] ?? ''));
+
+    // gender column exists only after migration 010.
+    $hasGender = false;
+    $gc = $conn->query("SHOW COLUMNS FROM coiffure_customers LIKE 'gender'");
+    if ($gc && $gc->num_rows > 0) {
+        $hasGender = true;
+    }
+    $genderCol = $hasGender ? ', gender' : '';
+
+    $sql = "SELECT customer_id, first_name, last_name{$genderCol}
+            FROM coiffure_customers
+            WHERE salon_id = ? AND birth_day = ? AND birth_month = ? AND is_deleted = 0";
+    $types = "iii";
+    $params = [$salonId, $day, $month];
+
+    if ($q !== '') {
+        $sql .= " AND (first_name LIKE ? OR last_name LIKE ?)";
+        $types .= "ss";
+        $like = $q . '%';
+        $params[] = $like;
+        $params[] = $like;
+    }
+    $sql .= " ORDER BY first_name ASC, last_name ASC LIMIT 50";
+
+    $stmt = $conn->prepare($sql);
     if (!$stmt) {
         sendErrorResponse('Database query preparation failed', 500);
     }
-    $stmt->bind_param("iii", $salonId, $day, $month);
+    $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $res = $stmt->get_result();
 
     $candidates = [];
     while ($row = $res->fetch_assoc()) {
-        // Fall back to splitting full_name if first/last are empty (legacy rows).
         $first = $row['first_name'];
         $last  = $row['last_name'];
         $lastInitial = '';
@@ -142,6 +164,7 @@ if ($action === 'candidates') {
             'id'                 => (int)$row['customer_id'],
             'first_name'         => $first ?: '',
             'last_name_initial'  => $lastInitial,
+            'gender'             => $hasGender ? ($row['gender'] ?? null) : null,
         ];
     }
     $stmt->close();
@@ -151,6 +174,7 @@ if ($action === 'candidates') {
         'success'    => true,
         'day'        => $day,
         'month'      => $month,
+        'query'      => $q,
         'candidates' => $candidates,
     ], 200);
 }

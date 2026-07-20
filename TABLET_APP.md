@@ -19,11 +19,16 @@ Birthday-first identification with a phone fallback:
 
 1. **Birthday** – large Tag (1–31) and Monat (Januar–Dezember) pickers; the
    **Weiter** button is disabled until both are chosen.
-2. **Name selection** – `GET api/checkin.php?action=candidates&day=DD&month=MM`
-   returns members with that birthday (`{id, first_name, last_name_initial}`).
+2. **Name selection** – `GET api/checkin.php?action=candidates&day=DD&month=MM[&q=…]`
+   returns members with that birthday
+   (`{id, first_name, last_name_initial, gender}`). Each card shows a
+   gender silhouette avatar so the customer spots their own profile at a glance.
    - 0 results → "Kein Eintrag gefunden" + phone-fallback button.
-   - 1 result → "Sind Sie … ?" confirmation.
-   - 2+ results → touchable cards (with a live first-name filter for long lists).
+   - 1 result → "Sind Sie … ?" confirmation (with avatar).
+   - 2+ results → touchable cards + a **name filter** (`q`) that re-queries the
+     backend on first- OR last-name prefix. This disambiguates people who share
+     a birthday, first name AND last initial without ever sending the full list
+     of surnames to the client.
 3. **Confirm** – `POST api/checkin.php {"action":"confirm","customer_id":N}`
    logs a visit and returns the first name for the welcome animation.
    The success screen auto-returns home after 3 s.
@@ -40,8 +45,12 @@ step. Membership/marketing flags are NOT required to check in.
 
 The existing membership sign-up, with wallet references removed. The membership
 opt-in now reads *"Ja, ich werde Mitglied im [Salon-Name] Club und profitiere
-von allen Vorteilen."* After a successful submit the tablet shows the
-Social/WiFi screen (with a short welcome banner), then idles back home.
+von allen Vorteilen."* and is **checked by default** (the marketing/DSGVO
+consents stay unchecked). The form also collects an optional **title** dropdown
+(Dr./Prof./Prof. Dr., empty by default) and an optional **gender** (Weiblich /
+Männlich / Divers) as clickable chips — the gender drives the check-in avatar.
+After a successful submit the tablet shows the Social/WiFi screen (with a short
+welcome banner), then idles back home.
 
 ## 3. Digital magazine & shop ("Stöbern")
 
@@ -61,6 +70,7 @@ back them later (managed via the web access) without changing the response shape
 | File | Purpose |
 |------|---------|
 | `migrations/009_visits_checkin.sql` + `api/apply_migration_009.php` | `coiffure_visits` table |
+| `migrations/010_add_gender.sql` + `api/apply_migration_010.php` | customer `gender` + `title` columns |
 | `api/checkin.php` | candidates / confirm / phone check-in actions |
 | `api/content.php` | Trends & Tipps content (reads `data/trends.json`) |
 | `api/products.php` | Shop catalogue (reads `data/products.json`) |
@@ -77,23 +87,28 @@ The check-in feature needs the `coiffure_visits` table and relies on the
 `birth_day` / `birth_month` columns from migration 008.
 
 ```bash
-# Idempotent runner (safe to re-run, works on any MySQL)
-php api/apply_migration_009.php
+# Idempotent runners (safe to re-run, work on any MySQL)
+php api/apply_migration_009.php   # coiffure_visits table
+php api/apply_migration_010.php   # customer gender + title columns
 
 # …or raw SQL
 mysql -u USER -p salonlyft < migrations/009_visits_checkin.sql
+mysql -u USER -p salonlyft < migrations/010_add_gender.sql
 ```
 
 `coiffure_visits`: `visit_id, customer_id, salon_id, checkin_method
 (birthday|phone|manual), checked_in_at`, indexed on `customer_id` and
 `checked_in_at` for analytics.
 
+Migration 010 adds `gender ENUM('female','male','diverse')` and
+`title VARCHAR(30)` to `coiffure_customers` (both optional).
+
 ## Manual installation steps
 
 1. Deploy the updated files (no new Composer dependencies — the passes library
    is gone).
-2. Run `php api/apply_migration_009.php` once (migration 008 must already be
-   applied for the birthday columns).
+2. Run `php api/apply_migration_009.php` and `php api/apply_migration_010.php`
+   once (migration 008 must already be applied for the birthday columns).
 3. Ensure `data/trends.json` and `data/products.json` are web-readable by PHP.
 4. Configure `api/.env` as before (`APP_PUBLIC_URL`, `MAIL_*`, optional
    `SMTP_*`). No wallet configuration is required anymore.

@@ -91,6 +91,14 @@ $consentCancellation = !empty($requestData['consent_cancellation_policy']);
 $policyVersion   = sanitizeInput($requestData['policy_version']);
 $referralSource  = !empty($requestData['referral_source']) ? sanitizeInput($requestData['referral_source']) : null;
 $preferredStylist = !empty($requestData['preferred_stylist_id']) ? (int)$requestData['preferred_stylist_id'] : null;
+// Gender (optional): whitelist to the allowed ENUM values.
+$gender = in_array($requestData['gender'] ?? '', ['female', 'male', 'diverse'], true)
+    ? $requestData['gender'] : null;
+// Title (optional): short courtesy/academic title, e.g. "Dr.", "Prof.".
+$title = !empty($requestData['title']) ? sanitizeInput($requestData['title']) : null;
+if ($title !== null && mb_strlen($title) > 30) {
+    $title = mb_substr($title, 0, 30);
+}
 
 // Postal address — only kept when the customer explicitly consented (GDPR).
 $addressStreet = null;
@@ -187,7 +195,7 @@ if ($existingRow) {
 
     $update = $conn->prepare(
         "UPDATE coiffure_customers SET
-            full_name = ?, first_name = ?, last_name = ?,
+            full_name = ?, first_name = ?, last_name = ?, gender = ?, title = ?,
             phone = ?, mobile = ?,
             birth_day = ?, birth_month = ?, birth_year = ?,
             zip = ?, city = ?,
@@ -202,8 +210,8 @@ if ($existingRow) {
     );
     // Types: build carefully
     $update->bind_param(
-        "sssssiiisssssiiiiiisisssissi",
-        $fullName, $firstName, $lastName,
+        "sssssssiiisssssiiiiiisisssissi",
+        $fullName, $firstName, $lastName, $gender, $title,
         $mobile, $mobile,
         $birthDay, $birthMonth, $birthYear,
         $zip, $city,
@@ -226,7 +234,7 @@ if ($existingRow) {
 } else {
     $insert = $conn->prepare(
         "INSERT INTO coiffure_customers
-            (salon_id, full_name, first_name, last_name, email, phone, mobile,
+            (salon_id, full_name, first_name, last_name, gender, title, email, phone, mobile,
              birth_day, birth_month, birth_year, zip, city,
              address_street, address_zip, address_city, consent_postal,
              consent_marketing, consent_email_marketing, consent_sms_whatsapp,
@@ -236,12 +244,12 @@ if ($existingRow) {
              referral_source, preferred_stylist_id,
              ip_address, user_agent, data_processing_purpose,
              gdpr_consent_notice_shown, data_retention_until)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                  CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)"
     );
     $insert->bind_param(
-        "issssssiiisssssiiiiiisisssissss",
-        $salonId, $fullName, $firstName, $lastName, $email, $mobile, $mobile,
+        "issssssssiiisssssiiiiiisisssissss",
+        $salonId, $fullName, $firstName, $lastName, $gender, $title, $email, $mobile, $mobile,
         $birthDay, $birthMonth, $birthYear, $zip, $city,
         $addressStreet, $addressZip, $addressCity, $consentPostal,
         $consentMarketing, $consentEmailMarketing, $consentSmsWhatsapp,
