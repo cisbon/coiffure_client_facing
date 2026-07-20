@@ -114,14 +114,17 @@ if ($consentPostal) {
 if (!validateEmail($email)) {
     sendErrorResponse('Invalid email address', 400);
 }
-if ($mobile !== null && $mobile !== '' && !validatePhone($mobile)) {
+if ($mobile === null || $mobile === '') {
+    sendErrorResponse('Bitte geben Sie Ihre Mobilnummer ein.', 400);
+}
+if (!validatePhone($mobile)) {
     sendErrorResponse('Invalid phone number', 400);
 }
 if ($birthDay < 1 || $birthDay > 31 || $birthMonth < 1 || $birthMonth > 12) {
     sendErrorResponse('Invalid birthday', 400);
 }
 if ($gender === null) {
-    sendErrorResponse('Bitte wählen Sie Ihre Anrede / Ihr Geschlecht.', 400);
+    sendErrorResponse('Bitte wählen Sie Ihre Anrede.', 400);
 }
 if (!$consentDataProcessing) {
     sendErrorResponse('Data processing consent is required', 400);

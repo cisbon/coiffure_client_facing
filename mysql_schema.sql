@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS coiffure_salons (
     address TEXT,
     google_reviews_url VARCHAR(500),
     facebook_url VARCHAR(500),
+    wifi_ssid VARCHAR(255) DEFAULT NULL,
+    wifi_password VARCHAR(255) DEFAULT NULL,
     policy_version VARCHAR(20) NOT NULL DEFAULT '1.0',
     cancellation_policy TEXT,
     data_processing_policy TEXT,
