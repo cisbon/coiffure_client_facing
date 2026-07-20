@@ -1079,6 +1079,12 @@ function populateSalonProfileForm(branding) {
     document.getElementById('textColor').value = branding.text_color || '#1F2937';
     document.getElementById('textColorHex').value = branding.text_color || '#1F2937';
 
+    // Set guest WiFi (optional)
+    const wifiSsidEl = document.getElementById('wifiSsid');
+    const wifiPasswordEl = document.getElementById('wifiPassword');
+    if (wifiSsidEl) wifiSsidEl.value = branding.wifi_ssid || '';
+    if (wifiPasswordEl) wifiPasswordEl.value = branding.wifi_password || '';
+
     // Set logo
     if (branding.logo_path) {
         // Convert relative path to full URL using correct base URL
@@ -1199,6 +1205,12 @@ async function saveSalonProfile(event) {
         formData.append('background_color', document.getElementById('backgroundColorHex').value);
         formData.append('button_color', document.getElementById('buttonColorHex').value);
         formData.append('text_color', document.getElementById('textColorHex').value);
+
+        // Add guest WiFi (optional)
+        const wifiSsidEl = document.getElementById('wifiSsid');
+        const wifiPasswordEl = document.getElementById('wifiPassword');
+        if (wifiSsidEl) formData.append('wifi_ssid', wifiSsidEl.value.trim());
+        if (wifiPasswordEl) formData.append('wifi_password', wifiPasswordEl.value.trim());
 
         // Add logo if uploaded
         if (uploadedLogoFile) {

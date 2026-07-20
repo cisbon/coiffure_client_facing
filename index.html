@@ -163,6 +163,55 @@
             object-fit: contain;
         }
 
+        /* Left navigation rail (sticky, expandable via burger) */
+        body { padding-left: 76px; }
+        .nav-rail {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 76px;
+            z-index: 40;
+            background: #ffffff;
+            box-shadow: 2px 0 14px rgba(0,0,0,0.07);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.2s ease;
+        }
+        .nav-rail.expanded { width: 232px; }
+        .nav-burger {
+            height: 64px;
+            min-height: 64px;
+            font-size: 1.6rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #374151;
+        }
+        .nav-items { display: flex; flex-direction: column; gap: 4px; padding: 8px; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #374151;
+            font-weight: 600;
+            font-size: 1rem;
+            white-space: nowrap;
+            text-align: left;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .nav-item:hover { background: #f3f4f6; }
+        .nav-item.active { background: var(--color-primary, #9333EA); color: #ffffff; }
+        .nav-ico { font-size: 1.5rem; width: 28px; text-align: center; flex: 0 0 auto; }
+        .nav-label { opacity: 0; transition: opacity 0.15s ease; }
+        .nav-rail.expanded .nav-label { opacity: 1; }
+
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
         #keypad button {
@@ -214,6 +263,28 @@
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
 
+    <!-- ==================== LEFT NAVIGATION RAIL ==================== -->
+    <aside id="nav-rail" class="nav-rail">
+        <button id="nav-burger" class="nav-burger" onclick="toggleRail()" aria-label="Menü öffnen/schließen">☰</button>
+        <nav class="nav-items">
+            <button type="button" class="nav-item" data-screen="browse" onclick="navGo('browse')">
+                <span class="nav-ico">📖</span><span class="nav-label">Stöbern</span>
+            </button>
+            <button type="button" class="nav-item" data-screen="checkin" onclick="navGo('checkin')">
+                <span class="nav-ico">✅</span><span class="nav-label">Check-In</span>
+            </button>
+            <button type="button" class="nav-item" data-screen="register" onclick="navGo('register')">
+                <span class="nav-ico">📝</span><span class="nav-label">Registrieren</span>
+            </button>
+            <button type="button" class="nav-item" data-screen="welcome" onclick="navGo('welcome')">
+                <span class="nav-ico">📶</span><span class="nav-label" id="nav-social-label">Social</span>
+            </button>
+            <button type="button" class="nav-item" data-screen="ai" onclick="navGo('ai')">
+                <span class="nav-ico">✨</span><span class="nav-label">AI Hairstyle</span>
+            </button>
+        </nav>
+    </aside>
+
     <!-- Header -->
     <header class="bg-white shadow-md">
         <div class="container mx-auto px-4 py-6">
@@ -256,72 +327,7 @@
     </header>
 
     <!-- Main Container -->
-    <main class="container mx-auto px-4 py-8 max-w-4xl">
-
-        <!-- Navigation bar (hidden on the home/idle screen) -->
-        <div id="nav-bar" class="hidden flex items-center justify-between mb-4">
-            <button type="button" onclick="navBack()" class="flex items-center gap-2 px-4 py-3 bg-white rounded-xl shadow font-semibold text-gray-700 hover:bg-gray-50">
-                <span class="text-xl">←</span> Zurück
-            </button>
-            <button type="button" onclick="goHome()" class="flex items-center gap-2 px-4 py-3 bg-white rounded-xl shadow font-semibold text-gray-700 hover:bg-gray-50">
-                🏠 <span class="hidden sm:inline">Home</span>
-            </button>
-        </div>
-
-        <!-- ==================== HOME / IDLE SCREEN ==================== -->
-        <div id="screen-home" class="screen">
-            <!-- Hero / featured promotion -->
-            <div id="home-hero" class="rounded-3xl p-6 sm:p-8 mb-6 text-white text-center shadow-lg"
-                 style="background:linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
-                <p class="uppercase tracking-wide text-xs sm:text-sm opacity-90 mb-1">Willkommen bei <span class="salon-name-ph font-semibold">[Salon-Name]</span></p>
-                <h2 id="hero-text" class="text-2xl sm:text-4xl font-bold">🎁 10 € Rabatt auf den 5. Besuch</h2>
-                <p class="mt-2 text-sm sm:text-base opacity-90">Werden Sie Mitglied und sichern Sie sich Ihre Vorteile.</p>
-            </div>
-
-            <!-- Primary tiles -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <button type="button" onclick="showScreen('checkin')"
-                    class="home-tile sm:col-span-3 bg-white rounded-3xl shadow-lg p-8 text-center hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-300"
-                    style="min-height:180px;">
-                    <div class="text-6xl mb-3">✅</div>
-                    <div class="text-2xl font-bold text-gray-800">Einchecken</div>
-                    <p class="text-gray-500 mt-1">Schnell anmelden – wir finden Sie über Ihren Geburtstag.</p>
-                </button>
-
-                <button type="button" onclick="showScreen('register')"
-                    class="home-tile bg-white rounded-3xl shadow-lg p-6 text-center hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-300"
-                    style="min-height:160px;">
-                    <div class="text-5xl mb-2">📝</div>
-                    <div class="text-xl font-bold text-gray-800">Registrieren</div>
-                    <p class="text-gray-500 text-sm mt-1">Neu hier? Jetzt Mitglied werden.</p>
-                </button>
-
-                <button type="button" onclick="showScreen('browse')"
-                    class="home-tile bg-white rounded-3xl shadow-lg p-6 text-center hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-300"
-                    style="min-height:160px;">
-                    <div class="text-5xl mb-2">📖</div>
-                    <div class="text-xl font-bold text-gray-800">Stöbern</div>
-                    <p class="text-gray-500 text-sm mt-1">Trends, Tipps &amp; Produkte.</p>
-                </button>
-
-                <button type="button" onclick="showScreen('welcome')"
-                    class="home-tile bg-white rounded-3xl shadow-lg p-6 text-center hover:shadow-xl transition-all border-2 border-transparent hover:border-purple-300"
-                    style="min-height:160px;">
-                    <div class="text-5xl mb-2">📶</div>
-                    <div class="text-xl font-bold text-gray-800">Social &amp; WLAN</div>
-                    <p class="text-gray-500 text-sm mt-1">Folgen, bewerten, verbinden.</p>
-                </button>
-            </div>
-
-            <!-- Secondary: AI consultation (kept from before) -->
-            <div class="mt-4">
-                <button type="button" onclick="openKioskPopup()"
-                    class="w-full bg-white/70 rounded-2xl shadow p-4 text-center hover:bg-white transition-all">
-                    <span class="text-2xl mr-2">✨</span>
-                    <span class="font-semibold text-gray-700">KI-Frisurenberatung ausprobieren</span>
-                </button>
-            </div>
-        </div>
+    <main class="mx-auto w-full max-w-5xl px-5 sm:px-6 py-6">
 
         <!-- ==================== CHECK-IN SCREEN ==================== -->
         <div id="screen-checkin" class="screen hidden">
@@ -433,6 +439,19 @@
 
         <!-- ==================== BROWSE (Magazine & Shop) SCREEN ==================== -->
         <div id="screen-browse" class="screen hidden">
+            <!-- Slim featured promotion (start screen) -->
+            <div id="home-hero" class="rounded-2xl px-5 py-4 mb-4 text-white shadow-lg flex items-center justify-between gap-4 flex-wrap"
+                 style="background:linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
+                <div>
+                    <p class="uppercase tracking-wide text-xs opacity-90">Willkommen bei <span class="salon-name-ph font-semibold">[Salon-Name]</span></p>
+                    <h2 id="hero-text" class="text-xl sm:text-2xl font-bold">🎁 10 € Rabatt auf den 5. Besuch</h2>
+                </div>
+                <button type="button" onclick="showScreen('register')"
+                    class="bg-white/95 text-gray-800 font-semibold px-5 py-2.5 rounded-xl shadow hover:bg-white whitespace-nowrap">
+                    Jetzt Mitglied werden
+                </button>
+            </div>
+
             <!-- Tabs -->
             <div class="bg-white rounded-2xl shadow p-2 mb-4 flex gap-2">
                 <button type="button" id="browse-tab-trend" onclick="switchBrowseTab('trend')"
@@ -500,20 +519,24 @@
 
                     <form id="onboarding-form" class="space-y-5" novalidate>
 
-                        <!-- Gender (mandatory) + Title (optional) on one line -->
+                        <!-- Anrede (mandatory) + Title (optional) on one line -->
                         <div class="flex flex-wrap items-start gap-x-8 gap-y-3">
                             <div>
-                                <p class="text-sm font-medium text-gray-700 mb-2">Anrede / Geschlecht <span class="text-red-500">*</span></p>
+                                <p class="text-sm font-medium text-gray-700 mb-2">Anrede <span class="text-red-500">*</span></p>
                                 <div class="flex flex-wrap gap-2" id="gender-group">
-                                    <label class="referral-chip"><input type="radio" name="gender" value="female" class="sr-only" required><span>Weiblich</span></label>
-                                    <label class="referral-chip"><input type="radio" name="gender" value="male" class="sr-only"><span>Männlich</span></label>
+                                    <label class="referral-chip"><input type="radio" name="gender" value="female" class="sr-only" required><span>Frau</span></label>
+                                    <label class="referral-chip"><input type="radio" name="gender" value="male" class="sr-only"><span>Herr</span></label>
                                     <label class="referral-chip"><input type="radio" name="gender" value="diverse" class="sr-only"><span>Divers</span></label>
                                 </div>
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-gray-700 mb-2">Titel <span class="text-gray-400 text-xs font-normal">(optional)</span></p>
-                                <!-- Single toggleable chip: click to select "Dr.", click again to deselect -->
-                                <label class="referral-chip" id="title-chip"><input type="checkbox" id="title" name="title" value="Dr." class="sr-only"><span>Dr.</span></label>
+                                <!-- Single-select but deselectable: click a chip to select, click again to clear -->
+                                <div class="flex flex-wrap gap-2" id="title-group">
+                                    <label class="referral-chip"><input type="checkbox" name="title" value="Dr." class="sr-only"><span>Dr.</span></label>
+                                    <label class="referral-chip"><input type="checkbox" name="title" value="Prof." class="sr-only"><span>Prof.</span></label>
+                                    <label class="referral-chip"><input type="checkbox" name="title" value="Prof. Dr." class="sr-only"><span>Prof. Dr.</span></label>
+                                </div>
                             </div>
                         </div>
 
@@ -536,9 +559,11 @@
                             </div>
                             <div class="md:col-span-2">
                                 <label for="mobile" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Mobilnummer <span class="text-gray-400 text-xs font-normal">(optional – für Termin-Erinnerungen)</span>
+                                    Mobilnummer <span class="text-red-500">*</span>
+                                    <span class="text-gray-400 text-xs font-normal">(für Termin-Erinnerungen)</span>
                                 </label>
-                                <input type="tel" id="mobile" name="mobile" autocomplete="tel" inputmode="tel" placeholder="+49 170 1234567"
+                                <input type="tel" id="mobile" name="mobile" required autocomplete="tel" inputmode="numeric"
+                                    pattern="[0-9]*" placeholder="0170 1234567"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
                             </div>
                         </div>
@@ -1421,6 +1446,21 @@
                     <p class="text-gray-500">Ihre Registrierung war erfolgreich. Folgen Sie uns oder verbinden Sie sich mit unserem WLAN.</p>
                 </div>
 
+                <!-- Guest WiFi card (shown only when the salon configured WiFi) -->
+                <div id="wifi-card" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-6">
+                    <div class="flex flex-col sm:flex-row items-center gap-6">
+                        <div class="bg-white p-3 rounded-xl border-2 border-purple-200 shrink-0">
+                            <div id="wifi-qr" class="flex justify-center items-center" style="width:180px;height:180px;"></div>
+                        </div>
+                        <div class="text-center sm:text-left">
+                            <h3 class="text-xl font-bold text-gray-800 mb-1">📶 Gäste-WLAN</h3>
+                            <p class="text-gray-500 text-sm mb-3">Scannen Sie den Code, um sich automatisch zu verbinden.</p>
+                            <p class="text-sm text-gray-700">Netzwerk: <span id="wifi-ssid" class="font-semibold"></span></p>
+                            <p class="text-sm text-gray-700">Passwort: <span id="wifi-password" class="font-mono font-semibold"></span></p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="bg-white rounded-lg shadow-lg p-8">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center" data-i18n="social.title">Connect With Us</h2>
                     <p class="text-gray-600 text-center mb-6" data-i18n="social.description">Follow us on social media or leave us a review!</p>
@@ -1789,6 +1829,13 @@
                 console.log('  ⚠ No salon name provided in branding data');
             }
 
+            // Capture guest WiFi (if the salon configured it) and reflect it in
+            // the nav label + social screen.
+            window.salonWifi = (branding.wifi_ssid && branding.wifi_password)
+                ? { ssid: branding.wifi_ssid, password: branding.wifi_password }
+                : null;
+            if (typeof updateSocialNavLabel === 'function') updateSocialNavLabel();
+
             console.log('Step 4: Applying logo...');
             // Apply logo if available - ensure correct URL prefix
             if (branding.logo_url) {
@@ -1860,27 +1907,22 @@
         }
 
         // ==================== SCREEN ROUTER ====================
-        let currentScreen = 'home';
-        let previousScreen = 'home';
+        const START_SCREEN = 'browse';   // Stöbern is the idle/start screen
+        let currentScreen = START_SCREEN;
 
         function showScreen(name) {
-            previousScreen = (name === currentScreen) ? previousScreen : currentScreen;
+            // 'ai' is an overlay, not a routed screen.
+            if (name === 'ai') { openKioskPopup(); return; }
 
             // Hide the standalone screens
-            ['screen-home', 'screen-checkin', 'screen-browse'].forEach(id => {
+            ['screen-checkin', 'screen-browse'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
             });
             // Hide the content-container children (register / welcome)
             document.getElementById('onboarding-content').classList.add('hidden');
             document.getElementById('social-content').classList.add('hidden');
 
-            const navBar = document.getElementById('nav-bar');
-            navBar.classList.toggle('hidden', name === 'home');
-
             switch (name) {
-                case 'home':
-                    document.getElementById('screen-home').classList.remove('hidden');
-                    break;
                 case 'checkin':
                     document.getElementById('screen-checkin').classList.remove('hidden');
                     startCheckin();
@@ -1895,23 +1937,70 @@
                 case 'welcome':
                     document.getElementById('social-content').classList.remove('hidden');
                     if (typeof loadSocialLinks === 'function') loadSocialLinks();
+                    renderWifiCard();
                     break;
             }
             currentScreen = name;
+            setActiveNav(name);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             resetIdleTimer();
         }
 
+        // Highlight the active rail item.
+        function setActiveNav(name) {
+            document.querySelectorAll('#nav-rail .nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.screen === name);
+            });
+        }
+
+        // Rail navigation: switch screen and collapse the rail afterwards.
+        function navGo(name) {
+            showScreen(name);
+            setRailExpanded(false);
+        }
+
+        function toggleRail() {
+            const rail = document.getElementById('nav-rail');
+            setRailExpanded(!rail.classList.contains('expanded'));
+        }
+
+        function setRailExpanded(expanded) {
+            document.getElementById('nav-rail').classList.toggle('expanded', expanded);
+        }
+
         function goHome() {
-            // Cancel any pending auto-return and reset transient flows.
+            // Return to the start/idle screen (Stöbern).
             if (checkinSuccessTimer) { clearTimeout(checkinSuccessTimer); checkinSuccessTimer = null; }
-            showScreen('home');
+            showScreen(START_SCREEN);
         }
 
         function navBack() {
-            // Within the check-in flow, prefer stepping back inside it.
             if (currentScreen === 'checkin' && checkinBackWithinFlow()) return;
-            showScreen('home');
+            showScreen(START_SCREEN);
+        }
+
+        // Rail label + WiFi card depend on whether the salon configured WiFi.
+        function updateSocialNavLabel() {
+            const el = document.getElementById('nav-social-label');
+            if (el) el.textContent = window.salonWifi ? 'Social & WLAN' : 'Social';
+        }
+
+        function renderWifiCard() {
+            const card = document.getElementById('wifi-card');
+            if (!card) return;
+            if (!window.salonWifi) { card.classList.add('hidden'); return; }
+            const { ssid, password } = window.salonWifi;
+            document.getElementById('wifi-ssid').textContent = ssid;
+            document.getElementById('wifi-password').textContent = password;
+            const qrEl = document.getElementById('wifi-qr');
+            qrEl.innerHTML = '';
+            // Standard WiFi QR payload; escape the reserved characters \ ; , : "
+            const esc = s => String(s).replace(/([\\;,:"])/g, '\\$1');
+            const payload = `WIFI:T:WPA;S:${esc(ssid)};P:${esc(password)};;`;
+            try {
+                new QRCode(qrEl, { text: payload, width: 180, height: 180, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+            } catch (e) { console.error('wifi qr failed', e); }
+            card.classList.remove('hidden');
         }
 
         // Open fullscreen kiosk popup
@@ -1956,6 +2045,27 @@
 
             // The optional address block reuses the mandatory PLZ / Ort, so no
             // separate address PLZ/Ort fields are shown or synced here.
+
+            // Title chips: single-select but deselectable — checking one clears
+            // the others; clicking a checked one clears it (native checkbox).
+            document.querySelectorAll('#title-group input[type="checkbox"]').forEach(box => {
+                box.addEventListener('change', () => {
+                    if (box.checked) {
+                        document.querySelectorAll('#title-group input[type="checkbox"]').forEach(other => {
+                            if (other !== box) other.checked = false;
+                        });
+                    }
+                });
+            });
+
+            // Mobile: numbers only (strip anything non-digit as the user types).
+            const mobileEl = document.getElementById('mobile');
+            if (mobileEl) {
+                mobileEl.addEventListener('input', () => {
+                    const cleaned = mobileEl.value.replace(/\D/g, '');
+                    if (cleaned !== mobileEl.value) mobileEl.value = cleaned;
+                });
+            }
 
             // Membership opt-in → gently recommend (never auto-check) e-mail marketing.
             const memberEl = document.getElementById('is_member');
@@ -2020,7 +2130,8 @@
             if (!val('first_name')) errors.push('Bitte geben Sie Ihren Vornamen ein.');
             if (!val('last_name')) errors.push('Bitte geben Sie Ihren Nachnamen ein.');
             if (!isValidEmailAddress(val('email'))) errors.push('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
-            if (!document.querySelector('input[name="gender"]:checked')) errors.push('Bitte wählen Sie Ihre Anrede / Ihr Geschlecht.');
+            if (!document.querySelector('input[name="gender"]:checked')) errors.push('Bitte wählen Sie Ihre Anrede.');
+            if (val('mobile').replace(/\D/g, '').length < 5) errors.push('Bitte geben Sie Ihre Mobilnummer ein.');
             if (!val('birth_day') || !val('birth_month')) errors.push('Bitte wählen Sie Tag und Monat Ihres Geburtstags.');
             if (!val('zip') || !val('city')) errors.push('Bitte geben Sie PLZ und Ort ein.');
             if (!document.getElementById('consent_data_processing').checked) {
@@ -2040,12 +2151,12 @@
             const sourceEl = document.querySelector('input[name="referral_source"]:checked');
             const genderEl = document.querySelector('input[name="gender"]:checked');
 
-            const titleEl = document.getElementById('title');
+            const titleChecked = document.querySelector('#title-group input[type="checkbox"]:checked');
 
             const formData = {
                 first_name: val('first_name'),
                 last_name: val('last_name'),
-                title: (titleEl && titleEl.checked) ? titleEl.value : '',
+                title: titleChecked ? titleChecked.value : '',
                 gender: genderEl ? genderEl.value : '',
                 email: val('email'),
                 mobile: val('mobile'),
@@ -2517,7 +2628,7 @@
         function resetIdleTimer() {
             if (idleTimer) clearTimeout(idleTimer);
             idleTimer = setTimeout(() => {
-                if (currentScreen !== 'home' && !isFlowActive()) {
+                if (currentScreen !== START_SCREEN && !isFlowActive()) {
                     goHome();
                 } else {
                     resetIdleTimer(); // still busy → check again later
@@ -3730,9 +3841,10 @@
             // Initialize the membership registration form (works with or without auth).
             initMembershipForm();
 
-            // Initialize the kiosk shell: check-in UI, home screen, idle timer.
+            // Initialize the kiosk shell: check-in UI, start screen, idle timer.
             initCheckinUI();
-            showScreen('home');
+            updateSocialNavLabel();
+            showScreen(START_SCREEN);
             resetIdleTimer();
 
         });

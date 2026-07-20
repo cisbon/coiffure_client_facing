@@ -59,6 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
+    // WiFi columns exist only after migration 011.
+    $hasWifi = $conn->query("SHOW COLUMNS FROM coiffure_salons LIKE 'wifi_ssid'");
+    $wifiCols = ($hasWifi && $hasWifi->num_rows > 0) ? ", wifi_ssid, wifi_password" : "";
+
     $stmt = $conn->prepare("
         SELECT
             salon_id,
@@ -68,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             secondary_color,
             background_color,
             button_color,
-            text_color
+            text_color{$wifiCols}
         FROM coiffure_salons
         WHERE salon_id = ?
     ");
@@ -232,29 +236,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Update salon branding
-    $stmt = $conn->prepare("
-        UPDATE coiffure_salons
-        SET
-            logo_path = ?,
-            primary_color = ?,
-            secondary_color = ?,
-            background_color = ?,
-            button_color = ?,
-            text_color = ?,
-            updated_at = NOW()
-        WHERE salon_id = ?
-    ");
+    // Optional guest-WiFi (only persisted when migration 011 columns exist).
+    $hasWifiCol = $conn->query("SHOW COLUMNS FROM coiffure_salons LIKE 'wifi_ssid'");
+    $wifiEnabled = ($hasWifiCol && $hasWifiCol->num_rows > 0);
 
-    $stmt->bind_param("ssssssi",
-        $logoPath,
-        $primaryColor,
-        $secondaryColor,
-        $backgroundColor,
-        $buttonColor,
-        $textColor,
-        $salonId
-    );
+    if ($wifiEnabled) {
+        // Empty string → NULL so the tablet treats it as "no WiFi configured".
+        $wifiSsid = isset($_POST['wifi_ssid']) && trim($_POST['wifi_ssid']) !== '' ? trim($_POST['wifi_ssid']) : null;
+        $wifiPassword = isset($_POST['wifi_password']) && trim($_POST['wifi_password']) !== '' ? trim($_POST['wifi_password']) : null;
+
+        $stmt = $conn->prepare("
+            UPDATE coiffure_salons
+            SET
+                logo_path = ?,
+                primary_color = ?,
+                secondary_color = ?,
+                background_color = ?,
+                button_color = ?,
+                text_color = ?,
+                wifi_ssid = ?,
+                wifi_password = ?,
+                updated_at = NOW()
+            WHERE salon_id = ?
+        ");
+        $stmt->bind_param("ssssssssi",
+            $logoPath,
+            $primaryColor,
+            $secondaryColor,
+            $backgroundColor,
+            $buttonColor,
+            $textColor,
+            $wifiSsid,
+            $wifiPassword,
+            $salonId
+        );
+    } else {
+        $stmt = $conn->prepare("
+            UPDATE coiffure_salons
+            SET
+                logo_path = ?,
+                primary_color = ?,
+                secondary_color = ?,
+                background_color = ?,
+                button_color = ?,
+                text_color = ?,
+                updated_at = NOW()
+            WHERE salon_id = ?
+        ");
+        $stmt->bind_param("ssssssi",
+            $logoPath,
+            $primaryColor,
+            $secondaryColor,
+            $backgroundColor,
+            $buttonColor,
+            $textColor,
+            $salonId
+        );
+    }
 
     if ($stmt->execute()) {
         echo json_encode([

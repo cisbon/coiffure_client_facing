@@ -1,17 +1,21 @@
 # Tablet App – Check-in, Registration & Digital Magazine
 
-The in-salon tablet is a self-service kiosk with three paths from a home/idle
-screen: **Einchecken** (self check-in), **Registrieren** (membership sign-up),
-and **Stöbern** (digital magazine & product shop). All wallet/pass features
-have been removed — membership is now a status only, no downloadable card.
+The in-salon tablet is a self-service kiosk. All wallet/pass features have been
+removed — membership is now a status only, no downloadable card.
 
-## Home / idle screen
+## Navigation & idle screen
 
-- Hero area with a featured promotion (e.g. "10 € Rabatt auf den 5. Besuch").
-- Three tiles: **Einchecken** (most prominent), **Registrieren**, **Stöbern**,
-  plus **Social & WLAN** and a small **KI-Frisurenberatung** entry.
+- A sticky **left navigation rail** is always visible (icon rail, ~76px). A
+  **burger** at the top expands it to show labels. Top→bottom the items are:
+  **Stöbern**, **Check-In**, **Registrieren**, **Social & WLAN**, **AI Hairstyle**.
+- **Stöbern** (the digital magazine & shop) is the **start / idle screen**.
+- The **Social & WLAN** label reads just **Social** unless the salon configured
+  a guest-WiFi name AND password in the admin dashboard.
+- **AI Hairstyle** opens the existing full-screen KI consultation overlay.
+- The content area is centered (max-w-5xl) with modest horizontal padding,
+  tuned for landscape tablet readability.
 - After 30 s of inactivity (except during an active check-in or a
-  partially-filled registration) the tablet auto-returns to this screen.
+  partially-filled registration) the tablet auto-returns to Stöbern.
 
 ## 1. Self check-in
 
@@ -43,14 +47,30 @@ step. Membership/marketing flags are NOT required to check in.
 
 ## 2. Registration
 
-The existing membership sign-up, with wallet references removed. The membership
-opt-in now reads *"Ja, ich werde Mitglied im [Salon-Name] Club und profitiere
-von allen Vorteilen."* and is **checked by default** (the marketing/DSGVO
-consents stay unchecked). The form also collects an optional **title** dropdown
-(Dr./Prof./Prof. Dr., empty by default) and an optional **gender** (Weiblich /
-Männlich / Divers) as clickable chips — the gender drives the check-in avatar.
+The membership sign-up (wallet-free). Key fields:
+
+- **Anrede** (mandatory) as chips: **Frau / Herr / Divers** (stored as
+  female/male/diverse; drives the check-in avatar).
+- **Titel** (optional): **Dr. / Prof. / Prof. Dr.** chips — single-select but
+  deselectable (tap a chip again to clear it). On the same line as Anrede.
+- **Mobilnummer** is **mandatory** and **numeric-only** (numeric keyboard,
+  non-digits stripped as you type; placeholder `0170 1234567`).
+- The membership opt-in reads *"…und profitiere von allen Vorteilen."* and is
+  **checked by default** (marketing/DSGVO consents stay unchecked).
+- **PLZ / Ort** appear only once (mandatory section); the optional postal-address
+  block reuses them, so no duplicate fields.
+
 After a successful submit the tablet shows the Social/WiFi screen (with a short
-welcome banner), then idles back home.
+welcome banner), then idles back to Stöbern.
+
+## Guest WiFi
+
+Salons set an optional guest-WiFi **name + password** in the admin dashboard
+("Salon Profile & Branding" → *Gäste-WLAN*). When both are present, the tablet's
+Social screen shows a **WiFi card** with a scannable WiFi QR code
+(`WIFI:T:WPA;S:…;P:…;;`) and the credentials, and the nav item is labelled
+**Social & WLAN** (otherwise just **Social**). Stored via `salon-branding.php`
+(GET returns `wifi_ssid`/`wifi_password`; POST accepts them).
 
 ## 3. Digital magazine & shop ("Stöbern")
 
@@ -71,6 +91,7 @@ back them later (managed via the web access) without changing the response shape
 |------|---------|
 | `migrations/009_visits_checkin.sql` + `api/apply_migration_009.php` | `coiffure_visits` table |
 | `migrations/010_add_gender.sql` + `api/apply_migration_010.php` | customer `gender` + `title` columns |
+| `migrations/011_add_wifi.sql` + `api/apply_migration_011.php` | salon `wifi_ssid` + `wifi_password` columns |
 | `api/checkin.php` | candidates / confirm / phone check-in actions |
 | `api/content.php` | Trends & Tipps content (reads `data/trends.json`) |
 | `api/products.php` | Shop catalogue (reads `data/products.json`) |
@@ -90,10 +111,12 @@ The check-in feature needs the `coiffure_visits` table and relies on the
 # Idempotent runners (safe to re-run, work on any MySQL)
 php api/apply_migration_009.php   # coiffure_visits table
 php api/apply_migration_010.php   # customer gender + title columns
+php api/apply_migration_011.php   # salon guest-WiFi columns
 
 # …or raw SQL
 mysql -u USER -p salonlyft < migrations/009_visits_checkin.sql
 mysql -u USER -p salonlyft < migrations/010_add_gender.sql
+mysql -u USER -p salonlyft < migrations/011_add_wifi.sql
 ```
 
 `coiffure_visits`: `visit_id, customer_id, salon_id, checkin_method
@@ -107,8 +130,9 @@ Migration 010 adds `gender ENUM('female','male','diverse')` and
 
 1. Deploy the updated files (no new Composer dependencies — the passes library
    is gone).
-2. Run `php api/apply_migration_009.php` and `php api/apply_migration_010.php`
-   once (migration 008 must already be applied for the birthday columns).
+2. Run `php api/apply_migration_009.php`, `php api/apply_migration_010.php` and
+   `php api/apply_migration_011.php` once (migration 008 must already be applied
+   for the birthday columns).
 3. Ensure `data/trends.json` and `data/products.json` are web-readable by PHP.
 4. Configure `api/.env` as before (`APP_PUBLIC_URL`, `MAIL_*`, optional
    `SMTP_*`). No wallet configuration is required anymore.
