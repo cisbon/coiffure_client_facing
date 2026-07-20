@@ -7,8 +7,9 @@
  * small SMTP sender is used instead (no external dependency).
  *
  * Two variants:
- *   - Membership: welcome to the club + "Add to Wallet" button + QR + benefits
- *   - Plain:      simple welcome / confirmation, no membership card
+ *   - Membership: welcome to the club + benefits (membership status only,
+ *     no downloadable card / wallet pass)
+ *   - Plain:      simple welcome / confirmation
  */
 
 /**
@@ -16,9 +17,9 @@
  *
  * @param array $data Keys:
  *   to_email, first_name, salon_name,
- *   is_member (bool), wallet_url (string|null), member_id (string|null),
+ *   is_member (bool), member_id (string|null),
  *   member_since (string|null), primary_color, secondary_color,
- *   logo_url (public https URL, optional), user_agent (optional)
+ *   logo_url (public https URL, optional)
  * @return bool
  */
 function sendWelcomeEmail(array $data)
@@ -29,7 +30,7 @@ function sendWelcomeEmail(array $data)
     $isMember  = !empty($data['is_member']);
 
     $subject = $isMember
-        ? "Willkommen im {$salonName} Club – Ihre digitale Treuekarte"
+        ? "Willkommen im {$salonName} Club"
         : "Willkommen bei {$salonName}";
 
     $html = $isMember
@@ -52,61 +53,42 @@ function buildMembershipEmailHtml(array $d)
     $secondary = _hex($d['secondary_color'] ?? '#EC4899');
     $firstName = _h($d['first_name'] ?: '');
     $salonName = _h($d['salon_name'] ?: 'unser Salon');
-    $walletUrl = $d['wallet_url'] ?? '#';
     $memberId  = _h($d['member_id'] ?? '');
     $since     = _h(_fmtDate($d['member_since'] ?? date('Y-m-d')));
     $logo      = _logoTag($d['logo_url'] ?? null, $salonName);
 
-    // QR image rendered by the recipient's mail client from a public service.
-    $qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($walletUrl);
+    $memberLine = $memberId !== ''
+        ? "<tr><td style=\"padding:0 32px 8px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7280;\">"
+          . "Mitgliedsnummer: <strong>{$memberId}</strong> &nbsp;·&nbsp; Mitglied seit: <strong>{$since}</strong></td></tr>"
+        : '';
 
     $header = _emailHeader($primary, $secondary, $logo, $salonName);
     $footer = _emailFooter($salonName);
 
     return $header . <<<HTML
     <tr><td style="padding:32px 32px 8px 32px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
-        <h1 style="margin:0 0 8px 0;font-size:22px;color:{$primary};">Hallo {$firstName}, willkommen im Club! 🎉</h1>
-        <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
-            Schön, dass Sie Mitglied im <strong>{$salonName} Club</strong> sind. Ihre digitale
-            Treuekarte wartet schon auf Sie – fügen Sie sie mit einem Tipp zu Apple Wallet oder
-            Google Wallet hinzu.
+        <h1 style="margin:0 0 8px 0;font-size:22px;color:{$primary};">Willkommen im {$salonName} Club, {$firstName}! 🎉</h1>
+        <p style="margin:0 0 4px 0;font-size:15px;line-height:1.6;">
+            Schön, dass Sie dabei sind. Als Mitglied profitieren Sie ab sofort von allen Vorteilen –
+            wir freuen uns auf Ihren nächsten Besuch.
         </p>
     </td></tr>
 
-    <tr><td align="center" style="padding:8px 32px;">
-        <a href="{$walletUrl}" style="display:inline-block;background:{$primary};color:#ffffff;
-            text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:16px;
-            padding:14px 28px;border-radius:10px;">
-            Zur Wallet hinzufügen
-        </a>
-    </td></tr>
+    {$memberLine}
 
-    <tr><td align="center" style="padding:16px 32px 8px 32px;">
-        <img src="{$qrSrc}" width="180" height="180" alt="QR-Code zur Treuekarte"
-             style="border:8px solid #ffffff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <p style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7280;">
-            Oder scannen Sie diesen Code mit Ihrem Smartphone.
-        </p>
-    </td></tr>
-
-    <tr><td style="padding:8px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7280;">
-        Mitgliedsnummer: <strong>{$memberId}</strong> &nbsp;·&nbsp; Mitglied seit: <strong>{$since}</strong>
-    </td></tr>
-
-    <tr><td style="padding:16px 32px;">
+    <tr><td style="padding:8px 32px 16px 32px;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#faf5ff;border-radius:12px;">
             <tr><td style="padding:18px 20px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
                 <p style="margin:0 0 10px 0;font-weight:bold;color:{$primary};">Ihre Vorteile</p>
-                <p style="margin:0 0 6px 0;font-size:14px;">🎁 10 € Rabatt auf jeden 5. Besuch</p>
-                <p style="margin:0 0 6px 0;font-size:14px;">👥 Freund werben: Ihr Freund wird Mitglied → Sie beide erhalten 10 € Rabatt</p>
+                <p style="margin:0 0 6px 0;font-size:14px;">🎁 10 € Rabatt auf den 5. Besuch</p>
+                <p style="margin:0 0 6px 0;font-size:14px;">👥 Freunde werben lohnt sich – Sie beide erhalten 10 € Rabatt</p>
                 <p style="margin:0;font-size:14px;">✨ Exklusive Angebote &amp; Geburtstags-Überraschungen</p>
             </td></tr>
         </table>
     </td></tr>
 
-    <tr><td style="padding:8px 32px 24px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#9ca3af;">
-        Falls der Button nicht funktioniert, öffnen Sie bitte diesen Link:<br>
-        <a href="{$walletUrl}" style="color:{$primary};word-break:break-all;">{$walletUrl}</a>
+    <tr><td style="padding:0 32px 24px 32px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6b7280;line-height:1.6;">
+        Wir freuen uns auf Ihren nächsten Besuch bei {$salonName}.
     </td></tr>
 HTML
     . $footer;

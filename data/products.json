@@ -1,0 +1,66 @@
+[
+  {
+    "id": 1,
+    "name": "Kérastase Nutritive Bain Satin",
+    "description": "Nährendes Shampoo für normales bis leicht trockenes Haar. Spendet Feuchtigkeit und Geschmeidigkeit für gesund aussehendes Haar.",
+    "image_url": "https://placehold.co/600x600/9333EA/FFFFFF/png?text=Shampoo",
+    "price": "ab 24,90 €",
+    "category": "Pflege"
+  },
+  {
+    "id": 2,
+    "name": "Kérastase Nutritive Conditioner",
+    "description": "Pflegespülung für weiches, gut kämmbares Haar. Ideal in Kombination mit dem Nutritive Shampoo.",
+    "image_url": "https://placehold.co/600x600/A855F7/FFFFFF/png?text=Conditioner",
+    "price": "ab 26,90 €",
+    "category": "Pflege"
+  },
+  {
+    "id": 3,
+    "name": "Olaplex No. 3 Hair Perfector",
+    "description": "Intensive Treatment-Kur, die Haarbindungen im Inneren repariert. Für kräftigeres, gesünderes Haar.",
+    "image_url": "https://placehold.co/600x600/EC4899/FFFFFF/png?text=Olaplex+No.3",
+    "price": "ab 28,00 €",
+    "category": "Treatment"
+  },
+  {
+    "id": 4,
+    "name": "Wella EIMI Ocean Spritz",
+    "description": "Salzspray für sommerliche Beach-Waves und griffige, mattierte Struktur.",
+    "image_url": "https://placehold.co/600x600/6D28D9/FFFFFF/png?text=Salzspray",
+    "price": "ab 18,90 €",
+    "category": "Styling"
+  },
+  {
+    "id": 5,
+    "name": "Redken Styling Cream",
+    "description": "Leichte Stylingcreme für Definition und natürlichen Halt ohne zu beschweren.",
+    "image_url": "https://placehold.co/600x600/DB2777/FFFFFF/png?text=Styling+Cream",
+    "price": "ab 21,50 €",
+    "category": "Styling"
+  },
+  {
+    "id": 6,
+    "name": "Moroccanoil Treatment Original",
+    "description": "Das legendäre Arganöl-Treatment für Glanz, Geschmeidigkeit und Pflege in einem.",
+    "image_url": "https://placehold.co/600x600/7C3AED/FFFFFF/png?text=Arganoel",
+    "price": "ab 32,00 €",
+    "category": "Treatment"
+  },
+  {
+    "id": 7,
+    "name": "L'Oréal Professionnel Hitzeschutz-Spray",
+    "description": "Schützt das Haar bis 230 °C beim Föhnen und Glätten und erleichtert das Styling.",
+    "image_url": "https://placehold.co/600x600/9333EA/FFFFFF/png?text=Hitzeschutz",
+    "price": "ab 19,90 €",
+    "category": "Styling"
+  },
+  {
+    "id": 8,
+    "name": "Kérastase Blond Absolu Maske",
+    "description": "Reichhaltige Maske für blondiertes und aufgehelltes Haar. Neutralisiert Gelbstich und pflegt intensiv.",
+    "image_url": "https://placehold.co/600x600/EC4899/FFFFFF/png?text=Blond+Maske",
+    "price": "ab 39,90 €",
+    "category": "Pflege"
+  }
+]
