@@ -53,6 +53,9 @@ The membership sign-up (wallet-free). Key fields:
   female/male/diverse; drives the check-in avatar).
 - **Titel** (optional): **Dr. / Prof. / Prof. Dr.** chips — single-select but
   deselectable (tap a chip again to clear it). On the same line as Anrede.
+- **Geburtstag** is a native `<input type="date">` (iOS/iPad shows a wheel),
+  **mandatory including the year**, capped at today. The value is split into
+  birth_day / birth_month / birth_year on submit.
 - **Mobilnummer** is **mandatory** and **numeric-only** (numeric keyboard,
   non-digits stripped as you type; placeholder `0170 1234567`).
 - The membership opt-in reads *"…und profitiere von allen Vorteilen."* and is

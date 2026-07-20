@@ -568,19 +568,12 @@
                             </div>
                         </div>
 
-                        <!-- Birthday -->
+                        <!-- Birthday (native date picker → iOS/iPad shows a wheel) -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Geburtstag <span class="text-red-500">*</span></label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <select id="birth_day" name="birth_day" required class="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
-                                    <option value="">Tag</option>
-                                </select>
-                                <select id="birth_month" name="birth_month" required class="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
-                                    <option value="">Monat</option>
-                                </select>
-                                <input type="number" id="birth_year" name="birth_year" placeholder="Jahr (optional)" min="1900" max="2025" inputmode="numeric"
-                                    class="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
-                            </div>
+                            <label for="birthday" class="block text-sm font-medium text-gray-700 mb-1">Geburtstag <span class="text-red-500">*</span></label>
+                            <input type="date" id="birthday" name="birthday" required
+                                class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
+                            <p class="text-xs text-gray-400 mt-1">Tag, Monat und Jahr – auf dem Tablet erscheint ein Auswahlrad.</p>
                         </div>
 
                         <!-- Core ZIP / City -->
@@ -2027,20 +2020,15 @@
             return userSalonId || 1;
         }
 
-        // Populate day / month selects + hook up form behaviours.
+        // Hook up form behaviours.
         function initMembershipForm() {
-            const dayEl = document.getElementById('birth_day');
-            const monthEl = document.getElementById('birth_month');
-            if (dayEl && dayEl.options.length <= 1) {
-                for (let d = 1; d <= 31; d++) {
-                    dayEl.insertAdjacentHTML('beforeend', `<option value="${d}">${d}</option>`);
-                }
-            }
-            const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-            if (monthEl && monthEl.options.length <= 1) {
-                months.forEach((m, i) => {
-                    monthEl.insertAdjacentHTML('beforeend', `<option value="${i + 1}">${m}</option>`);
-                });
+            // Birthday uses a native date input; cap it at today so no future
+            // date can be chosen (year is mandatory as part of the full date).
+            const birthdayEl = document.getElementById('birthday');
+            if (birthdayEl) {
+                const today = new Date().toISOString().slice(0, 10);
+                birthdayEl.max = today;
+                birthdayEl.min = '1900-01-01';
             }
 
             // The optional address block reuses the mandatory PLZ / Ort, so no
@@ -2118,6 +2106,19 @@
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         }
 
+        // Parse a native date input value ("YYYY-MM-DD") into day/month/year.
+        // Returns null when incomplete or implausible (year is mandatory).
+        function parseBirthday(value) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+            if (!m) return null;
+            const year = parseInt(m[1], 10);
+            const month = parseInt(m[2], 10);
+            const day = parseInt(m[3], 10);
+            if (year < 1900 || year > new Date().getFullYear()) return null;
+            if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+            return { day: String(day), month: String(month), year: String(year) };
+        }
+
         document.getElementById('onboarding-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -2132,7 +2133,8 @@
             if (!isValidEmailAddress(val('email'))) errors.push('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
             if (!document.querySelector('input[name="gender"]:checked')) errors.push('Bitte wählen Sie Ihre Anrede.');
             if (val('mobile').replace(/\D/g, '').length < 5) errors.push('Bitte geben Sie Ihre Mobilnummer ein.');
-            if (!val('birth_day') || !val('birth_month')) errors.push('Bitte wählen Sie Tag und Monat Ihres Geburtstags.');
+            const birthdayParts = parseBirthday(val('birthday'));
+            if (!birthdayParts) errors.push('Bitte geben Sie Ihren Geburtstag (Tag, Monat und Jahr) an.');
             if (!val('zip') || !val('city')) errors.push('Bitte geben Sie PLZ und Ort ein.');
             if (!document.getElementById('consent_data_processing').checked) {
                 errors.push('Bitte stimmen Sie der Datenschutzerklärung zu (Pflichtfeld).');
@@ -2160,9 +2162,9 @@
                 gender: genderEl ? genderEl.value : '',
                 email: val('email'),
                 mobile: val('mobile'),
-                birth_day: val('birth_day'),
-                birth_month: val('birth_month'),
-                birth_year: val('birth_year'),
+                birth_day: birthdayParts.day,
+                birth_month: birthdayParts.month,
+                birth_year: birthdayParts.year,
                 zip: val('zip'),
                 city: val('city'),
                 address_street: val('address_street'),
