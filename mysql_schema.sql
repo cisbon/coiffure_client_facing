@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS coiffure_customers (
     full_name VARCHAR(255) NOT NULL,
     first_name VARCHAR(120),
     last_name VARCHAR(120),
+    gender ENUM('female', 'male', 'diverse') DEFAULT NULL,
+    title VARCHAR(30) DEFAULT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(50),                 -- legacy; kept in sync with mobile
     mobile VARCHAR(50),                -- optional, for appointment reminders
