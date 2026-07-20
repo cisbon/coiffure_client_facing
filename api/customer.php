@@ -51,6 +51,7 @@ $requiredFields = [
     'email',
     'birth_day',
     'birth_month',
+    'birth_year',
     'zip',
     'city',
     'consent_data_processing',
@@ -72,7 +73,7 @@ $mobile    = !empty($requestData['mobile']) ? sanitizeInput($requestData['mobile
 
 $birthDay   = (int)$requestData['birth_day'];
 $birthMonth = (int)$requestData['birth_month'];
-$birthYear  = !empty($requestData['birth_year']) ? (int)$requestData['birth_year'] : null;
+$birthYear  = (int)$requestData['birth_year'];
 
 $zip  = sanitizeInput($requestData['zip']);
 $city = sanitizeInput($requestData['city']);
@@ -122,6 +123,9 @@ if (!validatePhone($mobile)) {
 }
 if ($birthDay < 1 || $birthDay > 31 || $birthMonth < 1 || $birthMonth > 12) {
     sendErrorResponse('Invalid birthday', 400);
+}
+if ($birthYear < 1900 || $birthYear > (int)date('Y')) {
+    sendErrorResponse('Bitte geben Sie ein gültiges Geburtsjahr an.', 400);
 }
 if ($gender === null) {
     sendErrorResponse('Bitte wählen Sie Ihre Anrede.', 400);
