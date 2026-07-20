@@ -120,6 +120,9 @@ if ($mobile !== null && $mobile !== '' && !validatePhone($mobile)) {
 if ($birthDay < 1 || $birthDay > 31 || $birthMonth < 1 || $birthMonth > 12) {
     sendErrorResponse('Invalid birthday', 400);
 }
+if ($gender === null) {
+    sendErrorResponse('Bitte wählen Sie Ihre Anrede / Ihr Geschlecht.', 400);
+}
 if (!$consentDataProcessing) {
     sendErrorResponse('Data processing consent is required', 400);
 }

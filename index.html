@@ -500,18 +500,21 @@
 
                     <form id="onboarding-form" class="space-y-5" novalidate>
 
-                        <!-- Title (optional) -->
-                        <div class="max-w-[10rem]">
-                            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
-                                Titel <span class="text-gray-400 text-xs font-normal">(optional)</span>
-                            </label>
-                            <select id="title" name="title"
-                                class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
-                                <option value="">–</option>
-                                <option value="Dr.">Dr.</option>
-                                <option value="Prof.">Prof.</option>
-                                <option value="Prof. Dr.">Prof. Dr.</option>
-                            </select>
+                        <!-- Gender (mandatory) + Title (optional) on one line -->
+                        <div class="flex flex-wrap items-start gap-x-8 gap-y-3">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 mb-2">Anrede / Geschlecht <span class="text-red-500">*</span></p>
+                                <div class="flex flex-wrap gap-2" id="gender-group">
+                                    <label class="referral-chip"><input type="radio" name="gender" value="female" class="sr-only" required><span>Weiblich</span></label>
+                                    <label class="referral-chip"><input type="radio" name="gender" value="male" class="sr-only"><span>Männlich</span></label>
+                                    <label class="referral-chip"><input type="radio" name="gender" value="diverse" class="sr-only"><span>Divers</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 mb-2">Titel <span class="text-gray-400 text-xs font-normal">(optional)</span></p>
+                                <!-- Single toggleable chip: click to select "Dr.", click again to deselect -->
+                                <label class="referral-chip" id="title-chip"><input type="checkbox" id="title" name="title" value="Dr." class="sr-only"><span>Dr.</span></label>
+                            </div>
                         </div>
 
                         <!-- Core identity -->
@@ -537,16 +540,6 @@
                                 </label>
                                 <input type="tel" id="mobile" name="mobile" autocomplete="tel" inputmode="tel" placeholder="+49 170 1234567"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
-                            </div>
-                        </div>
-
-                        <!-- Gender (optional, clickable chips) -->
-                        <div>
-                            <p class="text-sm font-medium text-gray-700 mb-2">Anrede / Geschlecht <span class="text-gray-400 text-xs font-normal">(optional)</span></p>
-                            <div class="flex flex-wrap gap-2" id="gender-group">
-                                <label class="referral-chip"><input type="radio" name="gender" value="female" class="sr-only"><span>Weiblich</span></label>
-                                <label class="referral-chip"><input type="radio" name="gender" value="male" class="sr-only"><span>Männlich</span></label>
-                                <label class="referral-chip"><input type="radio" name="gender" value="diverse" class="sr-only"><span>Divers</span></label>
                             </div>
                         </div>
 
@@ -589,18 +582,7 @@
                                     <label for="address_street" class="block text-xs font-medium text-gray-600 mb-1">Straße &amp; Hausnummer</label>
                                     <input type="text" id="address_street" name="address_street" autocomplete="street-address"
                                         class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
-                                </div>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <div>
-                                        <label for="address_zip" class="block text-xs font-medium text-gray-600 mb-1">PLZ</label>
-                                        <input type="text" id="address_zip" name="address_zip" inputmode="numeric"
-                                            class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
-                                    </div>
-                                    <div class="col-span-2">
-                                        <label for="address_city" class="block text-xs font-medium text-gray-600 mb-1">Ort</label>
-                                        <input type="text" id="address_city" name="address_city"
-                                            class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
-                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">PLZ &amp; Ort übernehmen wir aus Ihren Angaben oben.</p>
                                 </div>
                                 <label class="flex items-start gap-2 cursor-pointer">
                                     <input type="checkbox" id="consent_postal" name="consent_postal" class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
@@ -1972,19 +1954,8 @@
                 });
             }
 
-            // Auto pre-fill address PLZ / Ort from the core fields (while empty / untouched).
-            const zip = document.getElementById('zip');
-            const city = document.getElementById('city');
-            const addrZip = document.getElementById('address_zip');
-            const addrCity = document.getElementById('address_city');
-            if (zip && addrZip) {
-                zip.addEventListener('input', () => { if (!addrZip.dataset.touched) addrZip.value = zip.value; });
-            }
-            if (city && addrCity) {
-                city.addEventListener('input', () => { if (!addrCity.dataset.touched) addrCity.value = city.value; });
-            }
-            if (addrZip) addrZip.addEventListener('input', () => { addrZip.dataset.touched = '1'; });
-            if (addrCity) addrCity.addEventListener('input', () => { addrCity.dataset.touched = '1'; });
+            // The optional address block reuses the mandatory PLZ / Ort, so no
+            // separate address PLZ/Ort fields are shown or synced here.
 
             // Membership opt-in → gently recommend (never auto-check) e-mail marketing.
             const memberEl = document.getElementById('is_member');
@@ -2049,6 +2020,7 @@
             if (!val('first_name')) errors.push('Bitte geben Sie Ihren Vornamen ein.');
             if (!val('last_name')) errors.push('Bitte geben Sie Ihren Nachnamen ein.');
             if (!isValidEmailAddress(val('email'))) errors.push('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+            if (!document.querySelector('input[name="gender"]:checked')) errors.push('Bitte wählen Sie Ihre Anrede / Ihr Geschlecht.');
             if (!val('birth_day') || !val('birth_month')) errors.push('Bitte wählen Sie Tag und Monat Ihres Geburtstags.');
             if (!val('zip') || !val('city')) errors.push('Bitte geben Sie PLZ und Ort ein.');
             if (!document.getElementById('consent_data_processing').checked) {
@@ -2068,10 +2040,12 @@
             const sourceEl = document.querySelector('input[name="referral_source"]:checked');
             const genderEl = document.querySelector('input[name="gender"]:checked');
 
+            const titleEl = document.getElementById('title');
+
             const formData = {
                 first_name: val('first_name'),
                 last_name: val('last_name'),
-                title: val('title'),
+                title: (titleEl && titleEl.checked) ? titleEl.value : '',
                 gender: genderEl ? genderEl.value : '',
                 email: val('email'),
                 mobile: val('mobile'),
@@ -2081,8 +2055,6 @@
                 zip: val('zip'),
                 city: val('city'),
                 address_street: val('address_street'),
-                address_zip: val('address_zip'),
-                address_city: val('address_city'),
                 consent_postal: document.getElementById('consent_postal').checked,
                 consent_data_processing: document.getElementById('consent_data_processing').checked,
                 consent_email_marketing: document.getElementById('consent_email_marketing').checked,
