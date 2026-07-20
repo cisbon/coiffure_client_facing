@@ -44,15 +44,44 @@ CREATE TABLE IF NOT EXISTS coiffure_customers (
 
     -- Personal Information
     full_name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(120),
+    last_name VARCHAR(120),
     email VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
+    phone VARCHAR(50),                 -- legacy; kept in sync with mobile
+    mobile VARCHAR(50),                -- optional, for appointment reminders
+
+    -- Birthday (day + month collected on the form, year optional)
+    birth_day TINYINT UNSIGNED,
+    birth_month TINYINT UNSIGNED,
+    birth_year SMALLINT UNSIGNED,
+
+    -- Core location (always collected)
+    zip VARCHAR(20),
+    city VARCHAR(120),
+
+    -- Optional postal address block (ONLY stored when consent_postal = 1)
+    address_street VARCHAR(255),
+    address_zip VARCHAR(20),
+    address_city VARCHAR(120),
+    consent_postal TINYINT(1) DEFAULT 0,
 
     -- GDPR Compliance Fields
-    consent_marketing TINYINT(1) DEFAULT 0,
+    consent_marketing TINYINT(1) DEFAULT 0,           -- legacy general marketing
+    consent_email_marketing TINYINT(1) DEFAULT 0,     -- e-mail offers + birthday
+    consent_sms_whatsapp TINYINT(1) DEFAULT 0,        -- SMS/WhatsApp offers & reminders
     consent_data_processing TINYINT(1) NOT NULL DEFAULT 0,
     consent_cancellation_policy TINYINT(1) NOT NULL DEFAULT 0,
     consent_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     policy_version_accepted VARCHAR(20) NOT NULL,
+
+    -- Membership / loyalty
+    is_member TINYINT(1) DEFAULT 0,
+    member_id VARCHAR(64) UNIQUE,
+    member_since DATE,
+
+    -- Enrichment
+    referral_source VARCHAR(50),        -- Google / Instagram / Empfehlung / ...
+    preferred_stylist_id INT UNSIGNED,
 
     -- Signature
     signature_data LONGTEXT,  -- Base64 encoded signature image
@@ -84,6 +113,28 @@ CREATE TABLE IF NOT EXISTS coiffure_customers (
     INDEX idx_customer_salon (salon_id),
     INDEX idx_customer_created (created_at),
     INDEX idx_customer_consent (consent_data_processing, is_deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Table: coiffure_employees
+-- Description: Salon stylists (populates the "Wunsch-Stylist" dropdown)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_employees (
+    employee_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    salon_id INT UNSIGNED NOT NULL,
+
+    full_name VARCHAR(255) NOT NULL,
+    title VARCHAR(120) DEFAULT NULL,
+    display_order INT UNSIGNED DEFAULT 0,
+    is_active TINYINT(1) DEFAULT 1,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (salon_id) REFERENCES coiffure_salons(salon_id) ON DELETE CASCADE,
+
+    INDEX idx_employee_salon (salon_id),
+    INDEX idx_employee_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

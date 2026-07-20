@@ -62,3 +62,9 @@ backup/*.sql
 # Uploaded files (should be stored outside web root in production)
 uploads/
 api/uploads/
+
+# Generated wallet passes (regenerated on demand) and signing certificates
+wallet/passes/*.pkpass
+wallet/certs/
+*.p12
+*.pem
