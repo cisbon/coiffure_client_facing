@@ -57,6 +57,27 @@
             cursor: crosshair;
         }
 
+        /* Referral source chips */
+        .referral-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .referral-chip:hover { border-color: #c4b5fd; }
+        .referral-chip:has(input:checked) {
+            background-color: #9333EA;
+            border-color: #9333EA;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
         /* Loading spinner animation */
         @keyframes spin {
             to { transform: rotate(360deg); }
@@ -209,107 +230,233 @@
 
             <!-- ==================== CUSTOMER ONBOARDING TAB ==================== -->
             <div id="onboarding-content" class="tab-content">
-                <!-- Customer Registration Form -->
-                <div class="bg-white rounded-lg shadow-lg p-4 sm:p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4" data-i18n="onboarding.title">Customer Registration</h2>
+                <!-- Membership Registration Form -->
+                <div id="registration-card" class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
 
-                    <form id="onboarding-form" class="space-y-4">
+                    <!-- Club headline -->
+                    <div class="text-center mb-4">
+                        <div class="text-4xl mb-1">🎁</div>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">
+                            Werden Sie Mitglied im <span class="salon-name-ph text-purple-600">[Salon-Name]</span> Club
+                        </h2>
+                        <p class="text-gray-500 text-sm mt-1">Jetzt beitreten und Vorteile sichern.</p>
+                    </div>
 
-                        <!-- Personal Information - Two Column Layout -->
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-3">Personal Information</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label for="full_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                        <span data-i18n="onboarding.full_name">Full Name</span> <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="text" id="full_name" name="full_name" required data-i18n-placeholder="onboarding.full_name_placeholder"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                </div>
+                    <!-- Benefits (above the form) -->
+                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4 mb-6">
+                        <ul class="space-y-2 text-sm sm:text-base text-gray-800">
+                            <li class="flex items-start gap-2"><span class="text-lg">💶</span><span><strong>10 € Rabatt</strong> auf jeden 5. Besuch</span></li>
+                            <li class="flex items-start gap-2"><span class="text-lg">👥</span><span><strong>Freund werben:</strong> Ihr Freund wird Mitglied → Sie beide erhalten 10 € Rabatt</span></li>
+                            <li class="flex items-start gap-2"><span class="text-lg">✨</span><span><strong>Exklusive Angebote</strong> &amp; Geburtstags-Überraschungen</span></li>
+                        </ul>
+                    </div>
 
-                                <div>
-                                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                                        <span data-i18n="onboarding.email">Email Address</span> <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="email" id="email" name="email" required data-i18n-placeholder="onboarding.email_placeholder"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                </div>
+                    <form id="onboarding-form" class="space-y-5" novalidate>
 
-                                <div class="md:col-span-2">
-                                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                                        <span data-i18n="onboarding.phone">Phone Number</span> <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="tel" id="phone" name="phone" required placeholder="+1234567890" data-i18n-placeholder="onboarding.phone_placeholder"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- GDPR Compliance - Compact Version -->
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-3" data-i18n="onboarding.gdpr_title">Privacy & Consent</h3>
-
-                            <!-- Compact GDPR Notice -->
-                            <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded mb-3">
-                                <p class="text-xs text-gray-700">
-                                    <strong data-i18n="onboarding.gdpr_notice_title">Data Processing:</strong> <span data-i18n="onboarding.gdpr_notice">Your data is processed for appointments and service delivery. Stored securely, not shared with third parties. Retained for 3 years. You can access, modify, or delete your data anytime.</span>
-                                </p>
-                            </div>
-
-                            <!-- Consent Checkboxes - Compact -->
-                            <div class="space-y-2">
-                                <div class="flex items-start">
-                                    <input type="checkbox" id="consent_data_processing" name="consent_data_processing" required
-                                        class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                                    <label for="consent_data_processing" class="ml-2 text-sm text-gray-700">
-                                        <span class="font-semibold" data-i18n="onboarding.consent_data_processing">I consent to data processing</span> <span class="text-red-500">*</span>
-                                    </label>
-                                </div>
-
-                                <div class="flex items-start">
-                                    <input type="checkbox" id="consent_cancellation_policy" name="consent_cancellation_policy" required
-                                        class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                                    <label for="consent_cancellation_policy" class="ml-2 text-sm text-gray-700">
-                                        <span class="font-semibold" data-i18n="onboarding.consent_cancellation">I accept the cancellation policy</span> <span class="text-red-500">*</span>
-                                    </label>
-                                </div>
-
-                                <div class="flex items-start">
-                                    <input type="checkbox" id="consent_marketing" name="consent_marketing"
-                                        class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                                    <label for="consent_marketing" class="ml-2 text-sm text-gray-700" data-i18n="onboarding.consent_marketing">
-                                        I would like to receive promotional offers (optional)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Signature - Compact -->
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-3" data-i18n="onboarding.signature_title">Digital Signature</h3>
-
+                        <!-- Core identity -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="onboarding.signature_description">
-                                    Please sign below with your finger or mouse
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">Vorname <span class="text-red-500">*</span></label>
+                                <input type="text" id="first_name" name="first_name" required autocomplete="given-name"
+                                    class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
+                            </div>
+                            <div>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Nachname <span class="text-red-500">*</span></label>
+                                <input type="text" id="last_name" name="last_name" required autocomplete="family-name"
+                                    class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-Mail-Adresse <span class="text-red-500">*</span></label>
+                                <input type="email" id="email" name="email" required autocomplete="email" inputmode="email"
+                                    class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="mobile" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Mobilnummer <span class="text-gray-400 text-xs font-normal">(optional – für Termin-Erinnerungen)</span>
                                 </label>
-                                <canvas id="signature-canvas" class="signature-canvas w-full h-32 bg-white"></canvas>
-                                <button type="button" onclick="clearSignature()" class="mt-2 px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" data-i18n="onboarding.signature_clear">
-                                    Clear Signature
-                                </button>
+                                <input type="tel" id="mobile" name="mobile" autocomplete="tel" inputmode="tel" placeholder="+49 170 1234567"
+                                    class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
                             </div>
                         </div>
 
-                        <!-- Submit Button - Touch Friendly -->
-                        <div class="pt-2">
+                        <!-- Birthday -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Geburtstag <span class="text-red-500">*</span></label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <select id="birth_day" name="birth_day" required class="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
+                                    <option value="">Tag</option>
+                                </select>
+                                <select id="birth_month" name="birth_month" required class="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
+                                    <option value="">Monat</option>
+                                </select>
+                                <input type="number" id="birth_year" name="birth_year" placeholder="Jahr (optional)" min="1900" max="2025" inputmode="numeric"
+                                    class="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
+                            </div>
+                        </div>
+
+                        <!-- Core ZIP / City -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="zip" class="block text-sm font-medium text-gray-700 mb-1">PLZ <span class="text-red-500">*</span></label>
+                                <input type="text" id="zip" name="zip" required inputmode="numeric" autocomplete="postal-code"
+                                    class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
+                            </div>
+                            <div class="col-span-2">
+                                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">Ort <span class="text-red-500">*</span></label>
+                                <input type="text" id="city" name="city" required autocomplete="address-level2"
+                                    class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
+                            </div>
+                        </div>
+
+                        <!-- Optional postal address block (visually separated) -->
+                        <div class="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-4">
+                            <h3 class="text-sm font-semibold text-gray-700 mb-1">Noch persönlicher? <span class="font-normal text-gray-500">(freiwillig)</span></h3>
+                            <p class="text-xs text-gray-500 mb-3">Für gelegentliche schöne Post von uns.</p>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <label for="address_street" class="block text-xs font-medium text-gray-600 mb-1">Straße &amp; Hausnummer</label>
+                                    <input type="text" id="address_street" name="address_street" autocomplete="street-address"
+                                        class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label for="address_zip" class="block text-xs font-medium text-gray-600 mb-1">PLZ</label>
+                                        <input type="text" id="address_zip" name="address_zip" inputmode="numeric"
+                                            class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label for="address_city" class="block text-xs font-medium text-gray-600 mb-1">Ort</label>
+                                        <input type="text" id="address_city" name="address_city"
+                                            class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
+                                    </div>
+                                </div>
+                                <label class="flex items-start gap-2 cursor-pointer">
+                                    <input type="checkbox" id="consent_postal" name="consent_postal" class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                    <span class="text-xs text-gray-700">Ja, ich bin einverstanden, dass <span class="salon-name-ph font-semibold">[Salon-Name]</span> mir gelegentlich postalische Angebote zusendet.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Consents -->
+                        <div class="space-y-3">
+                            <!-- DSGVO (required) -->
+                            <label class="flex items-start gap-2 cursor-pointer">
+                                <input type="checkbox" id="consent_data_processing" name="consent_data_processing" required
+                                    class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                <span class="text-sm text-gray-700">
+                                    Ich stimme der Verarbeitung meiner Daten gemäß der
+                                    <a href="#" id="privacy-policy-link" target="_blank" class="text-purple-600 underline">Datenschutzerklärung</a> zu. <span class="text-red-500">*</span>
+                                </span>
+                            </label>
+
+                            <!-- E-Mail marketing -->
+                            <label class="flex items-start gap-2 cursor-pointer">
+                                <input type="checkbox" id="consent_email_marketing" name="consent_email_marketing"
+                                    class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                <span class="text-sm text-gray-700">E-Mail: Ja, ich möchte exklusive Angebote &amp; meinen Geburtstagsvorteil erhalten.</span>
+                            </label>
+
+                            <!-- SMS / WhatsApp -->
+                            <label class="flex items-start gap-2 cursor-pointer">
+                                <input type="checkbox" id="consent_sms_whatsapp" name="consent_sms_whatsapp"
+                                    class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                <span class="text-sm text-gray-700">SMS/WhatsApp: Ja, ich möchte Angebote &amp; Terminerinnerungen per SMS/WhatsApp bekommen.</span>
+                            </label>
+
+                            <!-- Membership (highlighted) -->
+                            <label id="membership-optin" class="flex items-start gap-3 cursor-pointer bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl p-4 shadow-lg ring-2 ring-purple-300">
+                                <input type="checkbox" id="is_member" name="is_member"
+                                    class="mt-0.5 h-6 w-6 text-purple-700 border-white rounded focus:ring-white bg-white/90">
+                                <span class="text-sm sm:text-base">
+                                    <span class="text-xl mr-1">🎁</span>
+                                    <strong>Mitglied werden:</strong> Ja, ich werde Mitglied im
+                                    <span class="salon-name-ph font-bold">[Salon-Name]</span> Club und erhalte meine digitale Treuekarte mit allen Vorteilen.
+                                </span>
+                            </label>
+                            <p id="membership-hint" class="hidden text-xs text-purple-700 pl-1">
+                                💡 Tipp: Aktivieren Sie E-Mail, damit wir Ihnen Ihre Treuekarte und Ihren Geburtstagsvorteil senden können.
+                            </p>
+                        </div>
+
+                        <!-- Enrichment -->
+                        <div class="border-t pt-4 space-y-4">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 mb-2">Wie haben Sie von uns erfahren?</p>
+                                <div class="flex flex-wrap gap-2" id="referral-source-group">
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="google" class="sr-only"><span>Google</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="instagram_facebook" class="sr-only"><span>Instagram/Facebook</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="empfehlung" class="sr-only"><span>Empfehlung</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="vorbeigekommen" class="sr-only"><span>Vorbeigekommen</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="sonstiges" class="sr-only"><span>Sonstiges</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="preferred_stylist_id" class="block text-sm font-medium text-gray-700 mb-1">Ihr Wunsch-Stylist?</label>
+                                <select id="preferred_stylist_id" name="preferred_stylist_id"
+                                    class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
+                                    <option value="">Kein Wunsch – egal</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="pt-1">
                             <button type="submit" id="onboarding-submit-btn"
-                                class="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg text-lg" data-i18n="onboarding.submit_button">
-                                Submit Registration
+                                class="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg text-lg">
+                                Jetzt Mitglied werden
                             </button>
                         </div>
 
                         <!-- Response Message -->
                         <div id="onboarding-message" class="hidden mt-4"></div>
                     </form>
+                </div>
+
+                <!-- ========== POST-SUBMISSION RESULT (wallet + social) ========== -->
+                <div id="registration-result" class="hidden">
+                    <!-- Wallet card (only for members) -->
+                    <div id="wallet-result" class="hidden bg-white rounded-2xl shadow-lg p-6 text-center mb-6">
+                        <div class="text-5xl mb-2">🎉</div>
+                        <h2 class="text-2xl font-bold text-gray-800">Willkommen im Club, <span id="result-first-name"></span>!</h2>
+                        <p class="text-gray-500 mb-5">Ihre digitale Treuekarte ist bereit.</p>
+
+                        <div class="inline-block bg-white p-4 rounded-xl border-2 border-purple-200 shadow-sm">
+                            <div id="wallet-qr" class="flex justify-center items-center mx-auto" style="width:240px;height:240px;"></div>
+                        </div>
+
+                        <p class="text-gray-700 mt-4 max-w-md mx-auto">
+                            Scannen Sie diesen Code mit Ihrem Smartphone, um Ihre digitale Mitgliedskarte in
+                            Apple Wallet oder Google Wallet hinzuzufügen.
+                        </p>
+                        <p class="text-xs text-gray-400 mt-2">📧 Sie erhalten den Link auch per E-Mail.</p>
+                        <p class="text-xs text-gray-500 mt-3">Mitgliedsnummer: <span id="result-member-id" class="font-mono font-semibold"></span></p>
+
+                        <a id="wallet-open-link" href="#" target="_blank" class="inline-block mt-4 px-5 py-3 bg-gray-900 text-white rounded-lg font-semibold text-sm">
+                            Karte direkt öffnen
+                        </a>
+                    </div>
+
+                    <!-- Non-member confirmation -->
+                    <div id="plain-result" class="hidden bg-white rounded-2xl shadow-lg p-6 text-center mb-6">
+                        <div class="text-5xl mb-2">✅</div>
+                        <h2 class="text-2xl font-bold text-gray-800">Vielen Dank, <span id="plain-first-name"></span>!</h2>
+                        <p class="text-gray-500">Ihre Registrierung war erfolgreich.</p>
+                    </div>
+
+                    <!-- Social / WiFi prompt -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6 text-center">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Bleiben Sie in Kontakt</h3>
+                        <p class="text-gray-500 text-sm mb-4">Bewerten Sie uns, folgen Sie uns oder verbinden Sie sich mit unserem WLAN.</p>
+                        <button type="button" onclick="switchTab('social')" class="px-5 py-3 bg-purple-600 text-white rounded-lg font-semibold">
+                            Social &amp; WLAN anzeigen
+                        </button>
+                        <div class="mt-4">
+                            <button type="button" onclick="resetRegistration()" class="text-sm text-gray-500 underline">
+                                Neue Registrierung starten
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1418,6 +1565,11 @@
                     console.log('  ✓ Salon name set to:', branding.salon_name);
                     console.log('  ✓ Title color applied:', branding.primary_color);
                 }
+                // Fill dynamic [Salon-Name] placeholders across the membership form
+                window.currentSalonName = branding.salon_name;
+                document.querySelectorAll('.salon-name-ph').forEach(el => {
+                    el.textContent = branding.salon_name;
+                });
             } else {
                 console.log('  ⚠ No salon name provided in branding data');
             }
@@ -1517,118 +1669,231 @@
             document.getElementById('kiosk-popup').classList.add('hidden');
         }
 
-        // ==================== SIGNATURE CANVAS ====================
-        const canvas = document.getElementById('signature-canvas');
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
+        // ==================== MEMBERSHIP REGISTRATION ====================
 
-        // Set canvas size
-        function resizeCanvas() {
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
+        // Resolve the active salon id from the logged-in user (fallback to default).
+        function getActiveSalonId() {
+            if (typeof currentUser === 'object' && currentUser) {
+                if (currentUser.assigned_salons && currentUser.assigned_salons.length > 0) {
+                    return currentUser.assigned_salons[0].salon_id;
+                }
+                if (currentUser.salon_id) return currentUser.salon_id;
+            }
+            return userSalonId || 1;
         }
 
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+        // Populate day / month selects + hook up form behaviours.
+        function initMembershipForm() {
+            const dayEl = document.getElementById('birth_day');
+            const monthEl = document.getElementById('birth_month');
+            if (dayEl && dayEl.options.length <= 1) {
+                for (let d = 1; d <= 31; d++) {
+                    dayEl.insertAdjacentHTML('beforeend', `<option value="${d}">${d}</option>`);
+                }
+            }
+            const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+            if (monthEl && monthEl.options.length <= 1) {
+                months.forEach((m, i) => {
+                    monthEl.insertAdjacentHTML('beforeend', `<option value="${i + 1}">${m}</option>`);
+                });
+            }
 
-        // Drawing functions
-        function startDrawing(e) {
-            isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX || e.touches[0].clientX) - rect.left;
-            const y = (e.clientY || e.touches[0].clientY) - rect.top;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
+            // Auto pre-fill address PLZ / Ort from the core fields (while empty / untouched).
+            const zip = document.getElementById('zip');
+            const city = document.getElementById('city');
+            const addrZip = document.getElementById('address_zip');
+            const addrCity = document.getElementById('address_city');
+            if (zip && addrZip) {
+                zip.addEventListener('input', () => { if (!addrZip.dataset.touched) addrZip.value = zip.value; });
+            }
+            if (city && addrCity) {
+                city.addEventListener('input', () => { if (!addrCity.dataset.touched) addrCity.value = city.value; });
+            }
+            if (addrZip) addrZip.addEventListener('input', () => { addrZip.dataset.touched = '1'; });
+            if (addrCity) addrCity.addEventListener('input', () => { addrCity.dataset.touched = '1'; });
+
+            // Membership opt-in → gently recommend (never auto-check) e-mail marketing.
+            const memberEl = document.getElementById('is_member');
+            const hintEl = document.getElementById('membership-hint');
+            if (memberEl && hintEl) {
+                memberEl.addEventListener('change', () => {
+                    const emailChecked = document.getElementById('consent_email_marketing').checked;
+                    hintEl.classList.toggle('hidden', !(memberEl.checked && !emailChecked));
+                });
+                document.getElementById('consent_email_marketing').addEventListener('change', () => {
+                    const emailChecked = document.getElementById('consent_email_marketing').checked;
+                    hintEl.classList.toggle('hidden', !(memberEl.checked && !emailChecked));
+                });
+            }
+
+            // Privacy policy link (points at salon policy page).
+            const policyLink = document.getElementById('privacy-policy-link');
+            if (policyLink) {
+                policyLink.href = `${API_BASE_URL.replace(/\/api$/, '')}/datenschutz.html`;
+            }
+
+            loadStylists();
         }
 
-        function draw(e) {
-            if (!isDrawing) return;
-            e.preventDefault();
-
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX || e.touches[0].clientX) - rect.left;
-            const y = (e.clientY || e.touches[0].clientY) - rect.top;
-
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineTo(x, y);
-            ctx.stroke();
+        // Load the salon's stylists into the "Wunsch-Stylist" dropdown.
+        async function loadStylists() {
+            const select = document.getElementById('preferred_stylist_id');
+            if (!select) return;
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (typeof sessionToken !== 'undefined' && sessionToken) {
+                    headers['Authorization'] = `Bearer ${sessionToken}`;
+                }
+                const res = await fetch(`${API_BASE_URL}/employees.php?salon_id=${getActiveSalonId()}`, { headers });
+                const data = await res.json();
+                if (data.success && Array.isArray(data.employees) && data.employees.length) {
+                    // Keep the first "egal" option, append real stylists.
+                    data.employees.forEach(emp => {
+                        const label = emp.title ? `${emp.full_name} (${emp.title})` : emp.full_name;
+                        // Skip a seeded "egal" placeholder to avoid duplicates.
+                        if (/egal/i.test(emp.full_name)) return;
+                        select.insertAdjacentHTML('beforeend', `<option value="${emp.employee_id}">${escapeHtml(label)}</option>`);
+                    });
+                }
+            } catch (err) {
+                console.warn('Could not load stylists:', err);
+            }
         }
 
-        function stopDrawing() {
-            isDrawing = false;
+        function isValidEmailAddress(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         }
 
-        // Mouse events
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-
-        // Touch events
-        canvas.addEventListener('touchstart', startDrawing);
-        canvas.addEventListener('touchmove', draw);
-        canvas.addEventListener('touchend', stopDrawing);
-
-        function clearSignature() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
-        // ==================== CUSTOMER ONBOARDING ====================
         document.getElementById('onboarding-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const submitBtn = document.getElementById('onboarding-submit-btn');
             const messageDiv = document.getElementById('onboarding-message');
+            const val = id => (document.getElementById(id).value || '').trim();
 
-            // Disable submit button
+            // Client-side validation
+            const errors = [];
+            if (!val('first_name')) errors.push('Bitte geben Sie Ihren Vornamen ein.');
+            if (!val('last_name')) errors.push('Bitte geben Sie Ihren Nachnamen ein.');
+            if (!isValidEmailAddress(val('email'))) errors.push('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+            if (!val('birth_day') || !val('birth_month')) errors.push('Bitte wählen Sie Tag und Monat Ihres Geburtstags.');
+            if (!val('zip') || !val('city')) errors.push('Bitte geben Sie PLZ und Ort ein.');
+            if (!document.getElementById('consent_data_processing').checked) {
+                errors.push('Bitte stimmen Sie der Datenschutzerklärung zu (Pflichtfeld).');
+            }
+            if (errors.length) {
+                showMessage(messageDiv, errors.join('<br>'), 'error');
+                messageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<svg class="spinner inline h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Submitting...';
+            const originalLabel = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<svg class="spinner inline h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Wird gesendet...';
 
-            // Get form data
+            const stylistVal = document.getElementById('preferred_stylist_id').value;
+            const sourceEl = document.querySelector('input[name="referral_source"]:checked');
+
             const formData = {
-                full_name: document.getElementById('full_name').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                consent_marketing: document.getElementById('consent_marketing').checked,
+                first_name: val('first_name'),
+                last_name: val('last_name'),
+                email: val('email'),
+                mobile: val('mobile'),
+                birth_day: val('birth_day'),
+                birth_month: val('birth_month'),
+                birth_year: val('birth_year'),
+                zip: val('zip'),
+                city: val('city'),
+                address_street: val('address_street'),
+                address_zip: val('address_zip'),
+                address_city: val('address_city'),
+                consent_postal: document.getElementById('consent_postal').checked,
                 consent_data_processing: document.getElementById('consent_data_processing').checked,
-                consent_cancellation_policy: document.getElementById('consent_cancellation_policy').checked,
+                consent_email_marketing: document.getElementById('consent_email_marketing').checked,
+                consent_sms_whatsapp: document.getElementById('consent_sms_whatsapp').checked,
+                is_member: document.getElementById('is_member').checked,
+                referral_source: sourceEl ? sourceEl.value : '',
+                preferred_stylist_id: stylistVal || '',
                 policy_version: POLICY_VERSION,
-                signature_data: canvas.toDataURL('image/png'),
-                salon_id: currentUser.assigned_salons && currentUser.assigned_salons.length > 0
-                    ? currentUser.assigned_salons[0].salon_id
-                    : (currentUser.salon_id || userSalonId)
+                salon_id: getActiveSalonId()
             };
 
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (typeof sessionToken !== 'undefined' && sessionToken) {
+                    headers['Authorization'] = `Bearer ${sessionToken}`;
+                }
                 const response = await fetch(`${API_BASE_URL}/customer.php`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${sessionToken}`
-                    },
+                    headers,
                     body: JSON.stringify(formData)
                 });
-
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage(messageDiv, result.message, 'success');
+                    showRegistrationResult(result, formData.first_name);
                     document.getElementById('onboarding-form').reset();
-                    clearSignature();
                 } else {
-                    showMessage(messageDiv, result.error || 'Registration failed', 'error');
+                    showMessage(messageDiv, result.error || 'Registrierung fehlgeschlagen.', 'error');
                 }
             } catch (error) {
-                showMessage(messageDiv, 'Network error. Please try again.', 'error');
+                showMessage(messageDiv, 'Netzwerkfehler. Bitte versuchen Sie es erneut.', 'error');
                 console.error('Error:', error);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Submit Registration';
+                submitBtn.innerHTML = originalLabel;
             }
         });
+
+        // Show the post-submission screen (wallet QR for members, else confirmation).
+        function showRegistrationResult(result, firstName) {
+            document.getElementById('registration-card').classList.add('hidden');
+            const resultWrap = document.getElementById('registration-result');
+            resultWrap.classList.remove('hidden');
+            resultWrap.classList.add('fade-in');
+
+            if (result.is_member && result.wallet_url) {
+                document.getElementById('wallet-result').classList.remove('hidden');
+                document.getElementById('plain-result').classList.add('hidden');
+                document.getElementById('result-first-name').textContent = firstName;
+                document.getElementById('result-member-id').textContent = result.member_id || '';
+                document.getElementById('wallet-open-link').href = result.wallet_url;
+
+                const qrEl = document.getElementById('wallet-qr');
+                qrEl.innerHTML = '';
+                try {
+                    new QRCode(qrEl, {
+                        text: result.wallet_url,
+                        width: 240,
+                        height: 240,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } catch (err) {
+                    console.error('QR generation failed:', err);
+                    qrEl.innerHTML = '<p class="text-xs text-red-500">QR-Code konnte nicht erstellt werden</p>';
+                }
+            } else {
+                document.getElementById('plain-result').classList.remove('hidden');
+                document.getElementById('wallet-result').classList.add('hidden');
+                document.getElementById('plain-first-name').textContent = firstName;
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Return to a fresh registration form.
+        function resetRegistration() {
+            document.getElementById('registration-result').classList.add('hidden');
+            document.getElementById('wallet-result').classList.add('hidden');
+            document.getElementById('plain-result').classList.add('hidden');
+            document.getElementById('wallet-qr').innerHTML = '';
+            const membershipHint = document.getElementById('membership-hint');
+            if (membershipHint) membershipHint.classList.add('hidden');
+            document.getElementById('registration-card').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
         // ==================== AI CONSULTATION ====================
         let uploadedImage = null;
@@ -2827,6 +3092,9 @@
 
                 loadSocialLinks();
             }
+
+            // Initialize the membership registration form (works with or without auth).
+            initMembershipForm();
 
         });
 
