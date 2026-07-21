@@ -337,7 +337,7 @@
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
             display: flex;
-            padding: 1.5rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+            padding: calc(4.75rem + env(safe-area-inset-top)) 1rem calc(1.5rem + env(safe-area-inset-bottom));
         }
         /* Centre the single visible step; still scrolls if it ever overflows. */
         #screen-checkin.checkin-fullscreen > .checkin-step:not(.hidden) {
@@ -345,21 +345,46 @@
             width: 100%;
             max-width: 40rem;
         }
-        #checkin-close {
-            display: none;
-            position: fixed;
-            top: calc(0.5rem + env(safe-area-inset-top));
-            right: 1rem;
-            z-index: 60;
-            width: 48px; height: 48px;
-            border-radius: 9999px;
-            background: rgba(31, 41, 55, 0.85);
-            color: #fff;
-            font-size: 1.4rem; line-height: 1;
-            align-items: center; justify-content: center;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+
+        /* ---- Check-in header: progress + language + close + timeout bar ---- */
+        #checkin-header { display: none; }
+        #screen-checkin.checkin-fullscreen:not(.hidden) #checkin-header {
+            display: block;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 58;
+            background: rgba(255, 255, 255, 0.96);
+            -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+            box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+            padding-top: env(safe-area-inset-top);
         }
-        #screen-checkin.checkin-fullscreen #checkin-close { display: flex; }
+        .checkin-header-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 48px; }
+        #checkin-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; min-width: 0; }
+        .cp-step { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #9ca3af; font-weight: 600; }
+        .cp-num { width: 22px; height: 22px; border-radius: 9999px; background: #e5e7eb; color: #6b7280;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+        .cp-active { color: #1f2937; }
+        .cp-active .cp-num { background: var(--color-primary, #9333EA); color: #fff; }
+        .cp-done { color: #16a34a; }
+        .cp-done .cp-num { background: #16a34a; color: #fff; }
+        .cp-sep { color: #d1d5db; margin: 0 2px; }
+        .checkin-header-right { display: flex; align-items: center; gap: 8px; flex: none; }
+        #checkin-timeout-bar { position: relative; height: 3px; width: 100%; overflow: hidden; background: transparent; }
+        #checkin-timeout-bar > span { display: block; height: 100%; width: 100%; background: #cbd0d8; transform-origin: left center; }
+
+        /* Language pills (used inside fullscreen overlays) */
+        .lang-switch { display: inline-flex; gap: 4px; background: #f3f4f6; border-radius: 9999px; padding: 3px; }
+        .lang-pill { min-width: 40px; min-height: 36px; padding: 4px 10px; border-radius: 9999px;
+            font-weight: 700; font-size: 14px; color: #6b7280; background: transparent; -webkit-tap-highlight-color: transparent; }
+        .lang-pill.active { background: var(--color-primary, #9333EA); color: #fff; }
+
+        #checkin-close {
+            width: 44px; height: 44px; border-radius: 9999px;
+            background: rgba(31, 41, 55, 0.85); color: #fff;
+            font-size: 1.3rem; line-height: 1;
+            display: inline-flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); flex: none;
+        }
+        /* Per-card timeout bars are replaced by the single one in the header. */
+        #screen-checkin > .checkin-step > .timeout-bar { display: none; }
         body.checkin-locked, html.checkin-locked { overflow: hidden; height: 100%; overscroll-behavior: none; }
     </style>
 </head>
@@ -434,8 +459,20 @@
         <!-- ==================== CHECK-IN SCREEN ==================== -->
         <div id="screen-checkin" class="screen hidden">
 
-            <!-- Close the fullscreen check-in takeover (returns to Stöbern) -->
-            <button type="button" id="checkin-close" onclick="goHome()" aria-label="Schließen">✕</button>
+            <!-- Fullscreen header: dynamic progress, language switch, close, timeout bar -->
+            <div id="checkin-header">
+                <div class="checkin-header-row">
+                    <div id="checkin-progress" aria-label="Fortschritt"></div>
+                    <div class="checkin-header-right">
+                        <div class="lang-switch" role="group" aria-label="Sprache">
+                            <button type="button" class="lang-pill" data-lang="de" onclick="switchLanguage('de')" aria-label="Deutsch">DE</button>
+                            <button type="button" class="lang-pill" data-lang="en" onclick="switchLanguage('en')" aria-label="English">EN</button>
+                        </div>
+                        <button type="button" id="checkin-close" onclick="goHome()" aria-label="Schließen">✕</button>
+                    </div>
+                </div>
+                <div id="checkin-timeout-bar"><span></span></div>
+            </div>
 
             <!-- Step 1: Birthday scroll wheels -->
             <div id="checkin-step-birthday" class="checkin-step relative bg-white rounded-3xl shadow-lg p-6 sm:p-8">
@@ -556,11 +593,11 @@
             <div id="home-hero" class="rounded-2xl px-5 py-4 mb-4 text-white shadow-lg flex items-center justify-between gap-4 flex-wrap"
                  style="background:linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
                 <div>
-                    <p class="uppercase tracking-wide text-xs opacity-90">Willkommen bei <span class="salon-name-ph font-semibold">[Salon-Name]</span></p>
+                    <p class="uppercase tracking-wide text-xs opacity-90"><span data-i18n="browse.welcome_at">Willkommen bei</span> <span class="salon-name-ph font-semibold">[Salon-Name]</span></p>
                     <h2 id="hero-text" class="text-xl sm:text-2xl font-bold">🎁 10 € Rabatt auf den 5. Besuch</h2>
                 </div>
                 <button type="button" onclick="showScreen('register')"
-                    class="bg-white/95 text-gray-800 font-semibold px-5 py-2.5 rounded-xl shadow hover:bg-white whitespace-nowrap">
+                    class="bg-white/95 text-gray-800 font-semibold px-5 py-2.5 rounded-xl shadow hover:bg-white whitespace-nowrap" data-i18n="register.submit">
                     Jetzt Mitglied werden
                 </button>
             </div>
@@ -568,14 +605,14 @@
             <!-- Tabs -->
             <div class="bg-white rounded-2xl shadow p-2 mb-4 flex gap-2">
                 <button type="button" id="browse-tab-trend" onclick="switchBrowseTab('trend')"
-                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all">Trends</button>
+                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all" data-i18n="browse.trends">Trends</button>
                 <button type="button" id="browse-tab-tip" onclick="switchBrowseTab('tip')"
-                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all">Tipps</button>
+                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all" data-i18n="browse.tips">Tipps</button>
                 <button type="button" id="browse-tab-shop" onclick="switchBrowseTab('shop')"
-                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all">Shop</button>
+                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all" data-i18n="browse.shop">Shop</button>
             </div>
 
-            <div id="browse-loading" class="hidden text-center py-12 text-gray-500">Wird geladen…</div>
+            <div id="browse-loading" class="hidden text-center py-12 text-gray-500" data-i18n="browse.loading">Wird geladen…</div>
             <div id="browse-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
             <!-- Detail overlay -->
@@ -594,7 +631,7 @@
                         <p id="detail-text" class="text-gray-600 leading-relaxed"></p>
                         <button type="button" id="detail-cta" class="hidden w-full mt-5 px-6 py-4 rounded-2xl text-white font-bold shadow"
                             style="background:linear-gradient(135deg, var(--color-primary), var(--color-secondary));"
-                            onclick="alert('Zeigen Sie dieses Produkt einfach Ihrem Stylisten.')">
+                            onclick="alert('Zeigen Sie dieses Produkt einfach Ihrem Stylisten.')" data-i18n="browse.ask_team">
                             Fragen Sie Ihr Stylisten-Team
                         </button>
                     </div>
@@ -616,17 +653,17 @@
                     <div class="text-center mb-4">
                         <div class="text-4xl mb-1">🎁</div>
                         <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">
-                            Werden Sie Mitglied im <span class="salon-name-ph text-purple-600">[Salon-Name]</span> Club
+                            <span data-i18n="register.club_title_pre">Werden Sie Mitglied im</span> <span class="salon-name-ph text-purple-600">[Salon-Name]</span> <span data-i18n="register.club_title_post">Club</span>
                         </h2>
-                        <p class="text-gray-500 text-sm mt-1">Jetzt beitreten und Vorteile sichern.</p>
+                        <p class="text-gray-500 text-sm mt-1" data-i18n="register.subtitle">Jetzt beitreten und Vorteile sichern.</p>
                     </div>
 
                     <!-- Benefits (above the form) -->
                     <div class="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4 mb-6">
                         <ul class="space-y-2 text-sm sm:text-base text-gray-800">
                             <li id="benefit-loyalty-li" class="flex items-start gap-2"><span class="text-lg">💶</span><span id="benefit-loyalty"><strong>10 € Rabatt</strong> auf jeden 5. Besuch</span></li>
-                            <li class="flex items-start gap-2"><span class="text-lg">👥</span><span><strong>Freund werben:</strong> Ihr Freund wird Mitglied → Sie beide erhalten <span id="benefit-referral-amount">10 € Rabatt</span></span></li>
-                            <li class="flex items-start gap-2"><span class="text-lg">✨</span><span><strong>Exklusive Angebote</strong> &amp; Geburtstags-Überraschungen</span></li>
+                            <li class="flex items-start gap-2"><span class="text-lg">👥</span><span><span data-i18n-html="register.benefit_referral"><strong>Freund werben:</strong> Ihr Freund wird Mitglied → Sie beide erhalten</span> <span id="benefit-referral-amount">10 € Rabatt</span></span></li>
+                            <li class="flex items-start gap-2"><span class="text-lg">✨</span><span data-i18n-html="register.benefit_offers"><strong>Exklusive Angebote</strong> &amp; Geburtstags-Überraschungen</span></li>
                         </ul>
                     </div>
 
@@ -635,15 +672,15 @@
                         <!-- Anrede (mandatory) + Title (optional) on one line -->
                         <div class="flex flex-wrap items-start gap-x-8 gap-y-3">
                             <div>
-                                <p class="text-sm font-medium text-gray-700 mb-2">Anrede <span class="text-red-500">*</span></p>
+                                <p class="text-sm font-medium text-gray-700 mb-2"><span data-i18n="register.anrede">Anrede</span> <span class="text-red-500">*</span></p>
                                 <div class="flex flex-wrap gap-2" id="gender-group">
-                                    <label class="referral-chip"><input type="radio" name="gender" value="female" class="sr-only" required><span>Frau</span></label>
-                                    <label class="referral-chip"><input type="radio" name="gender" value="male" class="sr-only"><span>Herr</span></label>
-                                    <label class="referral-chip"><input type="radio" name="gender" value="diverse" class="sr-only"><span>Divers</span></label>
+                                    <label class="referral-chip"><input type="radio" name="gender" value="female" class="sr-only" required><span data-i18n="register.gender_female">Frau</span></label>
+                                    <label class="referral-chip"><input type="radio" name="gender" value="male" class="sr-only"><span data-i18n="register.gender_male">Herr</span></label>
+                                    <label class="referral-chip"><input type="radio" name="gender" value="diverse" class="sr-only"><span data-i18n="register.gender_diverse">Divers</span></label>
                                 </div>
                             </div>
                             <div>
-                                <p class="text-sm font-medium text-gray-700 mb-2">Titel <span class="text-gray-400 text-xs font-normal">(optional)</span></p>
+                                <p class="text-sm font-medium text-gray-700 mb-2"><span data-i18n="register.title_label">Titel</span> <span class="text-gray-400 text-xs font-normal" data-i18n="register.optional">(optional)</span></p>
                                 <!-- Single-select but deselectable: click a chip to select, click again to clear -->
                                 <div class="flex flex-wrap gap-2" id="title-group">
                                     <label class="referral-chip"><input type="checkbox" name="title" value="Dr." class="sr-only"><span>Dr.</span></label>
@@ -656,47 +693,47 @@
                         <!-- Core identity -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
-                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">Vorname <span class="text-red-500">*</span></label>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1"><span data-i18n="register.first_name">Vorname</span> <span class="text-red-500">*</span></label>
                                 <input type="text" id="first_name" name="first_name" required autocomplete="given-name"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
                             </div>
                             <div>
-                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Nachname <span class="text-red-500">*</span></label>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1"><span data-i18n="register.last_name">Nachname</span> <span class="text-red-500">*</span></label>
                                 <input type="text" id="last_name" name="last_name" required autocomplete="family-name"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
                             </div>
                             <div class="md:col-span-2">
-                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-Mail-Adresse <span class="text-red-500">*</span></label>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1"><span data-i18n="register.email">E-Mail-Adresse</span> <span class="text-red-500">*</span></label>
                                 <input type="email" id="email" name="email" required autocomplete="email" inputmode="email"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
                             </div>
                             <div class="md:col-span-2">
                                 <label for="mobile" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Mobilnummer <span class="text-red-500">*</span>
+                                    <span data-i18n="register.mobile">Mobilnummer</span> <span class="text-red-500">*</span>
                                 </label>
                                 <input type="tel" id="mobile" name="mobile" required autocomplete="tel" inputmode="numeric"
-                                    pattern="[0-9]*" placeholder="0170 1234567"
+                                    pattern="[0-9]*" placeholder="0170 1234567" data-i18n-placeholder="register.mobile_placeholder"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base">
                             </div>
                         </div>
 
                         <!-- Birthday (native date picker → iOS/iPad shows a wheel) -->
                         <div>
-                            <label for="birthday" class="block text-sm font-medium text-gray-700 mb-1">Geburtstag <span class="text-red-500">*</span></label>
+                            <label for="birthday" class="block text-sm font-medium text-gray-700 mb-1"><span data-i18n="register.birthday">Geburtstag</span> <span class="text-red-500">*</span></label>
                             <input type="date" id="birthday" name="birthday" required
                                 class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
-                            <p class="text-xs text-gray-400 mt-1">Ihr Geburtstag und Ihre Mobilnummer werden für den Check-In benötigt.</p>
+                            <p class="text-xs text-gray-400 mt-1" data-i18n="register.birthday_hint">Ihr Geburtstag und Ihre Mobilnummer werden für den Check-In benötigt.</p>
                         </div>
 
                         <!-- Core ZIP / City -->
                         <div class="grid grid-cols-3 gap-2">
                             <div>
-                                <label for="zip" class="block text-sm font-medium text-gray-700 mb-1">PLZ <span class="text-red-500">*</span></label>
+                                <label for="zip" class="block text-sm font-medium text-gray-700 mb-1"><span data-i18n="register.zip">PLZ</span> <span class="text-red-500">*</span></label>
                                 <input type="text" id="zip" name="zip" required inputmode="numeric" autocomplete="postal-code"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
                             </div>
                             <div class="col-span-2">
-                                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">Ort <span class="text-red-500">*</span></label>
+                                <label for="city" class="block text-sm font-medium text-gray-700 mb-1"><span data-i18n="register.city">Ort</span> <span class="text-red-500">*</span></label>
                                 <input type="text" id="city" name="city" required autocomplete="address-level2"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
                             </div>
@@ -704,18 +741,18 @@
 
                         <!-- Optional postal address block (visually separated) -->
                         <div class="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-4">
-                            <h3 class="text-sm font-semibold text-gray-700 mb-1">Noch persönlicher? <span class="font-normal text-gray-500">(freiwillig)</span></h3>
-                            <p class="text-xs text-gray-500 mb-3">Für gelegentliche schöne Post von uns.</p>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-1"><span data-i18n="register.postal_title">Noch persönlicher?</span> <span class="font-normal text-gray-500" data-i18n="register.postal_optional">(freiwillig)</span></h3>
+                            <p class="text-xs text-gray-500 mb-3" data-i18n="register.postal_subtitle">Für gelegentliche schöne Post von uns.</p>
 
                             <div class="space-y-3">
                                 <div>
-                                    <label for="address_street" class="block text-xs font-medium text-gray-600 mb-1">Straße &amp; Hausnummer</label>
+                                    <label for="address_street" class="block text-xs font-medium text-gray-600 mb-1" data-i18n="register.street">Straße &amp; Hausnummer</label>
                                     <input type="text" id="address_street" name="address_street" autocomplete="street-address"
                                         class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base">
                                 </div>
                                 <label class="flex items-start gap-2 cursor-pointer">
                                     <input type="checkbox" id="consent_postal" name="consent_postal" class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                                    <span class="text-xs text-gray-700">Ja, ich bin einverstanden, dass <span class="salon-name-ph font-semibold">[Salon-Name]</span> mir gelegentlich postalische Angebote zusendet.</span>
+                                    <span class="text-xs text-gray-700"><span data-i18n="register.consent_postal_pre">Ja, ich bin einverstanden, dass</span> <span class="salon-name-ph font-semibold">[Salon-Name]</span> <span data-i18n="register.consent_postal_post">mir gelegentlich postalische Angebote zusendet.</span></span>
                                 </label>
                             </div>
                         </div>
@@ -727,8 +764,8 @@
                                 <input type="checkbox" id="consent_data_processing" name="consent_data_processing" required
                                     class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
                                 <span class="text-sm text-gray-700">
-                                    Ich stimme der Verarbeitung meiner Daten gemäß der
-                                    <a href="#" id="privacy-policy-link" target="_blank" class="text-purple-600 underline">Datenschutzerklärung</a> zu. <span class="text-red-500">*</span>
+                                    <span data-i18n="register.consent_data_pre">Ich stimme der Verarbeitung meiner Daten gemäß der</span>
+                                    <a href="#" id="privacy-policy-link" target="_blank" class="text-purple-600 underline" data-i18n="register.privacy_policy">Datenschutzerklärung</a> <span data-i18n="register.consent_data_post">zu.</span> <span class="text-red-500">*</span>
                                 </span>
                             </label>
 
@@ -736,14 +773,14 @@
                             <label class="flex items-start gap-2 cursor-pointer">
                                 <input type="checkbox" id="consent_email_marketing" name="consent_email_marketing"
                                     class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                                <span class="text-sm text-gray-700">E-Mail: Ja, ich möchte exklusive Angebote &amp; meinen Geburtstagsvorteil erhalten.</span>
+                                <span class="text-sm text-gray-700" data-i18n="register.consent_email">E-Mail: Ja, ich möchte exklusive Angebote &amp; meinen Geburtstagsvorteil erhalten.</span>
                             </label>
 
                             <!-- SMS / WhatsApp -->
                             <label class="flex items-start gap-2 cursor-pointer">
                                 <input type="checkbox" id="consent_sms_whatsapp" name="consent_sms_whatsapp"
                                     class="mt-0.5 h-5 w-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                                <span class="text-sm text-gray-700">SMS/WhatsApp: Ja, ich möchte Angebote &amp; Terminerinnerungen per SMS/WhatsApp bekommen.</span>
+                                <span class="text-sm text-gray-700" data-i18n="register.consent_sms">SMS/WhatsApp: Ja, ich möchte Angebote &amp; Terminerinnerungen per SMS/WhatsApp bekommen.</span>
                             </label>
 
                             <!-- Membership (highlighted) -->
@@ -752,11 +789,11 @@
                                     class="mt-0.5 h-6 w-6 text-purple-700 border-white rounded focus:ring-white bg-white/90">
                                 <span class="text-sm sm:text-base">
                                     <span class="text-xl mr-1">🎁</span>
-                                    <strong>Mitglied werden:</strong> Ja, ich werde Mitglied im
-                                    <span class="salon-name-ph font-bold">[Salon-Name]</span> Club und profitiere von allen Vorteilen.
+                                    <span data-i18n-html="register.membership_pre"><strong>Mitglied werden:</strong> Ja, ich werde Mitglied im</span>
+                                    <span class="salon-name-ph font-bold">[Salon-Name]</span> <span data-i18n="register.membership_post">Club und profitiere von allen Vorteilen.</span>
                                 </span>
                             </label>
-                            <p id="membership-hint" class="hidden text-xs text-purple-700 pl-1">
+                            <p id="membership-hint" class="hidden text-xs text-purple-700 pl-1" data-i18n="register.membership_hint">
                                 💡 Tipp: Aktivieren Sie E-Mail, damit wir Ihnen exklusive Angebote und Ihren Geburtstagsvorteil senden können.
                             </p>
                         </div>
@@ -764,20 +801,20 @@
                         <!-- Enrichment -->
                         <div class="border-t pt-4 space-y-4">
                             <div>
-                                <p class="text-sm font-medium text-gray-700 mb-2">Wie haben Sie von uns erfahren?</p>
+                                <p class="text-sm font-medium text-gray-700 mb-2" data-i18n="register.referral_q">Wie haben Sie von uns erfahren?</p>
                                 <div class="flex flex-wrap gap-2" id="referral-source-group">
-                                    <label class="referral-chip"><input type="radio" name="referral_source" value="google" class="sr-only"><span>Google</span></label>
-                                    <label class="referral-chip"><input type="radio" name="referral_source" value="instagram_facebook" class="sr-only"><span>Instagram/Facebook</span></label>
-                                    <label class="referral-chip"><input type="radio" name="referral_source" value="empfehlung" class="sr-only"><span>Empfehlung</span></label>
-                                    <label class="referral-chip"><input type="radio" name="referral_source" value="vorbeigekommen" class="sr-only"><span>Vorbeigekommen</span></label>
-                                    <label class="referral-chip"><input type="radio" name="referral_source" value="sonstiges" class="sr-only"><span>Sonstiges</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="google" class="sr-only"><span data-i18n="register.ref_google">Google</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="instagram_facebook" class="sr-only"><span data-i18n="register.ref_social">Instagram/Facebook</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="empfehlung" class="sr-only"><span data-i18n="register.ref_recommendation">Empfehlung</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="vorbeigekommen" class="sr-only"><span data-i18n="register.ref_passing">Vorbeigekommen</span></label>
+                                    <label class="referral-chip"><input type="radio" name="referral_source" value="sonstiges" class="sr-only"><span data-i18n="register.ref_other">Sonstiges</span></label>
                                 </div>
                             </div>
                             <div>
-                                <label for="preferred_stylist_id" class="block text-sm font-medium text-gray-700 mb-1">Ihr Wunsch-Stylist?</label>
+                                <label for="preferred_stylist_id" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="register.stylist_q">Ihr Wunsch-Stylist?</label>
                                 <select id="preferred_stylist_id" name="preferred_stylist_id"
                                     class="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-base bg-white">
-                                    <option value="">Kein Wunsch – egal</option>
+                                    <option value="" data-i18n="register.stylist_none">Kein Wunsch – egal</option>
                                 </select>
                             </div>
                         </div>
@@ -785,7 +822,7 @@
                         <!-- Submit Button -->
                         <div class="pt-1">
                             <button type="submit" id="onboarding-submit-btn"
-                                class="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg text-lg">
+                                class="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg text-lg" data-i18n="register.submit">
                                 Jetzt Mitglied werden
                             </button>
                         </div>
@@ -807,6 +844,11 @@
 
             <!-- ==================== FULLSCREEN AI CONSULTATION POPUP ==================== -->
             <div id="kiosk-popup" class="hidden fixed inset-0 bg-white z-50">
+                <!-- Language switch (Top Left) -->
+                <div class="lang-switch" role="group" aria-label="Sprache" style="position:fixed;top:12px;left:16px;z-index:51">
+                    <button type="button" class="lang-pill" data-lang="de" onclick="switchLanguage('de')" aria-label="Deutsch">DE</button>
+                    <button type="button" class="lang-pill" data-lang="en" onclick="switchLanguage('en')" aria-label="English">EN</button>
+                </div>
                 <!-- Close Button (Top Right) -->
                 <button onclick="closeKioskPopup()" class="fixed top-2 right-4 z-50 w-12 h-12 bg-gray-800 hover:bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1546,8 +1588,8 @@
                 <!-- Registration success banner (shown right after a sign-up) -->
                 <div id="registration-success-banner" class="hidden bg-white rounded-2xl shadow-lg p-6 text-center mb-6 fade-in">
                     <div class="text-5xl mb-2">🎉</div>
-                    <h2 class="text-2xl font-bold text-gray-800">Willkommen, <span data-name></span>!</h2>
-                    <p class="text-gray-500">Ihre Registrierung war erfolgreich. Folgen Sie uns oder verbinden Sie sich mit unserem WLAN.</p>
+                    <h2 class="text-2xl font-bold text-gray-800"><span data-i18n="register.success_title">Willkommen,</span> <span data-name></span>!</h2>
+                    <p class="text-gray-500" data-i18n="register.success_text">Ihre Registrierung war erfolgreich. Folgen Sie uns oder verbinden Sie sich mit unserem WLAN.</p>
                 </div>
 
                 <!-- Guest WiFi card (shown only when the salon configured WiFi) -->
@@ -1557,10 +1599,10 @@
                             <div id="wifi-qr" class="flex justify-center items-center" style="width:180px;height:180px;"></div>
                         </div>
                         <div class="text-center sm:text-left">
-                            <h3 class="text-xl font-bold text-gray-800 mb-1">📶 Gäste-WLAN</h3>
-                            <p class="text-gray-500 text-sm mb-3">Scannen Sie den Code, um sich automatisch zu verbinden.</p>
-                            <p class="text-sm text-gray-700">Netzwerk: <span id="wifi-ssid" class="font-semibold"></span></p>
-                            <p class="text-sm text-gray-700">Passwort: <span id="wifi-password" class="font-mono font-semibold"></span></p>
+                            <h3 class="text-xl font-bold text-gray-800 mb-1" data-i18n="browse.wifi_title">📶 Gäste-WLAN</h3>
+                            <p class="text-gray-500 text-sm mb-3" data-i18n="browse.wifi_subtitle">Scannen Sie den Code, um sich automatisch zu verbinden.</p>
+                            <p class="text-sm text-gray-700"><span data-i18n="browse.wifi_network">Netzwerk:</span> <span id="wifi-ssid" class="font-semibold"></span></p>
+                            <p class="text-sm text-gray-700"><span data-i18n="browse.wifi_password">Passwort:</span> <span id="wifi-password" class="font-mono font-semibold"></span></p>
                         </div>
                     </div>
                 </div>
@@ -1622,6 +1664,10 @@
                     btn.classList.remove('lang-active');
                     btn.classList.add('lang-inactive');
                 }
+            });
+            // Fullscreen-overlay language pills (check-in + AI popup).
+            document.querySelectorAll('.lang-pill[data-lang]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === currentLang);
             });
         }
 
@@ -2057,6 +2103,7 @@
             document.getElementById('screen-checkin').classList.add('checkin-fullscreen');
             document.documentElement.classList.add('checkin-locked');
             document.body.classList.add('checkin-locked');
+            if (typeof updateLanguageButtons === 'function') updateLanguageButtons();
         }
         function exitCheckinFullscreen() {
             document.getElementById('screen-checkin').classList.remove('checkin-fullscreen');
@@ -2125,6 +2172,7 @@
         function openKioskPopup() {
             document.getElementById('kiosk-popup').classList.remove('hidden');
             initKioskMode();
+            if (typeof updateLanguageButtons === 'function') updateLanguageButtons();
         }
 
         // Close fullscreen kiosk popup
@@ -2364,6 +2412,31 @@
         const CHECKIN_STEPS = ['birthday','autoconfirm','names','phone','welcome','staffpin','staffsearch'];
         // Durations that aren't tied to a step key (welcome variants, sub-step).
         let welcomeSuccessMs = 8000, welcomeDuplicateMs = 5000, namesConfirmMs = 15000;
+        // Whether the phone step is part of the current journey (adds a progress chip).
+        let phoneStepActive = false;
+
+        // Dynamic progress header. Default: Geburtstag → Check-In. Phone journeys
+        // insert a Telefonnummer step. Staff steps show no customer progress.
+        function renderCheckinProgress(step) {
+            const prog = document.getElementById('checkin-progress');
+            if (!prog) return;
+            if (step === 'staffpin' || step === 'staffsearch') { prog.innerHTML = ''; return; }
+            const t = (k) => (window.i18n && i18n.t) ? i18n.t(k) : k;
+            const steps = phoneStepActive
+                ? [{ key: 'birthday', label: t('checkin.step_birthday') },
+                   { key: 'phone',    label: t('checkin.step_phone') },
+                   { key: 'checkin',  label: t('checkin.step_checkin') }]
+                : [{ key: 'birthday', label: t('checkin.step_birthday') },
+                   { key: 'checkin',  label: t('checkin.step_checkin') }];
+            let activeKey = 'birthday';
+            if (step === 'welcome') activeKey = 'checkin';
+            else if (step === 'phone') activeKey = 'phone';
+            const activeIdx = steps.findIndex(s => s.key === activeKey);
+            prog.innerHTML = steps.map((s, i) => {
+                const state = i < activeIdx ? 'done' : (i === activeIdx ? 'active' : 'todo');
+                return `<span class="cp-step cp-${state}"><span class="cp-num">${i + 1}</span><span class="cp-label">${escapeHtml(s.label)}</span></span>`;
+            }).join('<span class="cp-sep">›</span>');
+        }
 
         // Apply admin-configured global timeouts (values arrive in seconds).
         function applyGlobalTimeoutSettings(s) {
@@ -2509,6 +2582,7 @@
             const el = document.getElementById('checkin-step-' + step);
             el.classList.remove('hidden');
             currentCheckinStep = step;
+            renderCheckinProgress(step);
             const ms = overrideMs || CHECKIN_TIMEOUTS[step] || 45000;
             startStepTimeout(step, el, ms);
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2516,8 +2590,8 @@
 
         function startStepTimeout(step, el, ms) {
             clearStepTimeout();
-            el = el || document.getElementById('checkin-step-' + step);
-            animateBar(el.querySelector('.timeout-bar > span'), ms);
+            // Single timeout bar lives in the header, directly under the progress.
+            animateBar(document.querySelector('#checkin-timeout-bar > span'), ms);
             stepTimeoutTimer = setTimeout(() => { clearStepTimeout(); onStepTimeout(step); }, ms);
         }
         function resetStepTimeout() {
@@ -2547,13 +2621,14 @@
         function checkinResetState() {
             phoneBuffer = ''; checkinPhoneAttempts = 0; phoneLocked = false;
             staffPinBuffer = ''; staffPinAttempts = 0; verifiedStaffPin = '';
-            lastWelcome = null; checkinCandidates = [];
+            lastWelcome = null; checkinCandidates = []; phoneStepActive = false;
             closeNamesConfirm();
             document.querySelectorAll('#phone-keypad .pad-key').forEach(b => b.disabled = false);
         }
 
         function checkinToBirthday() {
             closeNamesConfirm();
+            phoneStepActive = false; // back to the start of the journey
             buildWheels();
             showCheckinStep('birthday');
         }
@@ -2682,6 +2757,7 @@
         };
         function checkinPhoneFallback(reason) {
             closeNamesConfirm();
+            phoneStepActive = true; // adds the Telefonnummer chip to the progress
             phoneBuffer = '';
             renderPhoneDisplay();
             document.getElementById('phone-error').classList.add('hidden');
@@ -4360,6 +4436,7 @@
         window.addEventListener('languageChanged', () => {
             if (window.salonLoyalty) applyLoyaltyMarketingCopy(window.salonLoyalty);
             if (dayWheel && monthWheel) buildWheels();
+            if (currentCheckinStep) renderCheckinProgress(currentCheckinStep);
         });
 
         async function loadSocialLinks() {

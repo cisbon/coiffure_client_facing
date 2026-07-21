@@ -52,7 +52,15 @@ A conversation-style, birthday-first flow with a phone fallback. There are no
 The check-in runs as a **fullscreen takeover** (fixed overlay, body scroll
 locked, an ✕ top-right returns to Stöbern). This keeps the custom scroll wheels
 immediately scrollable on iPad Safari, where a competing page-scroll region
-would otherwise steal the first touch.
+would otherwise steal the first touch. A fixed header shows a **dynamic progress
+indicator** (Geburtstag → Check-In, with a Telefonnummer step inserted only when
+the phone fallback is used), the **language switch** (DE/EN, also available in
+the AI fullscreen overlay), and the single timeout bar directly beneath it.
+
+**Localisation:** the customer-facing kiosk (check-in, registration form, browse
+hero/tabs, guest-WiFi card) is fully translated via `data-i18n` /
+`data-i18n-html` / `data-i18n-placeholder` against `lang/de.json` + `lang/en.json`;
+the DE/EN switch re-renders everything live.
 
 **Configurable timeouts:** every timeout (idle-return, birthday, auto-confirm,
 name list, name sub-step, phone, welcome-success, welcome-duplicate, staff-PIN,
