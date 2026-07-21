@@ -123,7 +123,25 @@
     "social_links": "Social Links",
     "customer_entries": "Customer Entries",
     "salon_profile": "Salon Profile",
-    "loyalty": "Loyalty"
+    "loyalty": "Loyalty",
+    "global_settings": "Global Settings"
+  },
+  "global_settings": {
+    "title": "Global Settings",
+    "description": "Timeout durations for the tablet check-in (in seconds). Applies to all salons. Administrators only.",
+    "section_timeouts": "Check-in timeouts (seconds)",
+    "idle_return": "Auto-return to start (idle)",
+    "birthday": "Birthday selection",
+    "autoconfirm": "Confirmation (single result)",
+    "namelist": "Name list",
+    "names_confirm": "Name confirmation (sub-step)",
+    "phone": "Phone entry",
+    "welcome_success": "Welcome (auto-return after check-in)",
+    "welcome_duplicate": "Welcome (already checked in)",
+    "staff_pin": "Staff PIN",
+    "staff_search": "Staff search",
+    "save": "Save",
+    "reset": "Reset"
   },
   "loyalty_admin": {
     "title": "Loyalty program",

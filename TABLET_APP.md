@@ -49,6 +49,18 @@ A conversation-style, birthday-first flow with a phone fallback. There are no
    one contextual message (birthday week → reward visit → referral), and
    auto-returns to Stöbern (8 s, or 5 s for a duplicate check-in).
 
+The check-in runs as a **fullscreen takeover** (fixed overlay, body scroll
+locked, an ✕ top-right returns to Stöbern). This keeps the custom scroll wheels
+immediately scrollable on iPad Safari, where a competing page-scroll region
+would otherwise steal the first touch.
+
+**Configurable timeouts:** every timeout (idle-return, birthday, auto-confirm,
+name list, name sub-step, phone, welcome-success, welcome-duplicate, staff-PIN,
+staff-search) is stored in `coiffure_global_settings` (seconds) and editable by
+an **admin** in the dashboard ("Globale Einstellungen"). The kiosk loads them
+from `GET api/global-settings.php` at startup; code defaults apply if the table
+is absent.
+
 **Staff override:** a 3 s long-press on the **Check-In** rail item opens a
 4-digit PIN pad (`staff_pin`, per salon, default `0000`). After the correct PIN
 staff get a full-name search (`staff_search`) and can check a customer in
@@ -153,6 +165,8 @@ back them later (managed via the web access) without changing the response shape
 | `migrations/012_loyalty_config.sql` + `api/apply_migration_012.php` | salon loyalty columns + `staff_pin` |
 | `migrations/013_checkin_analytics.sql` + `api/apply_migration_013.php` | `coiffure_checkin_events`, `coiffure_settings_audit`, `coiffure_checkin_lockouts` |
 | `migrations/014_salon_connections.sql` + `api/apply_migration_014.php` | `coiffure_salon_connections` (multi-store brands) |
+| `migrations/015_global_settings.sql` + `api/apply_migration_015.php` | `coiffure_global_settings` (admin-editable kiosk timeouts) |
+| `api/global-settings.php` | global timeout config read (public) / write (admin only) |
 | `api/checkin.php` | candidates / confirm / phone / staff / event actions |
 | `api/loyalty-config.php` + `api/loyalty_helpers.php` | loyalty config read/write + shared progress maths |
 | `api/content.php` | Trends & Tipps content (reads `data/trends.json`) |
@@ -177,6 +191,7 @@ php api/apply_migration_011.php   # salon guest-WiFi columns
 php api/apply_migration_012.php   # per-salon loyalty config + staff PIN
 php api/apply_migration_013.php   # checkin analytics / audit / lockout tables
 php api/apply_migration_014.php   # salon connections (multi-store brands)
+php api/apply_migration_015.php   # global settings (kiosk timeouts)
 
 # …or raw SQL
 mysql -u USER -p salonlyft < migrations/009_visits_checkin.sql

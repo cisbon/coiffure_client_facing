@@ -123,7 +123,25 @@
     "social_links": "Social Links",
     "customer_entries": "Kundeneinträge",
     "salon_profile": "Salon-Profil",
-    "loyalty": "Treueprogramm"
+    "loyalty": "Treueprogramm",
+    "global_settings": "Globale Einstellungen"
+  },
+  "global_settings": {
+    "title": "Globale Einstellungen",
+    "description": "Zeitlimits für den Tablet-Check-in (in Sekunden). Gilt für alle Salons. Nur für Administratoren.",
+    "section_timeouts": "Check-in Zeitlimits (Sekunden)",
+    "idle_return": "Auto-Rückkehr zum Start (Leerlauf)",
+    "birthday": "Geburtstag-Auswahl",
+    "autoconfirm": "Bestätigung (einzelnes Ergebnis)",
+    "namelist": "Namensliste",
+    "names_confirm": "Namens-Bestätigung (Unterschritt)",
+    "phone": "Telefon-Eingabe",
+    "welcome_success": "Willkommen (Auto-Rückkehr nach Check-in)",
+    "welcome_duplicate": "Willkommen (bereits eingecheckt)",
+    "staff_pin": "Personal-PIN",
+    "staff_search": "Personal-Suche",
+    "save": "Speichern",
+    "reset": "Zurücksetzen"
   },
   "loyalty_admin": {
     "title": "Treueprogramm",
