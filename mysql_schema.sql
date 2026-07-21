@@ -236,6 +236,18 @@ CREATE TABLE IF NOT EXISTS coiffure_salon_connections (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- Table: coiffure_global_settings  (migration 015)
+-- Description: App-wide settings (key-value), admin-editable. Holds the
+-- kiosk/check-in timeout durations (seconds). Seed via migration 015.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_global_settings (
+    setting_key VARCHAR(64) PRIMARY KEY,
+    setting_value VARCHAR(255) NOT NULL,
+    updated_by INT UNSIGNED DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- Table: coiffure_qr_codes
 -- Description: Generated QR codes for reviews and social media
 -- ============================================================

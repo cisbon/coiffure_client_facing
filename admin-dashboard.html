@@ -57,6 +57,9 @@
                 <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="loyalty" data-i18n="admin_tabs.loyalty">
                     Treueprogramm
                 </button>
+                <button id="globalSettingsTabBtn" style="display:none" class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="global-settings" data-i18n="admin_tabs.global_settings">
+                    Globale Einstellungen
+                </button>
                 <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="profile">
                     My Profile
                 </button>
@@ -432,6 +435,67 @@
                         <p class="text-xs text-gray-400 mt-2" data-i18n="loyalty_admin.preview_note">Beispiel: 3. Besuch von N.</p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Global Settings Tab (admin only) -->
+        <div id="global-settings-tab" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-1" data-i18n="global_settings.title">Globale Einstellungen</h2>
+                <p class="text-gray-600 mb-6" data-i18n="global_settings.description">Zeitlimits für den Tablet-Check-in (in Sekunden). Gilt für alle Salons. Nur für Administratoren.</p>
+
+                <form id="globalSettingsForm" class="space-y-5 max-w-2xl">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3" data-i18n="global_settings.section_timeouts">Check-in Zeitlimits (Sekunden)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.idle_return">Auto-Rückkehr zum Start (Leerlauf)</span>
+                                <input type="number" id="gsIdleReturn" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.birthday">Geburtstag-Auswahl</span>
+                                <input type="number" id="gsBirthday" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.autoconfirm">Bestätigung (einzelnes Ergebnis)</span>
+                                <input type="number" id="gsAutoconfirm" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.namelist">Namensliste</span>
+                                <input type="number" id="gsNamelist" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.names_confirm">Namens-Bestätigung (Unterschritt)</span>
+                                <input type="number" id="gsNamesConfirm" min="3" max="300" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.phone">Telefon-Eingabe</span>
+                                <input type="number" id="gsPhone" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.welcome_success">Willkommen (Auto-Rückkehr nach Check-in)</span>
+                                <input type="number" id="gsWelcomeSuccess" min="2" max="120" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.welcome_duplicate">Willkommen (bereits eingecheckt)</span>
+                                <input type="number" id="gsWelcomeDuplicate" min="2" max="120" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.staff_pin">Personal-PIN</span>
+                                <input type="number" id="gsStaffPin" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                            <label class="block">
+                                <span class="text-sm text-gray-700" data-i18n="global_settings.staff_search">Personal-Suche</span>
+                                <input type="number" id="gsStaffSearch" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="global_settings.save">Speichern</button>
+                        <button type="button" id="globalSettingsReload" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition duration-200" data-i18n="global_settings.reset">Zurücksetzen</button>
+                    </div>
+                </form>
             </div>
         </div>
 

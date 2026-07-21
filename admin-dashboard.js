@@ -1407,3 +1407,85 @@ function showLoyaltyToast(msg) {
     clearTimeout(t._timer);
     t._timer = setTimeout(function () { t.style.opacity = '0'; }, 2500);
 }
+
+// ==================== Global settings (admin only) ====================
+const GLOBAL_SETTINGS_FIELDS = {
+    gsIdleReturn:      'timeout_idle_return_s',
+    gsBirthday:        'timeout_birthday_s',
+    gsAutoconfirm:     'timeout_autoconfirm_s',
+    gsNamelist:        'timeout_namelist_s',
+    gsNamesConfirm:    'timeout_names_confirm_s',
+    gsPhone:           'timeout_phone_s',
+    gsWelcomeSuccess:  'timeout_welcome_success_s',
+    gsWelcomeDuplicate:'timeout_welcome_duplicate_s',
+    gsStaffPin:        'timeout_staff_pin_s',
+    gsStaffSearch:     'timeout_staff_search_s'
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    // The tab is reserved for full administrators.
+    let role = null;
+    try { role = (JSON.parse(localStorage.getItem('user_data') || '{}') || {}).role; } catch (e) {}
+    if (role === 'admin') {
+        const btn = document.getElementById('globalSettingsTabBtn');
+        if (btn) {
+            btn.style.display = '';
+            btn.addEventListener('click', loadGlobalSettings);
+        }
+    }
+
+    const form = document.getElementById('globalSettingsForm');
+    if (form) form.addEventListener('submit', saveGlobalSettings);
+    const reload = document.getElementById('globalSettingsReload');
+    if (reload) reload.addEventListener('click', function (e) { e.preventDefault(); loadGlobalSettings(); });
+});
+
+async function loadGlobalSettings() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/global-settings.php`, {
+            headers: { 'Authorization': `Bearer ${sessionToken}` }
+        });
+        const data = await res.json();
+        if (!data || !data.success) { alert('Konnte globale Einstellungen nicht laden.'); return; }
+        const s = data.settings || {};
+        Object.keys(GLOBAL_SETTINGS_FIELDS).forEach(function (fieldId) {
+            const el = document.getElementById(fieldId);
+            if (el) el.value = s[GLOBAL_SETTINGS_FIELDS[fieldId]];
+        });
+    } catch (e) {
+        console.error('global settings load', e);
+        alert('Fehler beim Laden der globalen Einstellungen.');
+    }
+}
+
+async function saveGlobalSettings(e) {
+    e.preventDefault();
+    const settings = {};
+    let invalid = null;
+    Object.keys(GLOBAL_SETTINGS_FIELDS).forEach(function (fieldId) {
+        const el = document.getElementById(fieldId);
+        if (!el) return;
+        const v = parseInt(el.value, 10);
+        const min = parseInt(el.min, 10), max = parseInt(el.max, 10);
+        if (isNaN(v) || v < min || v > max) { invalid = invalid || fieldId; }
+        settings[GLOBAL_SETTINGS_FIELDS[fieldId]] = v;
+    });
+    if (invalid) { alert('Bitte gültige Werte innerhalb der erlaubten Bereiche eingeben.'); return; }
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/global-settings.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken}` },
+            body: JSON.stringify({ settings: settings })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            showLoyaltyToast(data.message || 'Einstellungen gespeichert.');
+        } else {
+            alert((data && data.error) || 'Speichern fehlgeschlagen.');
+        }
+    } catch (err) {
+        console.error('global settings save', err);
+        alert('Netzwerkfehler beim Speichern.');
+    }
+}

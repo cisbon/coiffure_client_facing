@@ -324,6 +324,43 @@
         .pin-dots { display: flex; gap: 0.75rem; justify-content: center; }
         .pin-dot { width: 16px; height: 16px; border-radius: 50%; background: #d1d5db; }
         .pin-dot.on { background: var(--color-primary, #9333EA); }
+
+        /* ---------- Fullscreen check-in takeover ---------- */
+        /* Owns the whole viewport so iPad Safari never steals the first touch
+           from the scroll wheels via a competing page-scroll region. */
+        #screen-checkin.checkin-fullscreen:not(.hidden) {
+            position: fixed;
+            inset: 0;
+            z-index: 55;
+            background: linear-gradient(to bottom right, #faf5ff, #fdf2f8);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            display: flex;
+            padding: 1.5rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+        }
+        /* Centre the single visible step; still scrolls if it ever overflows. */
+        #screen-checkin.checkin-fullscreen > .checkin-step:not(.hidden) {
+            margin: auto;
+            width: 100%;
+            max-width: 40rem;
+        }
+        #checkin-close {
+            display: none;
+            position: fixed;
+            top: calc(0.5rem + env(safe-area-inset-top));
+            right: 1rem;
+            z-index: 60;
+            width: 48px; height: 48px;
+            border-radius: 9999px;
+            background: rgba(31, 41, 55, 0.85);
+            color: #fff;
+            font-size: 1.4rem; line-height: 1;
+            align-items: center; justify-content: center;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        }
+        #screen-checkin.checkin-fullscreen #checkin-close { display: flex; }
+        body.checkin-locked, html.checkin-locked { overflow: hidden; height: 100%; overscroll-behavior: none; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
@@ -396,6 +433,9 @@
 
         <!-- ==================== CHECK-IN SCREEN ==================== -->
         <div id="screen-checkin" class="screen hidden">
+
+            <!-- Close the fullscreen check-in takeover (returns to Stöbern) -->
+            <button type="button" id="checkin-close" onclick="goHome()" aria-label="Schließen">✕</button>
 
             <!-- Step 1: Birthday scroll wheels -->
             <div id="checkin-step-birthday" class="checkin-step relative bg-white rounded-3xl shadow-lg p-6 sm:p-8">
@@ -1981,9 +2021,14 @@
             document.getElementById('onboarding-content').classList.add('hidden');
             document.getElementById('social-content').classList.add('hidden');
 
+            // Leaving check-in → drop the fullscreen takeover (re-added below if
+            // we're entering it). Prevents the iPad-Safari scroll-focus issue.
+            if (name !== 'checkin') exitCheckinFullscreen();
+
             switch (name) {
                 case 'checkin':
                     document.getElementById('screen-checkin').classList.remove('hidden');
+                    enterCheckinFullscreen();
                     startCheckin();
                     break;
                 case 'browse':
@@ -2003,6 +2048,22 @@
             setActiveNav(name);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             resetIdleTimer();
+        }
+
+        // ---- Fullscreen check-in takeover ----
+        // On iPad Safari, a page-level scroll region steals the first touch from
+        // the custom scroll wheels. Making check-in a fixed fullscreen overlay
+        // that owns the viewport (and locking body scroll) keeps the wheels
+        // immediately scrollable.
+        function enterCheckinFullscreen() {
+            document.getElementById('screen-checkin').classList.add('checkin-fullscreen');
+            document.documentElement.classList.add('checkin-locked');
+            document.body.classList.add('checkin-locked');
+        }
+        function exitCheckinFullscreen() {
+            document.getElementById('screen-checkin').classList.remove('checkin-fullscreen');
+            document.documentElement.classList.remove('checkin-locked');
+            document.body.classList.remove('checkin-locked');
         }
 
         // Highlight the active rail item.
@@ -2299,9 +2360,37 @@
         const MONTHS_ABBR_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
         const MONTHS_ABBR_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-        // Per-step inactivity timeouts (ms). Welcome overrides at render time.
+        // Per-step inactivity timeouts (ms). Defaults here; an admin can override
+        // them globally (coiffure_global_settings → api/global-settings.php).
         const CHECKIN_TIMEOUTS = { birthday:45000, autoconfirm:30000, names:30000, phone:60000, welcome:8000, staffpin:60000, staffsearch:60000 };
         const CHECKIN_STEPS = ['birthday','autoconfirm','names','phone','welcome','staffpin','staffsearch'];
+        // Durations that aren't tied to a step key (welcome variants, sub-step).
+        let welcomeSuccessMs = 8000, welcomeDuplicateMs = 5000, namesConfirmMs = 15000;
+
+        // Apply admin-configured global timeouts (values arrive in seconds).
+        function applyGlobalTimeoutSettings(s) {
+            if (!s) return;
+            const ms = (k, d) => (s[k] != null ? Number(s[k]) * 1000 : d);
+            CHECKIN_TIMEOUTS.birthday    = ms('timeout_birthday_s', CHECKIN_TIMEOUTS.birthday);
+            CHECKIN_TIMEOUTS.autoconfirm = ms('timeout_autoconfirm_s', CHECKIN_TIMEOUTS.autoconfirm);
+            CHECKIN_TIMEOUTS.names       = ms('timeout_namelist_s', CHECKIN_TIMEOUTS.names);
+            CHECKIN_TIMEOUTS.phone       = ms('timeout_phone_s', CHECKIN_TIMEOUTS.phone);
+            CHECKIN_TIMEOUTS.welcome     = ms('timeout_welcome_success_s', CHECKIN_TIMEOUTS.welcome);
+            CHECKIN_TIMEOUTS.staffpin    = ms('timeout_staff_pin_s', CHECKIN_TIMEOUTS.staffpin);
+            CHECKIN_TIMEOUTS.staffsearch = ms('timeout_staff_search_s', CHECKIN_TIMEOUTS.staffsearch);
+            welcomeSuccessMs   = ms('timeout_welcome_success_s', welcomeSuccessMs);
+            welcomeDuplicateMs = ms('timeout_welcome_duplicate_s', welcomeDuplicateMs);
+            namesConfirmMs     = ms('timeout_names_confirm_s', namesConfirmMs);
+            if (typeof IDLE_MS !== 'undefined') IDLE_MS = ms('timeout_idle_return_s', IDLE_MS);
+        }
+
+        async function loadGlobalTimeoutSettings() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/global-settings.php`);
+                const data = await res.json();
+                if (data && data.success) applyGlobalTimeoutSettings(data.settings);
+            } catch (e) { /* keep defaults */ }
+        }
 
         let checkinCandidates = [];
         let checkinSuccessTimer = null;   // legacy name kept (referenced by goHome)
@@ -2551,9 +2640,9 @@
             document.getElementById('names-confirm-yes').onclick = () => checkinConfirm(c.id);
             const overlay = document.getElementById('checkin-names-confirm');
             overlay.classList.remove('hidden');
-            animateBar(overlay.querySelector('.timeout-bar > span'), 15000);
+            animateBar(overlay.querySelector('.timeout-bar > span'), namesConfirmMs);
             if (namesConfirmTimer) clearTimeout(namesConfirmTimer);
-            namesConfirmTimer = setTimeout(closeNamesConfirm, 15000);
+            namesConfirmTimer = setTimeout(closeNamesConfirm, namesConfirmMs);
             resetStepTimeout(); // keep the underlying list alive while confirming
         }
         function closeNamesConfirm() {
@@ -2649,7 +2738,7 @@
                 data.is_duplicate ? i18n.t('checkin.already_today') : i18n.t('checkin.glad_here');
             renderLoyaltyBar(loy);
             document.getElementById('welcome-context').textContent = welcomeContextMessage(data, loy);
-            showCheckinStep('welcome', data.is_duplicate ? 5000 : 8000);
+            showCheckinStep('welcome', data.is_duplicate ? welcomeDuplicateMs : welcomeSuccessMs);
         }
 
         // 100% dynamic — every value comes from the salon's loyalty config.
@@ -2685,6 +2774,7 @@
             document.getElementById('onboarding-content').classList.add('hidden');
             document.getElementById('social-content').classList.add('hidden');
             document.getElementById('screen-checkin').classList.remove('hidden');
+            enterCheckinFullscreen();
             currentScreen = 'checkin';
             if (typeof setActiveNav === 'function') setActiveNav('checkin');
             if (typeof setRailExpanded === 'function') setRailExpanded(false);
@@ -2972,7 +3062,7 @@
 
         // ==================== IDLE TIMER ====================
         let idleTimer = null;
-        const IDLE_MS = 30000;
+        let IDLE_MS = 30000;
 
         function isFlowActive() {
             // Don't auto-reset while the user is mid check-in or filling the form.
@@ -4222,6 +4312,7 @@
             initCheckinUI();
             updateSocialNavLabel();
             loadLoyaltyConfig();
+            loadGlobalTimeoutSettings();
             showScreen(START_SCREEN);
             resetIdleTimer();
 
