@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/loyalty_helpers.php';
 
 setCorsHeaders();
 
@@ -292,18 +293,22 @@ if (!empty($salon['logo_path'])) {
 // ------------------------------------------------------------------
 // Send welcome / membership e-mail (best-effort, never blocks response)
 // ------------------------------------------------------------------
+$loyaltyCfg = getLoyaltyConfig($conn, $salonId);
 $emailSent = false;
 try {
     $emailSent = sendWelcomeEmail([
-        'to_email'        => $email,
-        'first_name'      => $firstName,
-        'salon_name'      => $salon['salon_name'] ?? 'unser Salon',
-        'is_member'       => $isMember,
-        'member_id'       => $memberId,
-        'member_since'    => $memberSince,
-        'primary_color'   => $salon['primary_color'] ?? '#9333EA',
-        'secondary_color' => $salon['secondary_color'] ?? '#EC4899',
-        'logo_url'        => $logoPublicUrl,
+        'to_email'          => $email,
+        'first_name'        => $firstName,
+        'salon_name'        => $salon['salon_name'] ?? 'unser Salon',
+        'is_member'         => $isMember,
+        'member_id'         => $memberId,
+        'member_since'      => $memberSince,
+        'primary_color'     => $salon['primary_color'] ?? '#9333EA',
+        'secondary_color'   => $salon['secondary_color'] ?? '#EC4899',
+        'logo_url'          => $logoPublicUrl,
+        'loyalty_active'    => $loyaltyCfg['loyalty_active'],
+        'loyalty_label'     => $loyaltyCfg['discount_label'],
+        'loyalty_threshold' => $loyaltyCfg['visit_threshold'],
     ]);
 } catch (Throwable $e) {
     error_log('Welcome email error: ' . $e->getMessage());
