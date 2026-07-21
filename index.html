@@ -400,11 +400,6 @@
             <!-- Step 1: Birthday scroll wheels -->
             <div id="checkin-step-birthday" class="checkin-step relative bg-white rounded-3xl shadow-lg p-6 sm:p-8">
                 <div class="timeout-bar"><span></span></div>
-                <div class="flex justify-end mb-1">
-                    <button type="button" id="checkin-lang-toggle" onclick="toggleCheckinLang()"
-                        class="text-sm px-3 py-2 rounded-full bg-gray-100 text-gray-600 flex items-center gap-1"
-                        style="min-height:44px;min-width:44px" aria-label="Switch language">🌐 <span id="checkin-lang-label">EN</span></button>
-                </div>
                 <h2 class="text-2xl font-bold text-gray-800 text-center mb-6" data-i18n="checkin.birthday_headline">Schön, dass Sie da sind! Bitte Geburtstag wählen:</h2>
                 <div class="grid grid-cols-2 gap-6 max-w-md mx-auto">
                     <div>
@@ -1560,13 +1555,6 @@
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white mt-12 py-6 shadow-md">
-        <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
-            <p><span data-i18n="footer.copyright">&copy; 2025 Coiffure AI. All rights reserved.</span> | <span data-i18n="footer.gdpr_compliant">GDPR Compliant</span> | <span data-i18n="footer.secure">Secure & Private</span></p>
-        </div>
-    </footer>
-
     <script>
         // ==================== CONFIGURATION ====================
         const API_BASE_URL = 'https://clouedo.com/coiffure/api';
@@ -2490,18 +2478,6 @@
             return false; // on birthday → let the router go home
         }
 
-        // EN/DE toggle on the birthday screen (re-uses the global i18n switch).
-        async function toggleCheckinLang() {
-            const next = (window.i18n && i18n.currentLang === 'de') ? 'en' : 'de';
-            if (typeof switchLanguage === 'function') await switchLanguage(next);
-            syncCheckinLangLabel();
-            buildWheels(); // relabel months in the new language
-        }
-        function syncCheckinLangLabel() {
-            const lbl = document.getElementById('checkin-lang-label');
-            if (lbl) lbl.textContent = (window.i18n && i18n.currentLang === 'de') ? 'EN' : 'DE';
-        }
-
         // ---------- Lookup + routing ----------
         async function checkinBirthdayLookup() {
             const day = parseInt(dayWheel.value, 10);
@@ -2831,7 +2807,6 @@
                 screen.dataset.timeoutBound = '1';
             }
             initStaffLongPress();
-            syncCheckinLangLabel();
         }
 
         // Long-press (3s) on the Check-In rail item → staff mode.
@@ -4295,7 +4270,6 @@
         // Keep language-dependent, JS-rendered content in sync with the toggle.
         window.addEventListener('languageChanged', () => {
             if (window.salonLoyalty) applyLoyaltyMarketingCopy(window.salonLoyalty);
-            if (typeof syncCheckinLangLabel === 'function') syncCheckinLangLabel();
             if (dayWheel && monthWheel) buildWheels();
         });
 

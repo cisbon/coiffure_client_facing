@@ -218,6 +218,24 @@ CREATE TABLE IF NOT EXISTS coiffure_checkin_lockouts (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- Table: coiffure_salon_connections  (migration 014)
+-- Description: Groups salons of the same brand so they SHARE their customer
+-- base for self check-in. Salons with the same group_id are connected.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_salon_connections (
+    connection_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    group_id INT UNSIGNED NOT NULL,
+    salon_id INT UNSIGNED NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uniq_conn_salon (salon_id),
+    INDEX idx_conn_group (group_id),
+
+    CONSTRAINT fk_conn_salon FOREIGN KEY (salon_id)
+        REFERENCES coiffure_salons(salon_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- Table: coiffure_qr_codes
 -- Description: Generated QR codes for reviews and social media
 -- ============================================================

@@ -62,6 +62,25 @@ staff get a full-name search (`staff_search`) and can check a customer in
 Only `customer_id` (an integer key) may accompany an event — never a name,
 phone or birthday.
 
+**Salon scope (important):** the tablet logs in with a per-salon account, so a
+check-in only ever searches customers of the **logged-in salon** — the client
+cannot check in a customer from another salon. For multi-store brands, an
+administrator groups the stores in `coiffure_salon_connections` (same
+`group_id`); connected salons then share their customer base, so a check-in
+searches across all of them. A salon that is not listed there stays scoped to
+itself. The server derives the allowed salon set from the **session** (not from
+the client-supplied `salon_id`).
+
+```sql
+-- Connect salon 1 and salon 2 as one brand (group 100), admin only:
+INSERT INTO coiffure_salon_connections (group_id, salon_id) VALUES (100, 1), (100, 2);
+```
+
+**Duplicate check-in:** a customer can only log one visit per calendar day.
+Checking in again the same day shows "Sie sind heute bereits eingecheckt" and
+does **not** increase the visit count (so the loyalty reward can't be gamed).
+The next day it counts again — there is no check-out step.
+
 **GDPR:** candidate data is minimal (first name + last initial) and only
 returned after a birthday is entered — a legitimate-interest identification
 step. Failed-lookup details are never tied to a person. Membership/marketing
@@ -133,6 +152,7 @@ back them later (managed via the web access) without changing the response shape
 | `migrations/011_add_wifi.sql` + `api/apply_migration_011.php` | salon `wifi_ssid` + `wifi_password` columns |
 | `migrations/012_loyalty_config.sql` + `api/apply_migration_012.php` | salon loyalty columns + `staff_pin` |
 | `migrations/013_checkin_analytics.sql` + `api/apply_migration_013.php` | `coiffure_checkin_events`, `coiffure_settings_audit`, `coiffure_checkin_lockouts` |
+| `migrations/014_salon_connections.sql` + `api/apply_migration_014.php` | `coiffure_salon_connections` (multi-store brands) |
 | `api/checkin.php` | candidates / confirm / phone / staff / event actions |
 | `api/loyalty-config.php` + `api/loyalty_helpers.php` | loyalty config read/write + shared progress maths |
 | `api/content.php` | Trends & Tipps content (reads `data/trends.json`) |
@@ -156,6 +176,7 @@ php api/apply_migration_010.php   # customer gender + title columns
 php api/apply_migration_011.php   # salon guest-WiFi columns
 php api/apply_migration_012.php   # per-salon loyalty config + staff PIN
 php api/apply_migration_013.php   # checkin analytics / audit / lockout tables
+php api/apply_migration_014.php   # salon connections (multi-store brands)
 
 # …or raw SQL
 mysql -u USER -p salonlyft < migrations/009_visits_checkin.sql
