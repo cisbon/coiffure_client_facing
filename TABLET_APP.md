@@ -19,31 +19,67 @@ removed — membership is now a status only, no downloadable card.
 
 ## 1. Self check-in
 
-Birthday-first identification with a phone fallback:
+A conversation-style, birthday-first flow with a phone fallback. There are no
+"Weiter"/"Submit" buttons on the birthday screen — the flow auto-proceeds.
 
-1. **Birthday** – large Tag (1–31) and Monat (Januar–Dezember) pickers; the
-   **Weiter** button is disabled until both are chosen.
-2. **Name selection** – `GET api/checkin.php?action=candidates&day=DD&month=MM[&q=…]`
-   returns members with that birthday
-   (`{id, first_name, last_name_initial, gender}`). Each card shows a
-   gender silhouette avatar so the customer spots their own profile at a glance.
-   - 0 results → "Kein Eintrag gefunden" + phone-fallback button.
-   - 1 result → "Sind Sie … ?" confirmation (with avatar).
-   - 2+ results → touchable cards + a **name filter** (`q`) that re-queries the
-     backend on first- OR last-name prefix. This disambiguates people who share
-     a birthday, first name AND last initial without ever sending the full list
-     of surnames to the client.
+1. **Birthday** – two custom touch **scroll wheels** (Tag 1–31, Monat
+   Jan–Dez). No native `<select>`, no year, no keyboard. Momentum + snap +
+   a soft haptic tick per item. When both wheels have a value, the finger is
+   off, and 800 ms have passed, the lookup fires automatically.
+   `GET api/checkin.php?action=candidates&day=DD&month=MM[&q=…]` returns
+   `{id, first_name, last_name_initial, gender}`.
+2. **Routing** (frontend, on the result count):
+   - `0` → phone fallback (`no_match`)
+   - `1` → auto-confirm ("Sind Sie … ?")
+   - `2–8`, no first-name+initial collision → name list (each card → inline
+     "Sind Sie … ?" confirm sub-step)
+   - collision, or `>8` → phone fallback (`name_collision` / `too_many_results`)
 3. **Confirm** – `POST api/checkin.php {"action":"confirm","customer_id":N}`
-   logs a visit and returns the first name for the welcome animation.
-   The success screen auto-returns home after 3 s.
-4. **Phone fallback** – numeric keypad → `POST api/checkin.php`
-   `{"action":"phone","phone_number":"…"}`. Matches on trailing digits so
-   stored formats (spaces, +, /, -, ., parens) still resolve. Only customers
-   who previously stored a number can be found this way.
+   logs the visit (once per calendar day) and returns the **welcome payload**:
+   first name, dynamic loyalty progress, and `is_duplicate` / `is_birthday_week`
+   / `is_reward_visit` / `was_referred` flags.
+4. **Phone fallback** – custom numeric keypad (1–9, 0, ⌫, +). `POST
+   api/checkin.php {"action":"phone","phone_number":"…"}` matches on trailing
+   digits (tolerant of spaces/+/-/etc.). An ambiguous number returns a minimal
+   name list. After **3 failed lookups** input locks for the session and a
+   `phone_lockout` event is logged (salon_id + timestamp only). A single match
+   returns the welcome payload.
+5. **Welcome** – one screen for every path. Shows the greeting, the **dynamic
+   loyalty progress bar** (100 % from the salon's config — no hardcoded values),
+   one contextual message (birthday week → reward visit → referral), and
+   auto-returns to Stöbern (8 s, or 5 s for a duplicate check-in).
+
+**Staff override:** a 3 s long-press on the **Check-In** rail item opens a
+4-digit PIN pad (`staff_pin`, per salon, default `0000`). After the correct PIN
+staff get a full-name search (`staff_search`) and can check a customer in
+(`staff_confirm`, logged as a `manual` visit). 3 wrong PINs lock staff mode for
+5 minutes.
+
+**Analytics:** each session fires non-PII events (`checkin_started`,
+`birthday_selected`, `collision_detected`, `phone_fallback_triggered`,
+`phone_lookup_failed`, `phone_lockout`, `checkin_completed`, `checkin_duplicate`,
+…) via `POST api/checkin.php {"action":"event", …}` into `coiffure_checkin_events`.
+Only `customer_id` (an integer key) may accompany an event — never a name,
+phone or birthday.
 
 **GDPR:** candidate data is minimal (first name + last initial) and only
 returned after a birthday is entered — a legitimate-interest identification
-step. Membership/marketing flags are NOT required to check in.
+step. Failed-lookup details are never tied to a person. Membership/marketing
+flags are NOT required to check in.
+
+## 1a. Loyalty program (per salon, configurable)
+
+The loyalty program is configured per salon in the admin dashboard
+("**Treueprogramm**" tab) and stored on `coiffure_salons`:
+`loyalty_active`, `loyalty_visit_threshold` (2–50), `loyalty_discount_type`
+(`fixed_eur`|`percentage`), `loyalty_discount_value`, `loyalty_discount_label`
+(optional override). The tablet reads it via
+`GET api/loyalty-config.php?salon_id=N` (public) and renders the welcome
+progress bar and the marketing copy from it — nothing is hardcoded. Owner edits
+`POST` to the same endpoint (admin only); every changed field is written to
+`coiffure_settings_audit`. Changing the threshold never resets a customer's
+visit count — the modulo maths simply counts against the new threshold going
+forward.
 
 ## 2. Registration
 
@@ -95,7 +131,10 @@ back them later (managed via the web access) without changing the response shape
 | `migrations/009_visits_checkin.sql` + `api/apply_migration_009.php` | `coiffure_visits` table |
 | `migrations/010_add_gender.sql` + `api/apply_migration_010.php` | customer `gender` + `title` columns |
 | `migrations/011_add_wifi.sql` + `api/apply_migration_011.php` | salon `wifi_ssid` + `wifi_password` columns |
-| `api/checkin.php` | candidates / confirm / phone check-in actions |
+| `migrations/012_loyalty_config.sql` + `api/apply_migration_012.php` | salon loyalty columns + `staff_pin` |
+| `migrations/013_checkin_analytics.sql` + `api/apply_migration_013.php` | `coiffure_checkin_events`, `coiffure_settings_audit`, `coiffure_checkin_lockouts` |
+| `api/checkin.php` | candidates / confirm / phone / staff / event actions |
+| `api/loyalty-config.php` + `api/loyalty_helpers.php` | loyalty config read/write + shared progress maths |
 | `api/content.php` | Trends & Tipps content (reads `data/trends.json`) |
 | `api/products.php` | Shop catalogue (reads `data/products.json`) |
 | `data/trends.json`, `data/products.json` | Demo content & products |
@@ -115,6 +154,8 @@ The check-in feature needs the `coiffure_visits` table and relies on the
 php api/apply_migration_009.php   # coiffure_visits table
 php api/apply_migration_010.php   # customer gender + title columns
 php api/apply_migration_011.php   # salon guest-WiFi columns
+php api/apply_migration_012.php   # per-salon loyalty config + staff PIN
+php api/apply_migration_013.php   # checkin analytics / audit / lockout tables
 
 # …or raw SQL
 mysql -u USER -p salonlyft < migrations/009_visits_checkin.sql

@@ -214,16 +214,6 @@
 
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
-        #keypad button {
-            min-height: 64px;
-            font-size: 1.6rem;
-            font-weight: 700;
-            border-radius: 1rem;
-            background: #f3f4f6;
-            color: #1f2937;
-            transition: background 0.1s ease;
-        }
-        #keypad button:active { background: #e5e7eb; }
 
         /* Browse tabs */
         .browse-tab { background: #f3f4f6; color: #374151; }
@@ -4240,6 +4230,14 @@
                 }
 
                 loadSocialLinks();
+            }
+
+            // Ensure translations exist even on an unauthenticated kiosk, so the
+            // dynamic check-in strings (i18n.t) never fall back to raw keys.
+            if (typeof i18n !== 'undefined' && (!i18n.translations || Object.keys(i18n.translations).length === 0)) {
+                await i18n.loadLanguage(i18n.currentLang || 'de');
+                i18n.applyTranslations();
+                if (typeof updateLanguageButtons === 'function') updateLanguageButtons();
             }
 
             // Initialize the membership registration form (works with or without auth).

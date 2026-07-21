@@ -122,7 +122,29 @@
     "salon_management": "Salon Management",
     "social_links": "Social Links",
     "customer_entries": "Customer Entries",
-    "salon_profile": "Salon Profile"
+    "salon_profile": "Salon Profile",
+    "loyalty": "Loyalty"
+  },
+  "loyalty_admin": {
+    "title": "Loyalty program",
+    "description": "Decide how often a visit is rewarded and what discount your members receive. These values appear live on the tablet.",
+    "active": "Loyalty program active",
+    "threshold": "Reward on every Nth visit",
+    "threshold_hint": "Whole number between 2 and 50.",
+    "discount_type": "Discount type",
+    "type_fixed": "Fixed amount (€)",
+    "type_percentage": "Percentage (%)",
+    "discount_value": "Discount value",
+    "discount_label": "Custom label (optional)",
+    "label_hint": "Leave empty to show \"10 €\" / \"15 %\" automatically.",
+    "staff_pin": "Staff PIN (tablet, 4 digits)",
+    "staff_pin_hint": "Leave empty to keep the current PIN.",
+    "save": "Save",
+    "reset": "Reset",
+    "preview": "Preview (tablet)",
+    "preview_sub": "Great to have you here.",
+    "preview_inactive": "Loyalty program is disabled – no progress bar is shown on the tablet.",
+    "preview_note": "Example: visit 3 of N."
   },
   "user_management": {
     "title": "User Management",

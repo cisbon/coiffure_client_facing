@@ -57,6 +57,15 @@ function buildMembershipEmailHtml(array $d)
     $since     = _h(_fmtDate($d['member_since'] ?? date('Y-m-d')));
     $logo      = _logoTag($d['logo_url'] ?? null, $salonName);
 
+    // Loyalty copy is per-salon (falls back to the historical 10 €/5th visit).
+    $loyLabel     = _h($d['loyalty_label'] ?? '10 €');
+    $loyThreshold = (int)($d['loyalty_threshold'] ?? 5);
+    $loyActive    = !array_key_exists('loyalty_active', $d) || !empty($d['loyalty_active']);
+    $loyaltyBenefit = $loyActive
+        ? "<p style=\"margin:0 0 6px 0;font-size:14px;\">🎁 {$loyLabel} Rabatt auf den {$loyThreshold}. Besuch</p>"
+          . "<p style=\"margin:0 0 6px 0;font-size:14px;\">👥 Freunde werben lohnt sich – Sie beide erhalten {$loyLabel} Rabatt</p>"
+        : '';
+
     $memberLine = $memberId !== ''
         ? "<tr><td style=\"padding:0 32px 8px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7280;\">"
           . "Mitgliedsnummer: <strong>{$memberId}</strong> &nbsp;·&nbsp; Mitglied seit: <strong>{$since}</strong></td></tr>"
@@ -80,8 +89,7 @@ function buildMembershipEmailHtml(array $d)
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#faf5ff;border-radius:12px;">
             <tr><td style="padding:18px 20px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
                 <p style="margin:0 0 10px 0;font-weight:bold;color:{$primary};">Ihre Vorteile</p>
-                <p style="margin:0 0 6px 0;font-size:14px;">🎁 10 € Rabatt auf den 5. Besuch</p>
-                <p style="margin:0 0 6px 0;font-size:14px;">👥 Freunde werben lohnt sich – Sie beide erhalten 10 € Rabatt</p>
+                {$loyaltyBenefit}
                 <p style="margin:0;font-size:14px;">✨ Exklusive Angebote &amp; Geburtstags-Überraschungen</p>
             </td></tr>
         </table>
@@ -102,6 +110,15 @@ function buildPlainWelcomeEmailHtml(array $d)
     $salonName = _h($d['salon_name'] ?: 'unser Salon');
     $logo      = _logoTag($d['logo_url'] ?? null, $salonName);
 
+    $loyLabel     = _h($d['loyalty_label'] ?? '10 €');
+    $loyThreshold = (int)($d['loyalty_threshold'] ?? 5);
+    $loyActive    = !array_key_exists('loyalty_active', $d) || !empty($d['loyalty_active']);
+    $loyaltyNote  = $loyActive
+        ? "<p style=\"margin:0;font-size:14px;line-height:1.6;color:#6b7280;\">"
+          . "Übrigens: Als Mitglied in unserem Club erhalten Sie {$loyLabel} Rabatt auf jeden {$loyThreshold}. Besuch, "
+          . "exklusive Angebote und Geburtstags-Überraschungen. Fragen Sie einfach beim nächsten Besuch nach.</p>"
+        : '';
+
     $header = _emailHeader($primary, $secondary, $logo, $salonName);
     $footer = _emailFooter($salonName);
 
@@ -112,11 +129,7 @@ function buildPlainWelcomeEmailHtml(array $d)
             Vielen Dank für Ihre Registrierung bei <strong>{$salonName}</strong>. Wir freuen uns,
             Sie bald bei uns begrüßen zu dürfen.
         </p>
-        <p style="margin:0;font-size:14px;line-height:1.6;color:#6b7280;">
-            Übrigens: Als Mitglied in unserem Club erhalten Sie 10 € Rabatt auf jeden 5. Besuch,
-            exklusive Angebote und Geburtstags-Überraschungen. Fragen Sie einfach beim nächsten
-            Besuch nach.
-        </p>
+        {$loyaltyNote}
     </td></tr>
 HTML
     . $footer;

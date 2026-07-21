@@ -25,6 +25,13 @@ CREATE TABLE IF NOT EXISTS coiffure_salons (
     facebook_url VARCHAR(500),
     wifi_ssid VARCHAR(255) DEFAULT NULL,
     wifi_password VARCHAR(255) DEFAULT NULL,
+    -- Per-salon loyalty program config (migration 012)
+    loyalty_active TINYINT(1) NOT NULL DEFAULT 1,
+    loyalty_visit_threshold INT UNSIGNED NOT NULL DEFAULT 5,
+    loyalty_discount_type ENUM('fixed_eur','percentage') NOT NULL DEFAULT 'fixed_eur',
+    loyalty_discount_value DECIMAL(6,2) NOT NULL DEFAULT 10.00,
+    loyalty_discount_label VARCHAR(50) DEFAULT NULL,
+    staff_pin VARCHAR(8) NOT NULL DEFAULT '0000',
     policy_version VARCHAR(20) NOT NULL DEFAULT '1.0',
     cancellation_policy TEXT,
     data_processing_policy TEXT,
@@ -160,6 +167,54 @@ CREATE TABLE IF NOT EXISTS coiffure_visits (
     INDEX idx_visit_salon (salon_id),
     INDEX idx_visit_checked_in (checked_in_at),
     INDEX idx_visit_customer_day (customer_id, checked_in_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Table: coiffure_checkin_events  (migration 013)
+-- Description: Privacy-conscious check-in analytics (no PII beyond customer_id)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_checkin_events (
+    event_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    salon_id INT UNSIGNED NOT NULL,
+    event_type VARCHAR(40) NOT NULL,
+    customer_id INT UNSIGNED DEFAULT NULL,
+    payload JSON DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_event_salon (salon_id),
+    INDEX idx_event_type (event_type),
+    INDEX idx_event_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Table: coiffure_settings_audit  (migration 013)
+-- Description: Audit trail for salon setting changes (old → new value)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_settings_audit (
+    audit_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    salon_id INT UNSIGNED NOT NULL,
+    changed_by INT UNSIGNED DEFAULT NULL,
+    setting_key VARCHAR(64) NOT NULL,
+    old_value VARCHAR(255) DEFAULT NULL,
+    new_value VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_saudit_salon (salon_id),
+    INDEX idx_saudit_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Table: coiffure_checkin_lockouts  (migration 013)
+-- Description: Brute-force protection log (salon_id + timestamp only, no PII)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_checkin_lockouts (
+    lockout_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    salon_id INT UNSIGNED NOT NULL,
+    scope VARCHAR(20) NOT NULL DEFAULT 'phone',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_lockout_salon (salon_id),
+    INDEX idx_lockout_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

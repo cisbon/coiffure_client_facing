@@ -1244,3 +1244,166 @@ async function saveSalonProfile(event) {
         alert('Error saving salon profile. Please try again.');
     }
 }
+
+// ==================== Loyalty settings (Treueprogramm) ====================
+let loyaltyOriginal = null;
+
+document.addEventListener('DOMContentLoaded', function () {
+    const tab = document.querySelector('[data-tab="loyalty"]');
+    if (tab) tab.addEventListener('click', loadLoyaltySettings);
+
+    const form = document.getElementById('loyaltyForm');
+    if (form) form.addEventListener('submit', saveLoyaltySettings);
+
+    const reload = document.getElementById('loyaltyReload');
+    if (reload) reload.addEventListener('click', function (e) { e.preventDefault(); loadLoyaltySettings(); });
+
+    ['loyaltyActive', 'loyaltyThreshold', 'loyaltyDiscountType', 'loyaltyDiscountValue', 'loyaltyDiscountLabel']
+        .forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) { el.addEventListener('input', onLoyaltyInput); el.addEventListener('change', onLoyaltyInput); }
+        });
+});
+
+async function loadLoyaltySettings() {
+    if (!window.currentSalon || !window.currentSalon.salon_id) {
+        console.warn('Loyalty: no salon selected yet');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE_URL}/loyalty-config.php?salon_id=${window.currentSalon.salon_id}`, {
+            headers: { 'Authorization': `Bearer ${sessionToken}` }
+        });
+        const cfg = await res.json();
+        if (!cfg || !cfg.success) { alert('Konnte Treue-Einstellungen nicht laden: ' + (cfg && cfg.error || '')); return; }
+        loyaltyOriginal = cfg;
+        document.getElementById('loyaltyActive').checked = !!cfg.loyalty_active;
+        document.getElementById('loyaltyThreshold').value = cfg.visit_threshold;
+        document.getElementById('loyaltyDiscountType').value = cfg.discount_type;
+        document.getElementById('loyaltyDiscountValue').value = cfg.discount_value;
+        document.getElementById('loyaltyDiscountLabel').value = ''; // custom override; blank = auto
+        document.getElementById('loyaltyStaffPin').value = '';
+        onLoyaltyInput();
+    } catch (e) {
+        console.error('loyalty load', e);
+        alert('Fehler beim Laden der Treue-Einstellungen.');
+    }
+}
+
+function onLoyaltyInput() {
+    const active = document.getElementById('loyaltyActive').checked;
+    const fields = document.getElementById('loyaltyFields');
+    fields.style.opacity = active ? '1' : '0.5';
+    fields.querySelectorAll('input, select').forEach(function (el) { el.disabled = !active; });
+
+    const type = document.getElementById('loyaltyDiscountType').value;
+    const valEl = document.getElementById('loyaltyDiscountValue');
+    const hint = document.getElementById('loyaltyValueHint');
+    if (type === 'percentage') { valEl.min = 1; valEl.max = 100; valEl.step = 1; if (hint) hint.textContent = '1 – 100 %'; }
+    else { valEl.min = 0.5; valEl.max = 500; valEl.step = 0.5; if (hint) hint.textContent = '0,50 – 500 €'; }
+
+    updateLoyaltyPreview();
+}
+
+function loyaltyLabel(type, value, custom) {
+    custom = (custom || '').trim();
+    if (custom) return custom;
+    const num = Number(value);
+    if (isNaN(num)) return type === 'percentage' ? '% ' : '€';
+    const s = Number.isInteger(num) ? String(num) : num.toFixed(2).replace('.', ',');
+    return type === 'percentage' ? (s + ' %') : (s + ' €');
+}
+
+function updateLoyaltyPreview() {
+    const active = document.getElementById('loyaltyActive').checked;
+    const box = document.getElementById('loyaltyPreviewBox');
+    const inactive = document.getElementById('loyaltyPreviewInactive');
+    if (!active) { box.classList.add('hidden'); inactive.classList.remove('hidden'); return; }
+    box.classList.remove('hidden'); inactive.classList.add('hidden');
+
+    const threshold = Math.max(2, parseInt(document.getElementById('loyaltyThreshold').value, 10) || 5);
+    const type = document.getElementById('loyaltyDiscountType').value;
+    const value = document.getElementById('loyaltyDiscountValue').value;
+    const label = loyaltyLabel(type, value, document.getElementById('loyaltyDiscountLabel').value);
+
+    // Hardcoded example: 3rd visit of the configured threshold.
+    const exampleVisit = Math.min(3, threshold);
+    const inCycle = exampleVisit % threshold;
+    const remaining = threshold - inCycle;
+    const pct = Math.round((inCycle / threshold) * 100);
+
+    document.getElementById('loyaltyPreviewCount').textContent = 'Besuch ' + exampleVisit;
+    document.getElementById('loyaltyPreviewPercent').textContent = pct + '%';
+    document.getElementById('loyaltyPreviewFill').style.width = pct + '%';
+    document.getElementById('loyaltyPreviewCaption').textContent =
+        'Noch ' + remaining + ' Besuche bis zu Ihrem ' + label + ' Rabatt.';
+}
+
+async function saveLoyaltySettings(e) {
+    e.preventDefault();
+    if (!window.currentSalon || !window.currentSalon.salon_id) { alert('Kein Salon ausgewählt.'); return; }
+
+    const active = document.getElementById('loyaltyActive').checked;
+    const threshold = parseInt(document.getElementById('loyaltyThreshold').value, 10);
+    const type = document.getElementById('loyaltyDiscountType').value;
+    const value = parseFloat(document.getElementById('loyaltyDiscountValue').value);
+    const label = document.getElementById('loyaltyDiscountLabel').value.trim();
+    const pin = document.getElementById('loyaltyStaffPin').value.trim();
+
+    if (active) {
+        if (!(threshold >= 2 && threshold <= 50)) { alert('Die Besuchsschwelle muss zwischen 2 und 50 liegen.'); return; }
+        if (type === 'fixed_eur' && !(value >= 0.5 && value <= 500)) { alert('Fester Rabatt muss zwischen 0,50 € und 500 € liegen.'); return; }
+        if (type === 'percentage' && !(value >= 1 && value <= 100)) { alert('Prozentualer Rabatt muss zwischen 1 % und 100 % liegen.'); return; }
+    }
+    if (pin && !/^\d{4}$/.test(pin)) { alert('Die Personal-PIN muss aus genau 4 Ziffern bestehen.'); return; }
+
+    // Confirmation when the threshold changes (affects active members going forward).
+    if (loyaltyOriginal && Number(loyaltyOriginal.visit_threshold) !== threshold) {
+        const ok = confirm('Die Besuchsschwelle ändert sich von ' + loyaltyOriginal.visit_threshold + ' auf ' + threshold +
+            '. Bestehende Mitglieder behalten ihre gezählten Besuche und zählen ab sofort gegen die neue Schwelle. Fortfahren?');
+        if (!ok) return;
+    }
+
+    const body = {
+        salon_id: window.currentSalon.salon_id,
+        loyalty_active: active ? 1 : 0,
+        visit_threshold: threshold,
+        discount_type: type,
+        discount_value: value,
+        discount_label: label
+    };
+    if (pin) body.staff_pin = pin;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/loyalty-config.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken}` },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            loyaltyOriginal = data;
+            document.getElementById('loyaltyStaffPin').value = '';
+            showLoyaltyToast(data.message || 'Einstellungen gespeichert.');
+        } else {
+            alert((data && data.error) || 'Speichern fehlgeschlagen.');
+        }
+    } catch (err) {
+        console.error('loyalty save', err);
+        alert('Netzwerkfehler beim Speichern.');
+    }
+}
+
+function showLoyaltyToast(msg) {
+    let t = document.getElementById('loyaltyToast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'loyaltyToast';
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#16A34A;color:#fff;padding:12px 20px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:9999;font-weight:600;opacity:0;transition:opacity .2s';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    requestAnimationFrame(function () { t.style.opacity = '1'; });
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.style.opacity = '0'; }, 2500);
+}
