@@ -85,7 +85,20 @@
     "stylist_none": "No preference",
     "submit": "Become a member now",
     "success_title": "Welcome,",
-    "success_text": "Your registration was successful. Follow us or connect to our WiFi."
+    "success_text": "Your registration was successful. Follow us or connect to our WiFi.",
+    "err_title": "Please check the highlighted fields:",
+    "err_first_name": "Please enter your first name.",
+    "err_last_name": "Please enter your last name.",
+    "err_email": "Please enter a valid email address.",
+    "err_gender": "Please select your salutation.",
+    "err_mobile": "Please enter your mobile number.",
+    "err_birthday": "Please enter your birthday.",
+    "err_zip": "Please enter your ZIP code.",
+    "err_city": "Please enter your city.",
+    "err_consent": "Please agree to the privacy policy."
+  },
+  "nav": {
+    "checkin": "Check-in"
   },
   "browse": {
     "welcome_at": "Welcome to",
