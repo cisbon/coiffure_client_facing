@@ -85,6 +85,85 @@ function resolveSalonId(mysqli $conn, $requestData): int
     return (int)($fromReq ?? DEFAULT_SALON_ID);
 }
 
+/**
+ * Salon ids assigned to the authenticated tablet user (empty when no session).
+ * The tablet logs in with a per-salon account, so this is the trusted scope.
+ */
+function sessionSalonIds(mysqli $conn): array
+{
+    $token = getSessionToken();
+    if (!$token) {
+        return [];
+    }
+    $user = validateSession($conn, $token);
+    if (!$user) {
+        return [];
+    }
+    $ids = [];
+    $stmt = $conn->prepare("SELECT salon_id FROM coiffure_user_salons WHERE user_id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $user['user_id']);
+        $stmt->execute();
+        $r = $stmt->get_result();
+        while ($row = $r->fetch_assoc()) {
+            $ids[] = (int)$row['salon_id'];
+        }
+        $stmt->close();
+    }
+    return $ids;
+}
+
+/**
+ * Expand a set of salon ids with every salon they are connected to (same brand
+ * group in coiffure_salon_connections). A salon not listed there stays alone.
+ */
+function expandConnectedSalons(mysqli $conn, array $salonIds): array
+{
+    $salonIds = array_values(array_unique(array_map('intval', $salonIds)));
+    if (empty($salonIds) || !tableExists($conn, 'coiffure_salon_connections')) {
+        return $salonIds;
+    }
+    $set = [];
+    foreach ($salonIds as $sid) {
+        $set[$sid] = true;
+    }
+    $inClause = implode(',', $salonIds);
+    $sql = "SELECT s2.salon_id
+            FROM coiffure_salon_connections s1
+            JOIN coiffure_salon_connections s2 ON s1.group_id = s2.group_id
+            WHERE s1.salon_id IN ($inClause)";
+    $res = $conn->query($sql);
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $set[(int)$row['salon_id']] = true;
+        }
+    }
+    return array_keys($set);
+}
+
+/**
+ * The authoritative set of salon ids a check-in may search/act on.
+ *   - With a tablet session: that user's salon(s), expanded by brand connections.
+ *     The client-supplied salon_id is IGNORED (cannot check in cross-salon).
+ *   - Without a session (dev/public): the request/default salon, also expanded.
+ */
+function resolveAllowedSalonIds(mysqli $conn, $requestData): array
+{
+    $ids = sessionSalonIds($conn);
+    if (empty($ids)) {
+        $fromReq = $requestData['salon_id'] ?? ($_GET['salon_id'] ?? null);
+        $ids = [(int)($fromReq ?? DEFAULT_SALON_ID)];
+    }
+    $expanded = expandConnectedSalons($conn, $ids);
+    return !empty($expanded) ? $expanded : [(int)DEFAULT_SALON_ID];
+}
+
+/** Safe comma-separated IN list from server-derived integer salon ids. */
+function salonInClause(array $salonIds): string
+{
+    return implode(',', array_map('intval', $salonIds));
+}
+
 /** Log a visit; tolerates a missing visits table (returns false, non-fatal). */
 function logVisit(mysqli $conn, int $customerId, int $salonId, string $method): bool
 {
@@ -329,7 +408,9 @@ if ($action === 'candidates') {
         sendErrorResponse('Ungültiges Datum. Bitte Tag (1–31) und Monat (1–12) angeben.', 400);
     }
 
-    $salonId = resolveSalonId($conn, []);
+    $allowedSalons = resolveAllowedSalonIds($conn, []);
+    $salonId = $allowedSalons[0];
+    $salonIn = salonInClause($allowedSalons);
     $q = trim((string)($_GET['q'] ?? ''));
 
     $hasGender = false;
@@ -341,9 +422,9 @@ if ($action === 'candidates') {
 
     $sql = "SELECT customer_id, first_name, last_name{$genderCol}
             FROM coiffure_customers
-            WHERE salon_id = ? AND birth_day = ? AND birth_month = ? AND is_deleted = 0";
-    $types = "iii";
-    $params = [$salonId, $day, $month];
+            WHERE salon_id IN ($salonIn) AND birth_day = ? AND birth_month = ? AND is_deleted = 0";
+    $types = "ii";
+    $params = [$day, $month];
 
     if ($q !== '') {
         $sql .= " AND (first_name LIKE ? OR last_name LIKE ?)";
@@ -406,11 +487,15 @@ if ($action === 'confirm') {
         sendErrorResponse('customer_id erforderlich', 400);
     }
 
-    $salonId = resolveSalonId($conn, $requestData);
+    $allowedSalons = resolveAllowedSalonIds($conn, $requestData);
+    $salonId = $allowedSalons[0];
+    $salonIn = salonInClause($allowedSalons);
 
+    // Scope to the tablet's own (and connected) salons — a customer_id from any
+    // other salon must not be checkable in here.
     $stmt = $conn->prepare(
         "SELECT {$CUSTOMER_COLS} FROM coiffure_customers
-         WHERE customer_id = ? AND is_deleted = 0 LIMIT 1"
+         WHERE customer_id = ? AND salon_id IN ($salonIn) AND is_deleted = 0 LIMIT 1"
     );
     $stmt->bind_param("i", $customerId);
     $stmt->execute();
@@ -446,13 +531,15 @@ if ($action === 'phone') {
         sendErrorResponse('Bitte geben Sie eine gültige Telefonnummer ein.', 400);
     }
 
-    $salonId = resolveSalonId($conn, $requestData);
+    $allowedSalons = resolveAllowedSalonIds($conn, $requestData);
+    $salonId = $allowedSalons[0];
+    $salonIn = salonInClause($allowedSalons);
 
     // Compare on digits only so stored formats (spaces, +, /, -, ., parens) match.
     // Match on the trailing digits to tolerate country-code differences.
     $sqlDigits = "SELECT {$CUSTOMER_COLS}
                   FROM coiffure_customers
-                  WHERE salon_id = ? AND is_deleted = 0
+                  WHERE salon_id IN ($salonIn) AND is_deleted = 0
                     AND (mobile IS NOT NULL OR phone IS NOT NULL)
                     AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
                         COALESCE(mobile, phone), ' ', ''), '-', ''), '/', ''), '(', ''), ')', ''), '.', ''), '+', '')
@@ -462,7 +549,7 @@ if ($action === 'phone') {
     $stmt = $conn->prepare($sqlDigits);
     if ($stmt) {
         $tail = substr($digits, -max(7, min(strlen($digits), 9)));
-        $stmt->bind_param("is", $salonId, $tail);
+        $stmt->bind_param("s", $tail);
         $stmt->execute();
         $res = $stmt->get_result();
         while ($row = $res->fetch_assoc()) {
@@ -561,14 +648,15 @@ if ($action === 'staff_search') {
         sendJsonResponse(['success' => true, 'results' => []], 200);
     }
 
+    $salonIn = salonInClause(resolveAllowedSalonIds($conn, $requestData));
     $like = '%' . $q . '%';
     $digits = preg_replace('/\D/', '', $q);
     $sql = "SELECT customer_id, first_name, last_name, full_name
             FROM coiffure_customers
-            WHERE salon_id = ? AND is_deleted = 0
+            WHERE salon_id IN ($salonIn) AND is_deleted = 0
               AND (full_name LIKE ? OR first_name LIKE ? OR last_name LIKE ?";
-    $types = "isss";
-    $params = [$salonId, $like, $like, $like];
+    $types = "sss";
+    $params = [$like, $like, $like];
     if (strlen($digits) >= 3) {
         $sql .= " OR REPLACE(REPLACE(REPLACE(COALESCE(mobile, phone), ' ', ''), '-', ''), '+', '') LIKE ?";
         $types .= "s";
@@ -612,9 +700,10 @@ if ($action === 'staff_confirm') {
         sendErrorResponse('customer_id erforderlich', 400);
     }
 
+    $salonIn = salonInClause(resolveAllowedSalonIds($conn, $requestData));
     $stmt = $conn->prepare(
         "SELECT {$CUSTOMER_COLS} FROM coiffure_customers
-         WHERE customer_id = ? AND is_deleted = 0 LIMIT 1"
+         WHERE customer_id = ? AND salon_id IN ($salonIn) AND is_deleted = 0 LIMIT 1"
     );
     $stmt->bind_param("i", $customerId);
     $stmt->execute();
