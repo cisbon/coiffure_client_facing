@@ -85,7 +85,20 @@
     "stylist_none": "Kein Wunsch – egal",
     "submit": "Jetzt Mitglied werden",
     "success_title": "Willkommen,",
-    "success_text": "Ihre Registrierung war erfolgreich. Folgen Sie uns oder verbinden Sie sich mit unserem WLAN."
+    "success_text": "Ihre Registrierung war erfolgreich. Folgen Sie uns oder verbinden Sie sich mit unserem WLAN.",
+    "err_title": "Bitte prüfen Sie die markierten Felder:",
+    "err_first_name": "Bitte geben Sie Ihren Vornamen ein.",
+    "err_last_name": "Bitte geben Sie Ihren Nachnamen ein.",
+    "err_email": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    "err_gender": "Bitte wählen Sie Ihre Anrede.",
+    "err_mobile": "Bitte geben Sie Ihre Mobilnummer ein.",
+    "err_birthday": "Bitte geben Sie Ihren Geburtstag an.",
+    "err_zip": "Bitte geben Sie Ihre PLZ ein.",
+    "err_city": "Bitte geben Sie Ihren Ort ein.",
+    "err_consent": "Bitte stimmen Sie der Datenschutzerklärung zu."
+  },
+  "nav": {
+    "checkin": "Check-In"
   },
   "browse": {
     "welcome_at": "Willkommen bei",
