@@ -2627,7 +2627,7 @@
                 card.type = 'button';
                 card.className = 'candidate-card name-card gap-3';
                 card.setAttribute('aria-label', `${c.first_name} ${c.last_name_initial}`);
-                card.innerHTML = `<span class="shrink-0">${genderAvatar(c.gender)}</span><span>👤 ${escapeHtml(c.first_name)} ${escapeHtml(c.last_name_initial)}</span>`;
+                card.innerHTML = `<span class="shrink-0">${genderAvatar(c.gender)}</span><span>${escapeHtml(c.first_name)} ${escapeHtml(c.last_name_initial)}</span>`;
                 card.onclick = () => openNamesConfirm(c);
                 grid.appendChild(card);
             });
