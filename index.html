@@ -198,6 +198,31 @@
         .nav-label { opacity: 0; transition: opacity 0.15s ease; }
         .nav-rail.expanded .nav-label { opacity: 1; }
 
+        /* Checked-in customer card (bottom of the rail) */
+        .rail-ci { margin-top: auto; border-top: 1px solid #eef0f3; padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
+            display: flex; flex-direction: column; gap: 8px; }
+        .rail-ci.hidden { display: none; }
+        .rail-ci-person { display: flex; align-items: center; gap: 10px; background: transparent; border: none;
+            cursor: pointer; padding: 4px; border-radius: 12px; -webkit-tap-highlight-color: transparent; }
+        .rail-ci-person:hover { background: #f3f4f6; }
+        .nav-rail:not(.expanded) .rail-ci-person { justify-content: center; }
+        .rail-ci-avatar { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 9999px;
+            background: var(--color-primary, #9333EA); color: #fff; font-weight: 800; font-size: 15px;
+            display: inline-flex; align-items: center; justify-content: center; letter-spacing: 0.5px; }
+        .rail-lbl { display: none; white-space: nowrap; }
+        .nav-rail.expanded .rail-lbl { display: inline; }
+        .rail-ci-fullname { font-weight: 700; color: #1f2937; font-size: 15px; }
+        .rail-ci-meta { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .nav-rail.expanded .rail-ci-meta { align-items: flex-start; padding-left: 6px; }
+        .rail-ci-meta .hidden { display: none; }
+        .rail-ci-progress { font-size: 13px; font-weight: 700; color: #374151; }
+        .rail-ci-discount { font-size: 15px; font-weight: 800; color: #16a34a; }
+        .rail-ci-checkout { display: flex; align-items: center; gap: 12px; justify-content: center;
+            padding: 10px; border-radius: 12px; background: #f3f4f6; color: #374151; font-weight: 700;
+            border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .nav-rail.expanded .rail-ci-checkout { justify-content: flex-start; padding-left: 16px; }
+        .rail-ci-checkout:hover { background: #e5e7eb; }
+
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
 
@@ -417,6 +442,21 @@
                 <span class="nav-ico">✨</span><span class="nav-label">AI Hairstyle</span>
             </button>
         </nav>
+
+        <!-- Currently checked-in customer (staff-facing); hidden until a check-in -->
+        <div id="rail-checkedin" class="rail-ci hidden">
+            <button type="button" class="rail-ci-person" onclick="openCheckedInPopup()" aria-label="Eingecheckter Kunde">
+                <span class="rail-ci-avatar" id="rail-ci-initials"></span>
+                <span class="rail-ci-fullname rail-lbl" id="rail-ci-fullname"></span>
+            </button>
+            <div class="rail-ci-meta">
+                <span id="rail-ci-progress" class="rail-ci-progress hidden"></span>
+                <span id="rail-ci-discount" class="rail-ci-discount hidden"></span>
+            </div>
+            <button type="button" class="rail-ci-checkout" onclick="checkoutCustomer()">
+                <span class="nav-ico">⎋</span><span class="rail-lbl" data-i18n="checkin.checkout">Check-Out</span>
+            </button>
+        </div>
     </aside>
 
     <!-- Header -->
@@ -1624,6 +1664,27 @@
         </div>
     </main>
 
+    <!-- Checked-in customer popup (staff view of the welcome screen) -->
+    <div id="checkedin-popup" class="hidden" onclick="closeCheckedInPopup(event)"
+         style="position:fixed;inset:0;z-index:75;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:1.5rem">
+        <div class="relative bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center" onclick="event.stopPropagation()">
+            <button type="button" onclick="closeCheckedInPopup()" aria-label="Schließen"
+                class="absolute top-3 right-3 w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl flex items-center justify-center hover:bg-gray-200">✕</button>
+            <div class="text-6xl mb-2">✅</div>
+            <h2 class="text-2xl font-bold text-gray-800"><span data-i18n="checkin.hello">Hallo</span> <span id="ci-pop-name"></span>!</h2>
+            <p id="ci-pop-sub" class="text-gray-600 mt-1"></p>
+            <div id="ci-pop-loyalty" class="max-w-sm mx-auto mt-6 hidden">
+                <div class="flex justify-between items-end mb-1">
+                    <span id="ci-pop-count" class="text-base font-bold text-gray-800"></span>
+                    <span id="ci-pop-percent" class="text-sm text-gray-500"></span>
+                </div>
+                <div class="loyalty-track"><div id="ci-pop-fill" class="loyalty-fill"></div></div>
+                <p id="ci-pop-caption" class="text-sm text-gray-600 mt-2"></p>
+            </div>
+            <div id="ci-pop-context" class="max-w-sm mx-auto mt-5 text-lg font-medium"></div>
+        </div>
+    </div>
+
     <script>
         // ==================== CONFIGURATION ====================
         const API_BASE_URL = 'https://clouedo.com/coiffure/api';
@@ -2555,6 +2616,7 @@
             welcomeSuccessMs   = ms('timeout_welcome_success_s', welcomeSuccessMs);
             welcomeDuplicateMs = ms('timeout_welcome_duplicate_s', welcomeDuplicateMs);
             namesConfirmMs     = ms('timeout_names_confirm_s', namesConfirmMs);
+            autoCheckoutMs     = ms('timeout_autocheckout_s', autoCheckoutMs);
             if (typeof IDLE_MS !== 'undefined') IDLE_MS = ms('timeout_idle_return_s', IDLE_MS);
         }
 
@@ -2916,24 +2978,118 @@
             renderLoyaltyBar(loy);
             document.getElementById('welcome-context').textContent = welcomeContextMessage(data, loy);
             showCheckinStep('welcome', data.is_duplicate ? welcomeDuplicateMs : welcomeSuccessMs);
+            // Track this customer as the currently checked-in one (staff view).
+            setCheckedInCustomer(data);
         }
 
-        // 100% dynamic — every value comes from the salon's loyalty config.
-        function renderLoyaltyBar(loy) {
-            const box = document.getElementById('welcome-loyalty');
-            if (!loy || !loy.active) { box.classList.add('hidden'); return; }
-            box.classList.remove('hidden');
+        // Shared loyalty-bar painter (welcome screen + staff popup). 100% dynamic —
+        // every value comes from the salon's loyalty config.
+        function paintLoyaltyBar(els, loy) {
+            if (!loy || !loy.active) { els.box.classList.add('hidden'); return; }
+            els.box.classList.remove('hidden');
             const pct = loy.is_reward_visit ? 100 : (loy.percent || 0);
-            document.getElementById('loyalty-count').textContent = i18n.t('checkin.visit_count', { count: loy.visit_count });
-            document.getElementById('loyalty-percent').textContent = pct + '%';
-            const fill = document.getElementById('loyalty-fill');
-            fill.style.width = '0%';
-            fill.classList.toggle('reward', !!loy.is_reward_visit);
-            requestAnimationFrame(() => { requestAnimationFrame(() => { fill.style.width = pct + '%'; }); });
-            const cap = document.getElementById('loyalty-caption');
-            cap.textContent = loy.is_reward_visit
+            els.count.textContent = i18n.t('checkin.visit_count', { count: loy.visit_count });
+            els.percent.textContent = pct + '%';
+            els.fill.style.width = '0%';
+            els.fill.classList.toggle('reward', !!loy.is_reward_visit);
+            requestAnimationFrame(() => { requestAnimationFrame(() => { els.fill.style.width = pct + '%'; }); });
+            els.caption.textContent = loy.is_reward_visit
                 ? i18n.t('checkin.reward_ready', { discount: loy.discount_label })
                 : i18n.t('checkin.visits_remaining', { count: loy.visits_remaining, discount: loy.discount_label });
+        }
+        function renderLoyaltyBar(loy) {
+            paintLoyaltyBar({
+                box: document.getElementById('welcome-loyalty'),
+                count: document.getElementById('loyalty-count'),
+                percent: document.getElementById('loyalty-percent'),
+                fill: document.getElementById('loyalty-fill'),
+                caption: document.getElementById('loyalty-caption')
+            }, loy);
+        }
+
+        // ==================== Checked-in customer (staff-facing) ====================
+        let checkedInCustomer = null;      // { data, ts }
+        let autoCheckoutTimer = null;
+        let autoCheckoutMs = 1800 * 1000;  // default 30 min; overridden by global settings
+        const CHECKED_IN_KEY = 'coiffure_checked_in_v1';
+
+        // A new check-in overrides any previous one (condition c).
+        function setCheckedInCustomer(data) {
+            checkedInCustomer = { data: data, ts: Date.now() };
+            try { localStorage.setItem(CHECKED_IN_KEY, JSON.stringify(checkedInCustomer)); } catch (e) {}
+            renderRailCheckedIn();
+            startAutoCheckout(autoCheckoutMs);
+        }
+
+        // Restore across an accidental tablet reload within the auto-checkout window.
+        function restoreCheckedInCustomer() {
+            try {
+                const raw = localStorage.getItem(CHECKED_IN_KEY);
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                if (!saved || !saved.data || !saved.ts) return;
+                const elapsed = Date.now() - saved.ts;
+                if (elapsed >= autoCheckoutMs) { localStorage.removeItem(CHECKED_IN_KEY); return; }
+                checkedInCustomer = saved;
+                renderRailCheckedIn();
+                startAutoCheckout(autoCheckoutMs - elapsed);
+            } catch (e) {}
+        }
+
+        // Condition (a): manual checkout button. Also used by the auto-checkout.
+        function checkoutCustomer() {
+            checkedInCustomer = null;
+            if (autoCheckoutTimer) { clearTimeout(autoCheckoutTimer); autoCheckoutTimer = null; }
+            try { localStorage.removeItem(CHECKED_IN_KEY); } catch (e) {}
+            closeCheckedInPopup();
+            renderRailCheckedIn();
+        }
+
+        // Condition (b): auto check-out after the configured timeout.
+        function startAutoCheckout(ms) {
+            if (autoCheckoutTimer) clearTimeout(autoCheckoutTimer);
+            autoCheckoutTimer = setTimeout(() => { autoCheckoutTimer = null; checkoutCustomer(); }, Math.max(1000, ms));
+        }
+
+        function renderRailCheckedIn() {
+            const card = document.getElementById('rail-checkedin');
+            if (!card) return;
+            if (!checkedInCustomer) { card.classList.add('hidden'); return; }
+            const d = checkedInCustomer.data;
+            const loy = d.loyalty || {};
+            document.getElementById('rail-ci-initials').textContent = d.initials || '';
+            document.getElementById('rail-ci-fullname').textContent = `${d.first_name || ''} ${d.last_name_initial || ''}`.trim();
+            const prog = document.getElementById('rail-ci-progress');
+            if (loy.active) { prog.textContent = `${loy.visit_count}/${loy.visit_threshold}`; prog.classList.remove('hidden'); }
+            else { prog.classList.add('hidden'); }
+            // Discount tag only when this visit actually earned a reward.
+            const disc = document.getElementById('rail-ci-discount');
+            if (loy.active && loy.is_reward_visit && loy.discount_label) { disc.textContent = loy.discount_label; disc.classList.remove('hidden'); }
+            else { disc.classList.add('hidden'); }
+            card.classList.remove('hidden');
+        }
+
+        function openCheckedInPopup() {
+            if (!checkedInCustomer) return;
+            const d = checkedInCustomer.data;
+            const loy = d.loyalty || {};
+            document.getElementById('ci-pop-name').textContent = d.first_name || '';
+            document.getElementById('ci-pop-sub').textContent =
+                d.is_duplicate ? i18n.t('checkin.already_today') : i18n.t('checkin.glad_here');
+            paintLoyaltyBar({
+                box: document.getElementById('ci-pop-loyalty'),
+                count: document.getElementById('ci-pop-count'),
+                percent: document.getElementById('ci-pop-percent'),
+                fill: document.getElementById('ci-pop-fill'),
+                caption: document.getElementById('ci-pop-caption')
+            }, loy);
+            document.getElementById('ci-pop-context').textContent = welcomeContextMessage(d, loy);
+            document.getElementById('checkedin-popup').classList.remove('hidden');
+        }
+        function closeCheckedInPopup(e) {
+            // Ignore clicks that bubble from inside the card (only backdrop / X close).
+            if (e && e.target && e.target.id !== 'checkedin-popup') return;
+            document.getElementById('checkedin-popup').classList.add('hidden');
         }
 
         function welcomeContextMessage(data, loy) {
@@ -4491,6 +4647,7 @@
             updateSocialNavLabel();
             loadLoyaltyConfig();
             loadGlobalTimeoutSettings();
+            restoreCheckedInCustomer();
             showScreen(START_SCREEN);
             resetIdleTimer();
 

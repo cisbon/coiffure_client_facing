@@ -64,10 +64,22 @@ the DE/EN switch re-renders everything live.
 
 **Configurable timeouts:** every timeout (idle-return, birthday, auto-confirm,
 name list, name sub-step, phone, welcome-success, welcome-duplicate, staff-PIN,
-staff-search) is stored in `coiffure_global_settings` (seconds) and editable by
-an **admin** in the dashboard ("Globale Einstellungen"). The kiosk loads them
-from `GET api/global-settings.php` at startup; code defaults apply if the table
-is absent.
+staff-search, auto-checkout) is stored in `coiffure_global_settings` (seconds)
+and editable by an **admin** in the dashboard ("Globale Einstellungen"). The
+kiosk loads them from `GET api/global-settings.php` at startup; code defaults
+apply if the table is absent.
+
+**Checked-in customer & check-out (staff-facing):** after a check-in the
+nav-rail shows the current customer — initials (collapsed) or first name + last
+initial (expanded), the visit progress `visits/threshold`, and the reward amount
+in green **only when this visit earned a discount**. A **Check-Out** button sits
+below. Tapping the name opens a popup with the same welcome screen the customer
+saw (progress bar + reward/birthday message). The customer is checked out when
+(a) the Check-Out button is pressed, (b) the auto-checkout timeout elapses
+(`timeout_autocheckout_s`, default 1800 s), or (c) another customer checks in.
+The state survives an accidental tablet reload (localStorage, within the
+auto-checkout window). The welcome payload carries `initials` / `last_name_initial`
+for this display.
 
 **Staff override:** a 3 s long-press on the **Check-In** rail item opens a
 4-digit PIN pad (`staff_pin`, per salon, default `0000`). After the correct PIN

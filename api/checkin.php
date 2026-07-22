@@ -345,15 +345,23 @@ function buildWelcomePayload(mysqli $conn, array $customer, int $salonId, string
     $progress = getLoyaltyProgress($cfg, $visitCount);
 
     $firstName = $customer['first_name'] ?: trim(explode(' ', $customer['full_name'] ?? '')[0]);
+    $lastName  = trim((string)($customer['last_name'] ?? ''));
+    $mb = function_exists('mb_substr');
+    $lastInitialChar = $lastName !== '' ? ($mb ? mb_substr($lastName, 0, 1) : substr($lastName, 0, 1)) : '';
+    $lastNameInitial = $lastInitialChar !== '' ? $lastInitialChar . '.' : '';
+    $firstInitial = $firstName !== '' ? ($mb ? mb_substr($firstName, 0, 1) : substr($firstName, 0, 1)) : '';
+    $initials = strtoupper($firstInitial . $lastInitialChar);
     $referral = strtolower((string)($customer['referral_source'] ?? ''));
     $wasReferred = in_array($referral, ['empfehlung', 'referral', 'friend', 'freund'], true) ||
                    strpos($referral, 'empfehl') !== false;
 
     return [
-        'success'         => true,
-        'customer_id'     => $customerId,
-        'first_name'      => $firstName,
-        'method'          => $method,
+        'success'          => true,
+        'customer_id'      => $customerId,
+        'first_name'       => $firstName,
+        'last_name_initial' => $lastNameInitial,
+        'initials'         => $initials,
+        'method'           => $method,
         'is_duplicate'    => $isDuplicate,
         'is_first_visit'  => (!$isDuplicate && $visitCount === 1),
         'was_referred'    => $wasReferred,

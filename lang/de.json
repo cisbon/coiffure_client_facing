@@ -34,6 +34,7 @@
     "ctx_reward": "🎉 Glückwunsch! Ihr {discount} Rabatt wurde aktiviert!",
     "ctx_referral": "Danke, dass Sie durch eine Empfehlung zu uns gekommen sind!",
     "done": "Fertig ✓",
+    "checkout": "Check-Out",
     "cancel": "Abbrechen",
     "staff_pin": "Personal-PIN eingeben",
     "staff_search": "Kundin/Kunde suchen",
@@ -215,6 +216,7 @@
     "welcome_duplicate": "Willkommen (bereits eingecheckt)",
     "staff_pin": "Personal-PIN",
     "staff_search": "Personal-Suche",
+    "autocheckout": "Auto-Check-Out (eingecheckter Kunde)",
     "save": "Speichern",
     "reset": "Zurücksetzen"
   },
