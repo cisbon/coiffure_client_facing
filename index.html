@@ -223,6 +223,12 @@
         .nav-rail.expanded .rail-ci-checkout { justify-content: flex-start; padding-left: 16px; }
         .rail-ci-checkout:hover { background: #e5e7eb; }
 
+        /* Checked-in customer popup. Display is driven by the .hidden class only
+           (no inline display, which would override .hidden and stick open). */
+        .ci-popup { position: fixed; inset: 0; z-index: 75; background: rgba(0,0,0,0.5);
+            align-items: center; justify-content: center; padding: 1.5rem; display: none; }
+        .ci-popup:not(.hidden) { display: flex; }
+
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
 
@@ -1665,8 +1671,7 @@
     </main>
 
     <!-- Checked-in customer popup (staff view of the welcome screen) -->
-    <div id="checkedin-popup" class="hidden" onclick="closeCheckedInPopup(event)"
-         style="position:fixed;inset:0;z-index:75;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:1.5rem">
+    <div id="checkedin-popup" class="ci-popup hidden" onclick="closeCheckedInPopup(event)">
         <div class="relative bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center" onclick="event.stopPropagation()">
             <button type="button" onclick="closeCheckedInPopup()" aria-label="Schließen"
                 class="absolute top-3 right-3 w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl flex items-center justify-center hover:bg-gray-200">✕</button>
