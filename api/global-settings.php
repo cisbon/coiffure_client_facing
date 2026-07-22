@@ -31,6 +31,8 @@ const GLOBAL_TIMEOUT_DEFS = [
     'timeout_welcome_duplicate_s' => [5,  2, 120],
     'timeout_staff_pin_s'         => [60, 5, 600],
     'timeout_staff_search_s'      => [60, 5, 600],
+    // Auto check-out of the currently checked-in customer (default 30 min).
+    'timeout_autocheckout_s'      => [1800, 60, 86400],
 ];
 
 function globalSettingsTableExists(mysqli $conn): bool

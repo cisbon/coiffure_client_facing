@@ -29,7 +29,8 @@ INSERT IGNORE INTO coiffure_global_settings (setting_key, setting_value) VALUES
     ('timeout_welcome_success_s',  '8'),
     ('timeout_welcome_duplicate_s','5'),
     ('timeout_staff_pin_s',        '60'),
-    ('timeout_staff_search_s',     '60');
+    ('timeout_staff_search_s',     '60'),
+    ('timeout_autocheckout_s',     '1800');
 
 -- ============================================================
 -- End of migration 015

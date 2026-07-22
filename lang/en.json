@@ -34,6 +34,7 @@
     "ctx_reward": "🎉 Congratulations! Your {discount} discount is now active!",
     "ctx_referral": "Thank you for joining us through a referral!",
     "done": "Done ✓",
+    "checkout": "Check-out",
     "cancel": "Cancel",
     "staff_pin": "Enter staff PIN",
     "staff_search": "Search customer",
@@ -215,6 +216,7 @@
     "welcome_duplicate": "Welcome (already checked in)",
     "staff_pin": "Staff PIN",
     "staff_search": "Staff search",
+    "autocheckout": "Auto check-out (checked-in customer)",
     "save": "Save",
     "reset": "Reset"
   },
