@@ -35,6 +35,8 @@
     "ctx_referral": "Thank you for joining us through a referral!",
     "done": "Done ✓",
     "checkout": "Check-out",
+    "visits_word": "visits",
+    "discount_word": "discount",
     "cancel": "Cancel",
     "staff_pin": "Enter staff PIN",
     "staff_search": "Search customer",

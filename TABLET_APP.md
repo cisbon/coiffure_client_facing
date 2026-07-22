@@ -71,8 +71,14 @@ apply if the table is absent.
 
 **Checked-in customer & check-out (staff-facing):** after a check-in the
 nav-rail shows the current customer — initials (collapsed) or first name + last
-initial (expanded), the visit progress `visits/threshold`, and the reward amount
-in green **only when this visit earned a discount**. A **Check-Out** button sits
+initial (expanded), the **position in the current loyalty cycle**
+`visits_in_cycle/threshold` (never the raw lifetime total — e.g. an 8th visit at
+threshold 5 reads `3/5`, expanded `3/5 Besuche`), and the reward amount in green
+(expanded `10 € Rabatt`) **only when this visit earned a discount** — either a
+loyalty reward (every Nth visit) or the **yearly birthday reward**. The birthday
+wishes + discount are shown only on the **first visit within the birthday window
+per year** (`is_birthday_reward`, computed from `coiffure_visits`); the customer
+never sees their lifetime visit count. A **Check-Out** button sits
 below. Tapping the name opens a popup with the same welcome screen the customer
 saw (progress bar + reward/birthday message). The customer is checked out when
 (a) the Check-Out button is pressed, (b) the auto-checkout timeout elapses
