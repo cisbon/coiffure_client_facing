@@ -2221,6 +2221,8 @@
 
         function setRailExpanded(expanded) {
             document.getElementById('nav-rail').classList.toggle('expanded', expanded);
+            // Re-render the checked-in card so the expanded-only words appear/disappear.
+            if (typeof checkedInCustomer !== 'undefined' && checkedInCustomer) renderRailCheckedIn();
         }
 
         function goHome() {
@@ -2993,7 +2995,8 @@
             if (!loy || !loy.active) { els.box.classList.add('hidden'); return; }
             els.box.classList.remove('hidden');
             const pct = loy.is_reward_visit ? 100 : (loy.percent || 0);
-            els.count.textContent = i18n.t('checkin.visit_count', { count: loy.visit_count });
+            // Customer sees only the position in the current cycle, not the total.
+            els.count.textContent = i18n.t('checkin.visit_count', { count: loy.visits_in_cycle });
             els.percent.textContent = pct + '%';
             els.fill.style.width = '0%';
             els.fill.classList.toggle('reward', !!loy.is_reward_visit);
@@ -3062,15 +3065,27 @@
             if (!checkedInCustomer) { card.classList.add('hidden'); return; }
             const d = checkedInCustomer.data;
             const loy = d.loyalty || {};
+            const expanded = document.getElementById('nav-rail').classList.contains('expanded');
             document.getElementById('rail-ci-initials').textContent = d.initials || '';
             document.getElementById('rail-ci-fullname').textContent = `${d.first_name || ''} ${d.last_name_initial || ''}`.trim();
             const prog = document.getElementById('rail-ci-progress');
-            if (loy.active) { prog.textContent = `${loy.visit_count}/${loy.visit_threshold}`; prog.classList.remove('hidden'); }
-            else { prog.classList.add('hidden'); }
-            // Discount tag only when this visit actually earned a reward.
+            if (loy.active) {
+                // Show the position in the CURRENT cycle, never the raw total.
+                const base = `${loy.visits_in_cycle}/${loy.visit_threshold}`;
+                prog.textContent = expanded ? `${base} ${i18n.t('checkin.visits_word')}` : base;
+                prog.classList.remove('hidden');
+            } else {
+                prog.classList.add('hidden');
+            }
+            // Discount tag: a loyalty reward (Nth visit) OR the yearly birthday reward.
             const disc = document.getElementById('rail-ci-discount');
-            if (loy.active && loy.is_reward_visit && loy.discount_label) { disc.textContent = loy.discount_label; disc.classList.remove('hidden'); }
-            else { disc.classList.add('hidden'); }
+            const earnedDiscount = (loy.active && loy.is_reward_visit) || d.is_birthday_reward;
+            if (earnedDiscount && loy.discount_label) {
+                disc.textContent = expanded ? `${loy.discount_label} ${i18n.t('checkin.discount_word')}` : loy.discount_label;
+                disc.classList.remove('hidden');
+            } else {
+                disc.classList.add('hidden');
+            }
             card.classList.remove('hidden');
         }
 
@@ -3098,7 +3113,8 @@
         }
 
         function welcomeContextMessage(data, loy) {
-            if (data.is_birthday_week) return i18n.t('checkin.ctx_birthday');
+            // Birthday wishes only on the first visit after the birthday (once/year).
+            if (data.is_birthday_reward) return i18n.t('checkin.ctx_birthday');
             if (loy && loy.active && loy.is_reward_visit) return i18n.t('checkin.ctx_reward', { discount: loy.discount_label });
             if (data.is_first_visit && data.was_referred) return i18n.t('checkin.ctx_referral');
             return '';
@@ -4703,6 +4719,7 @@
             if (window.salonLoyalty) applyLoyaltyMarketingCopy(window.salonLoyalty);
             if (dayWheel && monthWheel) buildWheels();
             if (currentCheckinStep) renderCheckinProgress(currentCheckinStep);
+            if (typeof checkedInCustomer !== 'undefined' && checkedInCustomer) renderRailCheckedIn();
         });
 
         async function loadSocialLinks() {

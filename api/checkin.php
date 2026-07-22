@@ -248,6 +248,49 @@ function birthdayWithin(?int $day, ?int $month, int $window): bool
     return false;
 }
 
+/**
+ * The [start,end] unix-timestamp window around the birthday occurrence that is
+ * within ±$window days of today, or null when today is not in the window.
+ */
+function birthdayWindow(?int $day, ?int $month, int $window): ?array
+{
+    if (!$day || !$month) {
+        return null;
+    }
+    $year = (int)date('Y');
+    $today = mktime(12, 0, 0, (int)date('n'), (int)date('j'), $year);
+    foreach ([-1, 0, 1] as $yShift) {
+        $cand = @mktime(12, 0, 0, $month, $day, $year + $yShift);
+        if ($cand === false) {
+            continue;
+        }
+        if (abs(($cand - $today) / 86400) <= $window) {
+            return [$cand - $window * 86400, $cand + $window * 86400];
+        }
+    }
+    return null;
+}
+
+/** Number of visits for a customer whose checked_in_at falls in [from,to] (unix ts). */
+function countVisitsInRange(mysqli $conn, int $customerId, int $from, int $to): int
+{
+    if (!visitsTableExists($conn)) {
+        return 0;
+    }
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) AS c FROM coiffure_visits
+         WHERE customer_id = ? AND checked_in_at BETWEEN FROM_UNIXTIME(?) AND FROM_UNIXTIME(?)"
+    );
+    if (!$stmt) {
+        return 0;
+    }
+    $stmt->bind_param("iii", $customerId, $from, $to);
+    $stmt->execute();
+    $c = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+    $stmt->close();
+    return $c;
+}
+
 /** Append a non-PII analytics event (best-effort, never fatal). */
 function recordEvent(mysqli $conn, int $salonId, string $type, ?int $customerId, $payload): void
 {
@@ -355,6 +398,22 @@ function buildWelcomePayload(mysqli $conn, array $customer, int $salonId, string
     $wasReferred = in_array($referral, ['empfehlung', 'referral', 'friend', 'freund'], true) ||
                    strpos($referral, 'empfehl') !== false;
 
+    // Birthday: is today within the birthday window at all?
+    $bDay   = isset($customer['birth_day']) ? (int)$customer['birth_day'] : null;
+    $bMonth = isset($customer['birth_month']) ? (int)$customer['birth_month'] : null;
+    $isBirthdayWeek = birthdayWithin($bDay, $bMonth, 3);
+
+    // Birthday REWARD: only the FIRST visit within this year's birthday window.
+    // We count visits in the window; the current (just-logged) visit is included,
+    // so >1 means the customer was already welcomed for this birthday.
+    $isBirthdayReward = false;
+    if ($isBirthdayWeek && !$isDuplicate) {
+        $win = birthdayWindow($bDay, $bMonth, 3);
+        if ($win) {
+            $isBirthdayReward = countVisitsInRange($conn, $customerId, $win[0], $win[1]) <= 1;
+        }
+    }
+
     return [
         'success'          => true,
         'customer_id'      => $customerId,
@@ -365,11 +424,8 @@ function buildWelcomePayload(mysqli $conn, array $customer, int $salonId, string
         'is_duplicate'    => $isDuplicate,
         'is_first_visit'  => (!$isDuplicate && $visitCount === 1),
         'was_referred'    => $wasReferred,
-        'is_birthday_week' => birthdayWithin(
-            isset($customer['birth_day']) ? (int)$customer['birth_day'] : null,
-            isset($customer['birth_month']) ? (int)$customer['birth_month'] : null,
-            3
-        ),
+        'is_birthday_week' => $isBirthdayWeek,
+        'is_birthday_reward' => $isBirthdayReward,
         'loyalty' => [
             'active'           => $cfg['loyalty_active'],
             'visit_count'      => $progress['visit_count'],
