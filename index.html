@@ -282,12 +282,39 @@
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
 
-        /* Browse tabs */
+        /* Browse tabs (legacy, unused) */
         .browse-tab { background: #f3f4f6; color: #374151; }
         .browse-tab.browse-tab-active {
             background: var(--color-primary, #9333EA);
             color: #ffffff;
         }
+
+        /* ---------- Trends slider (home screen) ---------- */
+        body.home-nolscroll { overflow: hidden; }
+        .trends-slider { position: relative; width: 100%; }
+        .trends-viewport { position: relative; width: 100%; height: 100%; overflow: hidden;
+            border-radius: 1.25rem; box-shadow: 0 12px 34px rgba(0,0,0,0.16); background: #111;
+            touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+        .trends-track { display: flex; height: 100%; will-change: transform; }
+        .trends-slide { position: relative; flex: 0 0 100%; height: 100%;
+            background-size: cover; background-position: center; background-color: #1f2430; }
+        .trends-overlay { position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.74) 0%, rgba(0,0,0,0.30) 42%, rgba(0,0,0,0.04) 70%, rgba(0,0,0,0) 100%); }
+        .trends-content { position: absolute; left: 0; bottom: 0; max-width: min(720px, 84%);
+            text-align: left; padding: clamp(20px, 4vw, 48px); color: #fff; }
+        .trends-title { font-size: clamp(24px, 3.4vw, 44px); font-weight: 800; line-height: 1.1;
+            text-shadow: 0 2px 14px rgba(0,0,0,0.55); }
+        .trends-text { margin-top: 10px; font-size: clamp(15px, 1.6vw, 21px); line-height: 1.5;
+            opacity: 0.96; text-shadow: 0 1px 10px rgba(0,0,0,0.55); }
+        .trends-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px;
+            padding: 12px 24px; border-radius: 9999px; background: #fff; color: #111827;
+            font-weight: 700; font-size: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.28); text-decoration: none; }
+        .trends-cta:hover, .trends-cta:active { background: #f3f4f6; }
+        .trends-dots { position: absolute; bottom: 14px; right: 18px; display: flex; gap: 8px; z-index: 3; }
+        .trends-dot { width: 9px; height: 9px; border-radius: 9999px; background: rgba(255,255,255,0.45); transition: width 0.25s ease, background 0.25s ease; }
+        .trends-dot.active { background: #fff; width: 24px; }
+        .trends-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #9ca3af; }
+        .trends-empty.hidden { display: none; }
 
         /* Candidate card */
         .candidate-card {
@@ -690,40 +717,13 @@
                 </button>
             </div>
 
-            <!-- Tabs -->
-            <div class="bg-white rounded-2xl shadow p-2 mb-4 flex gap-2">
-                <button type="button" id="browse-tab-trend" onclick="switchBrowseTab('trend')"
-                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all" data-i18n="browse.trends">Trends</button>
-                <button type="button" id="browse-tab-tip" onclick="switchBrowseTab('tip')"
-                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all" data-i18n="browse.tips">Tipps</button>
-                <button type="button" id="browse-tab-shop" onclick="switchBrowseTab('shop')"
-                    class="browse-tab flex-1 px-4 py-3 rounded-xl font-semibold transition-all" data-i18n="browse.shop">Shop</button>
-            </div>
-
-            <div id="browse-loading" class="hidden text-center py-12 text-gray-500" data-i18n="browse.loading">Wird geladen…</div>
-            <div id="browse-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-
-            <!-- Detail overlay -->
-            <div id="browse-detail" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onclick="closeBrowseDetail(event)">
-                <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-                    <div class="relative">
-                        <img id="detail-image" src="" alt="" class="w-full h-56 object-cover rounded-t-3xl">
-                        <button type="button" onclick="closeBrowseDetail()" class="absolute top-3 right-3 w-10 h-10 bg-white/90 rounded-full text-gray-800 text-xl shadow">✕</button>
-                    </div>
-                    <div class="p-6">
-                        <h3 id="detail-title" class="text-xl font-bold text-gray-800 mb-1"></h3>
-                        <p id="detail-price" class="hidden text-lg font-semibold text-purple-600 mb-2"></p>
-                        <div id="detail-video-wrap" class="hidden aspect-video mb-3">
-                            <iframe id="detail-video" class="w-full h-full rounded-xl" src="" frameborder="0" allowfullscreen></iframe>
-                        </div>
-                        <p id="detail-text" class="text-gray-600 leading-relaxed"></p>
-                        <button type="button" id="detail-cta" class="hidden w-full mt-5 px-6 py-4 rounded-2xl text-white font-bold shadow"
-                            style="background:linear-gradient(135deg, var(--color-primary), var(--color-secondary));"
-                            onclick="alert('Zeigen Sie dieses Produkt einfach Ihrem Stylisten.')" data-i18n="browse.ask_team">
-                            Fragen Sie Ihr Stylisten-Team
-                        </button>
-                    </div>
+            <!-- Auto-sliding trends slider (coiffure_trends) -->
+            <div id="trends-slider" class="trends-slider">
+                <div id="trends-viewport" class="trends-viewport">
+                    <div id="trends-track" class="trends-track"></div>
+                    <div id="trends-dots" class="trends-dots"></div>
                 </div>
+                <div id="trends-empty" class="trends-empty hidden"></div>
             </div>
         </div>
 
@@ -2196,6 +2196,14 @@
             document.getElementById('onboarding-content').classList.add('hidden');
             document.getElementById('social-content').classList.add('hidden');
 
+            // Set the active screen up front so screen-specific init (e.g. the
+            // trends slider auto-timer) can check it correctly.
+            currentScreen = name;
+
+            // Home screen: lock page scroll (slider handles horizontal only).
+            document.body.classList.toggle('home-nolscroll', name === 'browse');
+            if (name !== 'browse' && typeof stopTrendsAuto === 'function') stopTrendsAuto();
+
             // Leaving check-in → drop the fullscreen takeover (re-added below if
             // we're entering it). Prevents the iPad-Safari scroll-focus issue.
             if (name !== 'checkin') exitCheckinFullscreen();
@@ -2219,7 +2227,6 @@
                     renderWifiCard();
                     break;
             }
-            currentScreen = name;
             setActiveNav(name);
             window.scrollTo({ top: 0, behavior: 'smooth' });
             resetIdleTimer();
@@ -2673,6 +2680,10 @@
             namesConfirmMs     = ms('timeout_names_confirm_s', namesConfirmMs);
             autoCheckoutMs     = ms('timeout_autocheckout_s', autoCheckoutMs);
             if (s.timeout_autophoto_s != null) autoPhotoSec = Math.max(1, Number(s.timeout_autophoto_s));
+            if (s.timeout_autoslide_trends_s != null) {
+                autoSlideSec = Math.max(1, Number(s.timeout_autoslide_trends_s));
+                if (currentScreen === 'browse') restartTrendsAuto();
+            }
             if (typeof IDLE_MS !== 'undefined') IDLE_MS = ms('timeout_idle_return_s', IDLE_MS);
         }
         let autoPhotoSec = 5; // AI camera auto-capture delay (seconds); overridden by settings
@@ -3335,13 +3346,154 @@
             return `<svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="${c}" opacity="0.1"/><path fill="${c}" d="M24 13a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.8-3.9 1.2-7 4.2-8 8.2-.3 1.2.6 2.3 1.9 2.3h20.2c1.3 0 2.2-1.1 1.9-2.3-1-4-4.1-7-8-8.2 1.8-1.3 3-3.4 3-5.8a7 7 0 0 0-7-7z"/></svg>`;
         }
 
-        // ==================== BROWSE (Magazine & Shop) ====================
-        let browseCache = { trend: null, tip: null, shop: null };
-        let browseCurrentTab = 'trend';
+        // ==================== TRENDS SLIDER (home screen) ====================
+        // Full-screen auto-advancing slider backed by coiffure_trends.
+        const TRENDS_IMAGES_BASE = API_BASE_URL.replace(/\/api\/?$/, '') + '/images/';
+        let trendsData = [];
+        let trendsIdx = 1;      // DOM index (0 = clone-of-last, 1..N = real, N+1 = clone-of-first)
+        let trendsCount = 0;
+        let trendsTimer = null;
+        let autoSlideSec = 3;   // overridden by global settings
+        let trendsLoaded = false;
+
+        function trendsImageUrl(u) {
+            if (!u) return '';
+            return /^https?:\/\//i.test(u) ? u : TRENDS_IMAGES_BASE + String(u).replace(/^\/+/, '');
+        }
 
         function openBrowseDefault() {
-            switchBrowseTab(browseCurrentTab || 'trend');
+            resizeTrends();
+            if (!trendsLoaded) { trendsLoaded = true; loadTrends(); }
+            else { startTrendsAuto(); }
         }
+
+        async function loadTrends() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/trends.php`);
+                const data = await res.json();
+                trendsData = (data && data.trends) ? data.trends : [];
+            } catch (e) { console.warn('trends load failed', e); trendsData = []; }
+            buildTrendsSlider();
+        }
+
+        function makeTrendSlide(t) {
+            const slide = document.createElement('div');
+            slide.className = 'trends-slide';
+            const url = trendsImageUrl(t.image_url).replace(/["\\]/g, '');
+            if (url) slide.style.backgroundImage = `url("${url}")`;
+            const ov = document.createElement('div'); ov.className = 'trends-overlay'; slide.appendChild(ov);
+            const content = document.createElement('div'); content.className = 'trends-content';
+            if (t.title) { const h = document.createElement('div'); h.className = 'trends-title'; h.textContent = t.title; content.appendChild(h); }
+            if (t.text)  { const p = document.createElement('div'); p.className = 'trends-text';  p.textContent = t.text;  content.appendChild(p); }
+            if (t.link) {
+                const a = document.createElement('a');
+                a.className = 'trends-cta';
+                // Only allow http(s) links; open in a new browser tab.
+                a.href = /^https?:\/\//i.test(t.link) ? t.link : ('https://' + String(t.link).replace(/^\/+/, ''));
+                a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.textContent = (window.i18n && i18n.t) ? i18n.t('browse.learn_more') : 'Mehr erfahren →';
+                content.appendChild(a);
+            }
+            slide.appendChild(content);
+            return slide;
+        }
+
+        function buildTrendsSlider() {
+            const track = document.getElementById('trends-track');
+            const dots = document.getElementById('trends-dots');
+            const empty = document.getElementById('trends-empty');
+            if (!track) return;
+            stopTrendsAuto();
+            track.innerHTML = ''; dots.innerHTML = '';
+            trendsCount = trendsData.length;
+            if (trendsCount === 0) {
+                empty.textContent = (window.i18n && i18n.t) ? i18n.t('browse.no_trends') : '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            // clone-of-last + reals + clone-of-first → seamless infinite loop
+            track.appendChild(makeTrendSlide(trendsData[trendsCount - 1]));
+            trendsData.forEach(t => track.appendChild(makeTrendSlide(t)));
+            track.appendChild(makeTrendSlide(trendsData[0]));
+
+            trendsData.forEach(() => { const d = document.createElement('span'); d.className = 'trends-dot'; dots.appendChild(d); });
+
+            resizeTrends();
+            trendsIdx = 1;
+            trendsGoTo(1, false);
+            bindTrendsSwipe();
+            startTrendsAuto();
+        }
+
+        function trendsGoTo(domIdx, animate) {
+            const track = document.getElementById('trends-track');
+            if (!track) return;
+            track.style.transition = animate ? 'transform 0.55s cubic-bezier(.22,.61,.36,1)' : 'none';
+            track.style.transform = `translateX(${-domIdx * 100}%)`;
+            trendsIdx = domIdx;
+            if (!animate) void track.offsetWidth; // commit the jump instantly
+            updateTrendsDots();
+        }
+
+        function realIndex() {
+            if (trendsIdx === 0) return trendsCount - 1;
+            if (trendsIdx === trendsCount + 1) return 0;
+            return trendsIdx - 1;
+        }
+        function updateTrendsDots() {
+            if (trendsCount === 0) return;
+            const ri = ((realIndex() % trendsCount) + trendsCount) % trendsCount;
+            document.querySelectorAll('#trends-dots .trends-dot').forEach((d, i) => d.classList.toggle('active', i === ri));
+        }
+
+        function trendsNext() { trendsGoTo(trendsIdx + 1, true); }
+        function trendsPrev() { trendsGoTo(trendsIdx - 1, true); }
+
+        // After a transition onto a clone, jump instantly to the matching real slide.
+        function onTrendsTransitionEnd() {
+            if (trendsIdx === 0) trendsGoTo(trendsCount, false);
+            else if (trendsIdx === trendsCount + 1) trendsGoTo(1, false);
+        }
+
+        function startTrendsAuto() {
+            stopTrendsAuto();
+            if (trendsCount <= 1 || currentScreen !== 'browse') return;
+            trendsTimer = setInterval(trendsNext, Math.max(1, autoSlideSec) * 1000);
+        }
+        function stopTrendsAuto() { if (trendsTimer) { clearInterval(trendsTimer); trendsTimer = null; } }
+        function restartTrendsAuto() { startTrendsAuto(); }
+
+        function resizeTrends() {
+            const slider = document.getElementById('trends-slider');
+            if (!slider) return;
+            const top = slider.getBoundingClientRect().top;
+            const h = Math.max(240, Math.round(window.innerHeight - top - 14));
+            slider.style.height = h + 'px';
+        }
+
+        function bindTrendsSwipe() {
+            const vp = document.getElementById('trends-viewport');
+            const track = document.getElementById('trends-track');
+            if (track && !track.dataset.tebound) { track.dataset.tebound = '1'; track.addEventListener('transitionend', onTrendsTransitionEnd); }
+            if (!vp || vp.dataset.bound) return;
+            vp.dataset.bound = '1';
+            let sx = null, sy = null;
+            vp.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; stopTrendsAuto(); }, { passive: true });
+            const end = e => {
+                if (sx === null) return;
+                const dx = (e.clientX != null ? e.clientX : sx) - sx;
+                const dy = (e.clientY != null ? e.clientY : sy) - sy;
+                sx = null;
+                if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { if (dx < 0) trendsNext(); else trendsPrev(); }
+                restartTrendsAuto();
+            };
+            vp.addEventListener('pointerup', end, { passive: true });
+            vp.addEventListener('pointercancel', () => { sx = null; restartTrendsAuto(); }, { passive: true });
+        }
+
+        window.addEventListener('resize', () => { if (currentScreen === 'browse') resizeTrends(); });
 
         function switchBrowseTab(tab) {
             browseCurrentTab = tab;
@@ -4830,6 +4982,7 @@
             if (dayWheel && monthWheel) buildWheels();
             if (currentCheckinStep) renderCheckinProgress(currentCheckinStep);
             if (typeof checkedInCustomer !== 'undefined' && checkedInCustomer) renderRailCheckedIn();
+            if (trendsLoaded && trendsData.length) buildTrendsSlider();
         });
 
         async function loadSocialLinks() {

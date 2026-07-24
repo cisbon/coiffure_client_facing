@@ -183,18 +183,19 @@ Social screen shows a **WiFi card** with a scannable WiFi QR code
 **Social & WLAN** (otherwise just **Social**). Stored via `salon-branding.php`
 (GET returns `wifi_ssid`/`wifi_password`; POST accepts them).
 
-## 3. Digital magazine & shop ("Stöbern")
+## 3. Trends slider ("Stöbern")
 
-Three tabs:
-
-- **Trends** – `GET api/content.php?type=trend` (articles + embedded videos).
-- **Tipps** – `GET api/content.php?type=tip`.
-- **Shop** – `GET api/products.php` (in-salon catalogue; no cart/checkout —
-  the product detail shows a "Fragen Sie Ihr Stylisten-Team" prompt).
-
-MVP content is served from `data/trends.json` and `data/products.json`. The
-endpoints are DB-ready, so a `coiffure_content` / `coiffure_products` table can
-back them later (managed via the web access) without changing the response shape.
+The start/idle screen keeps the promo **home-hero** and, below it, a
+**full-screen auto-advancing image slider** backed by `coiffure_trends`
+(`GET api/trends.php`, active rows ordered by `sort`). Each slide shows a
+background image (`image_url`; a bare filename resolves under
+`https://<site>/coiffure/images/`), a **left-aligned** title + body text, and —
+when a `link` is set — a button that opens it in a **new browser tab**. It
+auto-advances every `timeout_autoslide_trends_s` seconds (default 3,
+`coiffure_global_settings`, admin-editable), **loops seamlessly** (cloned
+first/last slides), and can be advanced/rewound by **horizontal swipe**. The
+home screen locks vertical page scroll (`body.home-nolscroll`) — only the
+slider scrolls, horizontally. The old Trends/Tipps/Shop tab switcher was removed.
 
 ## Files
 
