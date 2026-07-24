@@ -33,6 +33,8 @@ const GLOBAL_TIMEOUT_DEFS = [
     'timeout_staff_search_s'      => [60, 5, 600],
     // Auto check-out of the currently checked-in customer (default 30 min).
     'timeout_autocheckout_s'      => [1800, 60, 86400],
+    // AI hairstyle: auto-capture the camera photo after N seconds (default 5).
+    'timeout_autophoto_s'         => [5, 1, 60],
 ];
 
 function globalSettingsTableExists(mysqli $conn): bool

@@ -85,8 +85,9 @@ if (!$user['is_active']) {
     sendErrorResponse('Account is inactive. Please contact administrator.', 403);
 }
 
-// Create session
-$session = createUserSession($conn, $user['user_id']);
+// Create session (long-lived so salon tablets stay logged in between uses;
+// sliding renewal in validateSession keeps active sessions alive thereafter).
+$session = createUserSession($conn, $user['user_id'], 24 * 30);
 
 if (!$session) {
     error_log("Failed to create session for user " . $user['user_id']);

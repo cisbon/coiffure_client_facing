@@ -541,6 +541,20 @@ function validateSession($conn, $token) {
             return null;
         }
 
+        // Sliding renewal: keep actively-used (kiosk) sessions alive so a tablet
+        // that is used at least once every few weeks never gets logged out. Only
+        // writes when the expiry has drifted, to avoid a write on every request.
+        $renew = $conn->prepare(
+            "UPDATE coiffure_sessions
+             SET expires_at = DATE_ADD(NOW(), INTERVAL 30 DAY)
+             WHERE session_id = ? AND expires_at < DATE_ADD(NOW(), INTERVAL 29 DAY)"
+        );
+        if ($renew) {
+            $renew->bind_param("i", $session['session_id']);
+            @$renew->execute();
+            $renew->close();
+        }
+
         // Optional: Check if IP matches (can be disabled for mobile users)
         // if ($session['ip_address'] !== getClientIp()) {
         //     error_log("Session IP mismatch for user " . $session['user_id']);

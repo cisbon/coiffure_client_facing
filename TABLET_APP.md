@@ -11,7 +11,22 @@ removed — membership is now a status only, no downloadable card.
 - **Stöbern** (the digital magazine & shop) is the **start / idle screen**.
 - The **Social & WLAN** label reads just **Social** unless the salon configured
   a guest-WiFi name AND password in the admin dashboard.
-- **AI Hairstyle** opens the existing full-screen KI consultation overlay.
+- **AI Hairstyle** opens the full-screen KI consultation overlay. Taking a photo
+  shows the camera **fullscreen** (iOS-camera style: shutter/cancel hover at the
+  bottom, a countdown badge top-left) and **auto-captures** after
+  `timeout_autophoto_s` seconds (default 5, in `coiffure_global_settings`).
+  The captured/uploaded photo is shown fullscreen with **Retake Photo** /
+  **Continue**; the whole experience fits on one screen (no page scrolling). On
+  the result the customer can **change only the hair colour** to re-run the same
+  style in another colour.
+
+**Session robustness:** salon tablets get a long-lived (30-day) session with
+sliding renewal (`validateSession` extends it on use), so a kiosk used at least
+every few weeks never gets logged out. The login page forwards an
+already-authenticated tablet straight to the app from cached data (Back button
+never strands it on the login form), branding is cached in `localStorage` and
+re-applied instantly on reload, and returning from standby (`visibilitychange`)
+refreshes salon data/branding without a re-login.
 - The content area is centered (max-w-5xl) with modest horizontal padding,
   tuned for landscape tablet readability.
 - After 30 s of inactivity (except during an active check-in or a
