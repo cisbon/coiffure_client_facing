@@ -105,6 +105,8 @@
   },
   "browse": {
     "welcome_at": "Willkommen bei",
+    "learn_more": "Mehr erfahren →",
+    "no_trends": "Zurzeit keine Inhalte verfügbar.",
     "trends": "Trends",
     "tips": "Tipps",
     "shop": "Shop",
@@ -220,6 +222,7 @@
     "staff_search": "Personal-Suche",
     "autocheckout": "Auto-Check-Out (eingecheckter Kunde)",
     "autophoto": "AI-Foto: Auto-Auslöser (Sekunden)",
+    "autoslide": "Trends-Slider: Auto-Wechsel (Sekunden)",
     "save": "Speichern",
     "reset": "Zurücksetzen"
   },

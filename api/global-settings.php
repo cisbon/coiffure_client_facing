@@ -35,6 +35,8 @@ const GLOBAL_TIMEOUT_DEFS = [
     'timeout_autocheckout_s'      => [1800, 60, 86400],
     // AI hairstyle: auto-capture the camera photo after N seconds (default 5).
     'timeout_autophoto_s'         => [5, 1, 60],
+    // Home-screen trends slider: auto-advance every N seconds (default 3).
+    'timeout_autoslide_trends_s'  => [3, 1, 60],
 ];
 
 function globalSettingsTableExists(mysqli $conn): bool

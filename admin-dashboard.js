@@ -1421,7 +1421,8 @@ const GLOBAL_SETTINGS_FIELDS = {
     gsStaffPin:        'timeout_staff_pin_s',
     gsStaffSearch:     'timeout_staff_search_s',
     gsAutocheckout:    'timeout_autocheckout_s',
-    gsAutophoto:       'timeout_autophoto_s'
+    gsAutophoto:       'timeout_autophoto_s',
+    gsAutoslide:       'timeout_autoslide_trends_s'
 };
 
 document.addEventListener('DOMContentLoaded', function () {

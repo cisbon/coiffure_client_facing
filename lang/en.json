@@ -105,6 +105,8 @@
   },
   "browse": {
     "welcome_at": "Welcome to",
+    "learn_more": "Learn more →",
+    "no_trends": "No content available right now.",
     "trends": "Trends",
     "tips": "Tips",
     "shop": "Shop",
@@ -220,6 +222,7 @@
     "staff_search": "Staff search",
     "autocheckout": "Auto check-out (checked-in customer)",
     "autophoto": "AI photo: auto-capture (seconds)",
+    "autoslide": "Trends slider: auto-advance (seconds)",
     "save": "Save",
     "reset": "Reset"
   },

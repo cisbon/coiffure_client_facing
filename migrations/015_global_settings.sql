@@ -31,7 +31,8 @@ INSERT IGNORE INTO coiffure_global_settings (setting_key, setting_value) VALUES
     ('timeout_staff_pin_s',        '60'),
     ('timeout_staff_search_s',     '60'),
     ('timeout_autocheckout_s',     '1800'),
-    ('timeout_autophoto_s',        '5');
+    ('timeout_autophoto_s',        '5'),
+    ('timeout_autoslide_trends_s', '3');
 
 -- ============================================================
 -- End of migration 015
