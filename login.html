@@ -79,6 +79,20 @@
         // Configuration
         const API_BASE_URL = 'https://clouedo.com/coiffure/api';  // Update with your API URL
 
+        // Already logged in? Forward straight to the app using the CACHED session
+        // (no network round-trip that could fail and strand the tablet on login).
+        // Runs first so the browser Back button lands on the app, not the login form.
+        (function () {
+            try {
+                const token = localStorage.getItem('session_token');
+                if (!token) return;
+                const role = (JSON.parse(localStorage.getItem('user_data') || '{}') || {}).role || '';
+                const dest = ['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate'].includes(role)
+                    ? 'admin-dashboard.html' : 'index.html';
+                window.location.replace(dest);
+            } catch (e) { /* fall through to the login form */ }
+        })();
+
         // DOM Elements
         const loginForm = document.getElementById('loginForm');
         const loginButton = document.getElementById('loginButton');
@@ -138,12 +152,11 @@
 
                     // Redirect based on role
                     setTimeout(() => {
-                        if (['admin', 'admin_delegate'].includes(data.user.role)) {
-                            window.location.href = 'admin-dashboard.html';
-                        } else if (['customer_admin', 'customer_admin_delegate'].includes(data.user.role)) {
-                            window.location.href = 'admin-dashboard.html';  // Same dashboard, different permissions
+                        // replace() so the login page is not left in history.
+                        if (['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate'].includes(data.user.role)) {
+                            window.location.replace('admin-dashboard.html');
                         } else {
-                            window.location.href = 'index.html';  // Regular user goes to main app
+                            window.location.replace('index.html');  // Regular user goes to main app
                         }
                     }, 1000);
                 } else {
@@ -159,31 +172,9 @@
             }
         });
 
-        // Check if already logged in
-        const sessionToken = localStorage.getItem('session_token');
-        if (sessionToken) {
-            // Validate session with backend
-            fetch(`${API_BASE_URL}/user-management.php`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${sessionToken}`
-                }
-            }).then(response => {
-                if (response.ok) {
-                    // Already logged in, redirect
-                    const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
-                    if (['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate'].includes(userData.role)) {
-                        window.location.href = 'admin-dashboard.html';
-                    } else {
-                        window.location.href = 'index.html';
-                    }
-                }
-            }).catch(() => {
-                // Session invalid, clear storage
-                localStorage.removeItem('session_token');
-                localStorage.removeItem('user_data');
-            });
-        }
+        // (The already-logged-in redirect runs at the top of this script using
+        // cached data; we intentionally do NOT clear the session on a network
+        // error, so a transient hiccup never logs a tablet out.)
     </script>
 </body>
 </html>

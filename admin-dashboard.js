@@ -1420,7 +1420,8 @@ const GLOBAL_SETTINGS_FIELDS = {
     gsWelcomeDuplicate:'timeout_welcome_duplicate_s',
     gsStaffPin:        'timeout_staff_pin_s',
     gsStaffSearch:     'timeout_staff_search_s',
-    gsAutocheckout:    'timeout_autocheckout_s'
+    gsAutocheckout:    'timeout_autocheckout_s',
+    gsAutophoto:       'timeout_autophoto_s'
 };
 
 document.addEventListener('DOMContentLoaded', function () {

@@ -229,6 +229,41 @@
             align-items: center; justify-content: center; padding: 1.5rem; display: none; }
         .ci-popup:not(.hidden) { display: flex; }
 
+        /* ---------- AI camera: fullscreen, iOS-camera-like ---------- */
+        .kiosk-fs { position: fixed; inset: 0; z-index: 45; background: #000; display: none; }
+        .kiosk-fs:not(.hidden) { display: block; }
+        .kiosk-fs-media { position: absolute; inset: 0; width: 100%; height: 100%; }
+        #kiosk-camera-video.kiosk-fs-media { object-fit: cover; transform: scaleX(-1); } /* mirror like a selfie cam */
+        #kiosk-preview-image.kiosk-fs-media { object-fit: contain; }
+        .kiosk-countdown { position: absolute; top: calc(80px + env(safe-area-inset-top)); left: 20px; z-index: 3;
+            width: 68px; height: 68px; border-radius: 9999px; background: rgba(0,0,0,0.45); color: #fff;
+            font-size: 34px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+        .kiosk-countdown.hidden { display: none; }
+        .kiosk-cam-controls { position: absolute; left: 0; right: 0; bottom: calc(26px + env(safe-area-inset-bottom));
+            display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 28px; z-index: 3; }
+        .kiosk-shutter { width: 74px; height: 74px; border-radius: 9999px; background: #fff;
+            border: 4px solid rgba(255,255,255,0.65); box-shadow: 0 0 0 3px rgba(0,0,0,0.25); cursor: pointer; flex: none; }
+        .kiosk-shutter:active { transform: scale(0.95); }
+        .kiosk-cam-btn { min-width: 132px; padding: 13px 18px; border-radius: 9999px; font-weight: 700; font-size: 16px;
+            cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+        .kiosk-cam-spacer { min-width: 132px; flex: none; }
+        .kiosk-cam-btn-secondary { background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.4); }
+        .kiosk-cam-btn-primary { background: linear-gradient(135deg, var(--color-primary, #9333EA), var(--color-secondary, #EC4899)); color: #fff; border: none; }
+
+        /* AI steps fill the popup below the top bar; the page never scrolls. */
+        .kiosk-step-fit { position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            padding-top: calc(74px + env(safe-area-inset-top));
+            padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+        /* Inside a scrollable style panel, only this middle region scrolls. */
+        .kiosk-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .kiosk-color-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 9999px;
+            border: 1px solid #e5e7eb; background: #fff; font-size: 13px; font-weight: 600; color: #374151;
+            white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .kiosk-color-chip::before { content: ""; width: 14px; height: 14px; border-radius: 9999px;
+            background: var(--sw, #ccc); box-shadow: 0 0 0 1px rgba(0,0,0,0.12); flex: none; }
+        .kiosk-color-chip:hover, .kiosk-color-chip:active { border-color: var(--color-primary, #9333EA); }
+
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
 
@@ -892,7 +927,7 @@
                 </button>
 
                 <!-- Progress Indicator (Top) -->
-                <div id="kiosk-progress" class="fixed top-0 left-0 right-0 bg-white shadow-md z-40 py-4 px-4">
+                <div id="kiosk-progress" class="fixed top-0 left-0 right-0 bg-white shadow-md z-[47] py-4 px-4">
                     <div class="max-w-2xl mx-auto">
                         <div class="flex items-center justify-center gap-2">
                             <div id="progress-step-1" class="flex items-center">
@@ -913,15 +948,36 @@
                     </div>
                 </div>
 
-                <!-- ========== STEP 1: PHOTO CAPTURE ========== -->
-                <div id="kiosk-step-photo" class="h-screen flex items-center justify-center pt-20 pb-8 px-4 overflow-hidden">
+                <!-- Fullscreen camera (iOS-camera-like); only the top bar stays visible -->
+                <div id="kiosk-camera-fs" class="kiosk-fs hidden">
+                    <video id="kiosk-camera-video" class="kiosk-fs-media" autoplay playsinline muted></video>
+                    <canvas id="kiosk-camera-canvas" class="hidden"></canvas>
+                    <div id="kiosk-countdown" class="kiosk-countdown hidden"></div>
+                    <div class="kiosk-cam-controls">
+                        <button type="button" onclick="kioskCloseCamera()" class="kiosk-cam-btn kiosk-cam-btn-secondary" data-i18n="kiosk.cancel">Cancel</button>
+                        <button type="button" onclick="kioskCapturePhoto()" class="kiosk-shutter" aria-label="Capture"></button>
+                        <span class="kiosk-cam-spacer"></span>
+                    </div>
+                </div>
+
+                <!-- Fullscreen captured/uploaded photo preview -->
+                <div id="kiosk-photo-fs" class="kiosk-fs hidden">
+                    <img id="kiosk-preview-image" class="kiosk-fs-media" alt="Your Photo">
+                    <div class="kiosk-cam-controls">
+                        <button type="button" onclick="kioskRetakePhoto()" class="kiosk-cam-btn kiosk-cam-btn-secondary" data-i18n="kiosk.retake_photo">Retake Photo</button>
+                        <span class="kiosk-cam-spacer"></span>
+                        <button type="button" onclick="kioskGoToStyleSelection()" class="kiosk-cam-btn kiosk-cam-btn-primary" data-i18n="kiosk.continue">Continue →</button>
+                    </div>
+                </div>
+
+                <!-- ========== STEP 1: PHOTO CAPTURE (options) ========== -->
+                <div id="kiosk-step-photo" class="kiosk-step-fit flex items-center justify-center px-4 overflow-hidden">
                     <div class="max-w-lg w-full text-center space-y-6">
-                        <div class="text-6xl mb-4">📸</div>
+                        <div class="text-6xl mb-2">📸</div>
                         <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.photo_title">Take Your Photo</h2>
                         <p class="text-gray-600 text-lg" data-i18n="kiosk.photo_subtitle">Let's start by capturing your current look</p>
 
-                        <!-- Photo Options (Before Photo Taken) -->
-                        <div id="kiosk-photo-options" class="space-y-4 mt-8">
+                        <div id="kiosk-photo-options" class="space-y-4 mt-6">
                             <button onclick="kioskOpenCamera()" class="w-full py-6 px-6 bg-purple-600 text-white text-xl font-semibold rounded-xl hover:bg-purple-700 transition-all shadow-lg flex items-center justify-center gap-3">
                                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
@@ -937,45 +993,13 @@
                             </button>
                             <input type="file" id="kiosk-image-input" accept="image/*" class="hidden" onchange="kioskHandleImageSelect(event)">
                         </div>
-
-                        <!-- Camera View (Inline) -->
-                        <div id="kiosk-camera-view" class="hidden space-y-4">
-                            <div class="relative bg-black rounded-xl overflow-hidden shadow-2xl">
-                                <video id="kiosk-camera-video" class="w-full" autoplay playsinline></video>
-                                <canvas id="kiosk-camera-canvas" class="hidden"></canvas>
-                            </div>
-                            <div class="flex gap-3">
-                                <button onclick="kioskCapturePhoto()" class="flex-1 py-4 px-6 bg-purple-600 text-white text-lg font-semibold rounded-xl hover:bg-purple-700 transition-all">
-                                    <span data-i18n="kiosk.capture">Capture</span>
-                                </button>
-                                <button onclick="kioskCloseCamera()" class="py-4 px-6 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
-                                    <span data-i18n="kiosk.cancel">Cancel</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Photo Preview (After Photo Taken) -->
-                        <div id="kiosk-photo-preview" class="hidden space-y-4">
-                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-200">
-                                <img id="kiosk-preview-image" class="w-full rounded-lg shadow-lg" alt="Your Photo">
-                            </div>
-                            <div class="flex gap-3">
-                                <button onclick="kioskRetakePhoto()" class="py-4 px-6 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
-                                    <span data-i18n="kiosk.retake">← Retake</span>
-                                </button>
-                                <button onclick="kioskGoToStyleSelection()" class="flex-1 py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg">
-                                    <span data-i18n="kiosk.continue">Continue →</span>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
                 <!-- ========== STEP 2: STYLE SELECTION ========== -->
-                <div id="kiosk-step-style" class="hidden h-screen flex flex-col pt-20 pb-8 px-4 overflow-hidden relative">
-                    <div class="max-w-4xl w-full mx-auto h-full flex flex-col">
-                        <div class="text-center mb-4">
-                            <div class="text-5xl mb-2">✨</div>
+                <div id="kiosk-step-style" class="hidden kiosk-step-fit flex flex-col px-4 overflow-hidden">
+                    <div class="max-w-4xl w-full mx-auto h-full flex flex-col min-h-0">
+                        <div class="text-center mb-2 flex-none">
                             <h2 class="text-2xl font-bold text-gray-800" data-i18n="kiosk.style_title">Choose Your Style</h2>
                         </div>
 
@@ -995,8 +1019,8 @@
                             </button>
                         </div>
 
-                        <!-- Content Area (now with full screen, can scroll if needed) -->
-                        <div class="flex-1 overflow-y-auto pb-20">
+                        <!-- Content Area: only this middle region scrolls (if ever needed) -->
+                        <div class="kiosk-scroll pb-2">
                             <!-- Quick Styles Mode -->
                             <div id="kiosk-quick-mode" class="space-y-4">
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -1208,19 +1232,17 @@
                             </div>
                         </div>
 
-                        <!-- Back Button (Fixed at Bottom) -->
-                        <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
-                            <div class="max-w-4xl mx-auto">
-                                <button onclick="kioskGoBackToPhoto()" class="w-full py-4 px-8 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all">
-                                    <span data-i18n="kiosk.back">← Back to Photo</span>
-                                </button>
-                            </div>
+                        <!-- Back Button (pinned footer, always visible) -->
+                        <div class="flex-none pt-3">
+                            <button onclick="kioskGoBackToPhoto()" class="w-full py-3 px-8 bg-gray-200 text-gray-700 text-base font-semibold rounded-xl hover:bg-gray-300 transition-all">
+                                <span data-i18n="kiosk.back">← Back to Photo</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- ========== STEP 3: GENERATING ========== -->
-                <div id="kiosk-step-generating" class="hidden h-screen flex items-center justify-center pt-20 pb-8 px-4 overflow-hidden">
+                <div id="kiosk-step-generating" class="hidden kiosk-step-fit flex items-center justify-center px-4 overflow-hidden">
                     <div class="max-w-lg w-full text-center space-y-6">
                         <!-- Large Spinner -->
                         <svg class="spinner mx-auto h-24 w-24 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1241,34 +1263,44 @@
                 </div>
 
                 <!-- ========== STEP 4: RESULTS ========== -->
-                <div id="kiosk-step-results" class="hidden h-screen flex items-center justify-center pt-20 pb-8 px-4 overflow-hidden">
-                    <div class="max-w-2xl w-full text-center space-y-6">
-                        <div class="text-6xl mb-4">🎉</div>
-                        <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.results_title">Your New Look!</h2>
+                <div id="kiosk-step-results" class="hidden kiosk-step-fit flex flex-col px-4 overflow-hidden">
+                    <div class="max-w-2xl w-full mx-auto h-full flex flex-col min-h-0 text-center">
+                        <h2 class="text-2xl font-bold text-gray-800 flex-none" data-i18n="kiosk.results_title">Your New Look!</h2>
 
-                        <!-- Generated Image -->
-                        <div id="kiosk-result-image-container" class="mt-6">
-                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-3 border-purple-200 shadow-2xl">
-                                <img id="kiosk-result-image" class="w-full rounded-xl shadow-lg" alt="AI Generated Hairstyle">
+                        <!-- Scrollable middle: generated image + info/error -->
+                        <div class="kiosk-scroll pt-2">
+                            <div id="kiosk-result-image-container">
+                                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-3 border-2 border-purple-200 shadow-xl inline-block max-w-full">
+                                    <img id="kiosk-result-image" class="rounded-xl shadow-lg mx-auto" style="max-height:46vh;width:auto;max-width:100%" alt="AI Generated Hairstyle">
+                                </div>
+                            </div>
+                            <div id="kiosk-processing-info" class="text-xs text-gray-500 mt-2"></div>
+                            <div id="kiosk-error-message" class="hidden mt-3 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                                <p class="text-red-600 font-semibold"></p>
                             </div>
                         </div>
 
-                        <!-- Processing Info (small text) -->
-                        <div id="kiosk-processing-info" class="text-xs text-gray-500"></div>
-
-                        <!-- Action Buttons -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-4">
-                            <button onclick="kioskTryDifferentStyle()" class="py-6 px-6 bg-purple-600 text-white text-xl font-semibold rounded-xl hover:bg-purple-700 transition-all shadow-lg">
-                                <span data-i18n="kiosk.try_different">Try Different Style</span>
-                            </button>
-                            <button onclick="kioskStartOver()" class="py-6 px-6 bg-gray-600 text-white text-xl font-semibold rounded-xl hover:bg-gray-700 transition-all shadow-lg">
-                                <span data-i18n="kiosk.start_over">Start Over</span>
-                            </button>
-                        </div>
-
-                        <!-- Error Message Container -->
-                        <div id="kiosk-error-message" class="hidden mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-                            <p class="text-red-600 font-semibold"></p>
+                        <!-- Pinned footer: change colour + actions -->
+                        <div class="flex-none pt-2">
+                            <div id="kiosk-color-row" class="mb-2">
+                                <p class="text-xs font-semibold text-gray-500 mb-1" data-i18n="kiosk.change_color">Nur Haarfarbe ändern</p>
+                                <div class="flex gap-2 overflow-x-auto justify-center pb-1">
+                                    <button type="button" onclick="kioskChangeColor('blonde')" class="kiosk-color-chip" style="--sw:#e6c98a"><span data-i18n="kiosk.color_blonde">Blond</span></button>
+                                    <button type="button" onclick="kioskChangeColor('brunette')" class="kiosk-color-chip" style="--sw:#6b4423"><span data-i18n="kiosk.color_brown">Braun</span></button>
+                                    <button type="button" onclick="kioskChangeColor('black')" class="kiosk-color-chip" style="--sw:#1c1c1c"><span data-i18n="kiosk.color_black">Schwarz</span></button>
+                                    <button type="button" onclick="kioskChangeColor('red')" class="kiosk-color-chip" style="--sw:#a3352a"><span data-i18n="kiosk.color_red">Rot</span></button>
+                                    <button type="button" onclick="kioskChangeColor('copper')" class="kiosk-color-chip" style="--sw:#b5651d"><span data-i18n="kiosk.color_copper">Kupfer</span></button>
+                                    <button type="button" onclick="kioskChangeColor('silver grey')" class="kiosk-color-chip" style="--sw:#b8b8b8"><span data-i18n="kiosk.color_grey">Grau</span></button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="kioskTryDifferentStyle()" class="py-3 px-4 bg-purple-600 text-white text-base font-semibold rounded-xl hover:bg-purple-700 transition-all shadow">
+                                    <span data-i18n="kiosk.try_different">Try Different Style</span>
+                                </button>
+                                <button onclick="kioskStartOver()" class="py-3 px-4 bg-gray-600 text-white text-base font-semibold rounded-xl hover:bg-gray-700 transition-all shadow">
+                                    <span data-i18n="kiosk.start_over">Start Over</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1889,6 +1921,9 @@
 
                     console.log('>>> Now applying salon branding...');
                     applySalonBranding(data.branding);
+                    // Cache so the styling survives a reload / tablet wake even
+                    // before (or without) a fresh network response.
+                    try { localStorage.setItem('salon_branding_cache', JSON.stringify(data.branding)); } catch (e) {}
                 } else {
                     console.warn('⚠️ Failed to load salon branding, using defaults');
                     console.warn('Response data:', data);
@@ -2269,6 +2304,13 @@
 
         // Close fullscreen kiosk popup
         function closeKioskPopup() {
+            // Always release the camera + cancel any auto-capture countdown.
+            if (typeof stopPhotoCountdown === 'function') stopPhotoCountdown();
+            if (typeof stopKioskStream === 'function') stopKioskStream();
+            const camFs = document.getElementById('kiosk-camera-fs');
+            const photoFs = document.getElementById('kiosk-photo-fs');
+            if (camFs) camFs.classList.add('hidden');
+            if (photoFs) photoFs.classList.add('hidden');
             document.getElementById('kiosk-popup').classList.add('hidden');
         }
 
@@ -2624,8 +2666,10 @@
             welcomeDuplicateMs = ms('timeout_welcome_duplicate_s', welcomeDuplicateMs);
             namesConfirmMs     = ms('timeout_names_confirm_s', namesConfirmMs);
             autoCheckoutMs     = ms('timeout_autocheckout_s', autoCheckoutMs);
+            if (s.timeout_autophoto_s != null) autoPhotoSec = Math.max(1, Number(s.timeout_autophoto_s));
             if (typeof IDLE_MS !== 'undefined') IDLE_MS = ms('timeout_idle_return_s', IDLE_MS);
         }
+        let autoPhotoSec = 5; // AI camera auto-capture delay (seconds); overridden by settings
 
         async function loadGlobalTimeoutSettings() {
             try {
@@ -4084,6 +4128,7 @@
         // ==================== KIOSK MODE FUNCTIONS ====================
         let kioskCameraStream = null;
         let kioskSelectedStyle = null;
+        let kioskLastStylePrompt = null; // remembered so "change colour only" can re-run it
 
         // Initialize kiosk mode when AI consultation tab is shown
         function initKioskMode() {
@@ -4099,11 +4144,23 @@
             // Reset state
             uploadedImage = null;
             kioskSelectedStyle = null;
+            kioskLastStylePrompt = null;
 
-            // Hide preview, show options
+            // Close any fullscreen camera/preview overlays.
+            stopPhotoCountdown();
+            stopKioskStream();
+            document.getElementById('kiosk-camera-fs').classList.add('hidden');
+            document.getElementById('kiosk-photo-fs').classList.add('hidden');
             document.getElementById('kiosk-photo-options').classList.remove('hidden');
-            document.getElementById('kiosk-camera-view').classList.add('hidden');
-            document.getElementById('kiosk-photo-preview').classList.add('hidden');
+        }
+
+        function stopKioskStream() {
+            if (kioskCameraStream) {
+                kioskCameraStream.getTracks().forEach(t => t.stop());
+                kioskCameraStream = null;
+            }
+            const v = document.getElementById('kiosk-camera-video');
+            if (v) v.srcObject = null;
         }
 
         // Progress indicator management
@@ -4132,103 +4189,107 @@
             }
         }
 
-        // STEP 1: Photo Capture Functions
+        // STEP 1: Photo Capture (fullscreen, iOS-camera-like with auto-capture)
+        let kioskCountdownTimer = null;
+
         async function kioskOpenCamera() {
-            const cameraView = document.getElementById('kiosk-camera-view');
-            const photoOptions = document.getElementById('kiosk-photo-options');
+            const cameraFs = document.getElementById('kiosk-camera-fs');
             const video = document.getElementById('kiosk-camera-video');
-
             try {
-                const constraints = {
-                    video: {
-                        facingMode: 'user',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
+                kioskCameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: false
-                };
-
-                kioskCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                });
                 video.srcObject = kioskCameraStream;
-
-                photoOptions.classList.add('hidden');
-                cameraView.classList.remove('hidden');
+                document.getElementById('kiosk-photo-fs').classList.add('hidden');
+                cameraFs.classList.remove('hidden');
+                // Auto-capture after the configured delay, with an on-screen countdown.
+                startPhotoCountdown();
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 alert('Could not access camera. Please ensure camera permissions are enabled.');
             }
         }
 
+        function startPhotoCountdown() {
+            stopPhotoCountdown(); // clear any prior timer/badge first
+            const badge = document.getElementById('kiosk-countdown');
+            let remaining = Math.max(1, autoPhotoSec || 5);
+            badge.textContent = remaining;
+            badge.classList.remove('hidden');
+            kioskCountdownTimer = setInterval(() => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    stopPhotoCountdown();
+                    kioskCapturePhoto();
+                    return;
+                }
+                badge.textContent = remaining;
+            }, 1000);
+        }
+        function stopPhotoCountdown() {
+            if (kioskCountdownTimer) { clearInterval(kioskCountdownTimer); kioskCountdownTimer = null; }
+            const badge = document.getElementById('kiosk-countdown');
+            if (badge) badge.classList.add('hidden');
+        }
+
         function kioskCloseCamera() {
-            const cameraView = document.getElementById('kiosk-camera-view');
-            const photoOptions = document.getElementById('kiosk-photo-options');
-            const video = document.getElementById('kiosk-camera-video');
-
-            if (kioskCameraStream) {
-                kioskCameraStream.getTracks().forEach(track => track.stop());
-                kioskCameraStream = null;
-            }
-
-            video.srcObject = null;
-            cameraView.classList.add('hidden');
-            photoOptions.classList.remove('hidden');
+            stopPhotoCountdown();
+            stopKioskStream();
+            document.getElementById('kiosk-camera-fs').classList.add('hidden');
+            document.getElementById('kiosk-photo-options').classList.remove('hidden');
         }
 
         function kioskCapturePhoto() {
+            stopPhotoCountdown();
             const video = document.getElementById('kiosk-camera-video');
             const canvas = document.getElementById('kiosk-camera-canvas');
             const ctx = canvas.getContext('2d');
-
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            // Mirror the capture so it matches the (mirrored) live preview.
+            ctx.save();
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
 
             uploadedImage = canvas.toDataURL('image/jpeg', 0.9);
+            stopKioskStream();
 
-            // Stop camera
-            if (kioskCameraStream) {
-                kioskCameraStream.getTracks().forEach(track => track.stop());
-                kioskCameraStream = null;
-            }
-
-            // Show preview
-            document.getElementById('kiosk-camera-view').classList.add('hidden');
+            document.getElementById('kiosk-camera-fs').classList.add('hidden');
             document.getElementById('kiosk-preview-image').src = uploadedImage;
-            document.getElementById('kiosk-photo-preview').classList.remove('hidden');
+            document.getElementById('kiosk-photo-fs').classList.remove('hidden');
         }
 
         function kioskHandleImageSelect(event) {
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    uploadedImage = e.target.result;
-
-                    // Hide options, show preview
-                    document.getElementById('kiosk-photo-options').classList.add('hidden');
-                    document.getElementById('kiosk-preview-image').src = uploadedImage;
-                    document.getElementById('kiosk-photo-preview').classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            }
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImage = e.target.result;
+                document.getElementById('kiosk-photo-options').classList.add('hidden');
+                document.getElementById('kiosk-preview-image').src = uploadedImage;
+                // Uploaded photos are already correctly oriented (no mirror).
+                document.getElementById('kiosk-preview-image').style.transform = 'none';
+                document.getElementById('kiosk-photo-fs').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
         }
 
         function kioskRetakePhoto() {
             uploadedImage = null;
-
-            // Show options, hide preview
-            document.getElementById('kiosk-photo-preview').classList.add('hidden');
-            document.getElementById('kiosk-photo-options').classList.remove('hidden');
+            document.getElementById('kiosk-preview-image').style.transform = '';
+            document.getElementById('kiosk-photo-fs').classList.add('hidden');
+            // Reopen the camera straight away (iOS-style retake).
+            kioskOpenCamera();
         }
 
         function kioskGoToStyleSelection() {
             if (!uploadedImage) return;
-
-            // Hide photo step, show style step
+            document.getElementById('kiosk-photo-fs').classList.add('hidden');
             document.getElementById('kiosk-step-photo').classList.add('hidden');
             document.getElementById('kiosk-step-style').classList.remove('hidden');
-
-            // Update progress
             updateKioskProgress(2);
         }
 
@@ -4407,6 +4468,8 @@
 
         // STEP 3 & 4: AI Generation and Results
         async function kioskPerformAIConsultation(imageBase64, stylePrompt) {
+            // Remember the style so the customer can re-run it with a new colour.
+            kioskLastStylePrompt = stylePrompt;
             // Debug logging
             console.log('=== KIOSK AI CONSULTATION DEBUG ===');
             console.log('Image Base64 exists:', !!imageBase64);
@@ -4485,6 +4548,21 @@
         function kioskStartOver() {
             // Reset everything and go to photo step
             initKioskMode();
+        }
+
+        // Keep the current style, only change the hair colour, and re-generate.
+        async function kioskChangeColor(color) {
+            if (!uploadedImage) return;
+            const base = kioskLastStylePrompt || 'the same hairstyle';
+            const prompt = `${base}, but change only the hair colour to ${color}. Keep the same haircut, length and shape.`;
+            document.getElementById('kiosk-step-results').classList.add('hidden');
+            document.getElementById('kiosk-error-message').classList.add('hidden');
+            document.getElementById('kiosk-result-image-container').classList.remove('hidden');
+            document.getElementById('kiosk-step-generating').classList.remove('hidden');
+            updateKioskProgress(3);
+            await kioskPerformAIConsultation(uploadedImage, prompt);
+            // Keep the ORIGINAL style so repeated colour swaps don't stack modifiers.
+            kioskLastStylePrompt = base;
         }
 
         // ===== END KIOSK MODE FUNCTIONS =====
@@ -4609,8 +4687,35 @@
         // ==================== SOCIAL LINKS ====================
         let socialLinksData = [];
 
+        // Apply the cached salon branding immediately (before any network call),
+        // so colours/logo show instantly on reload or after a tablet wake.
+        function applyCachedBranding() {
+            try {
+                const raw = localStorage.getItem('salon_branding_cache');
+                if (raw) applySalonBranding(JSON.parse(raw));
+            } catch (e) { /* ignore */ }
+        }
+
+        // When the tablet wakes from standby, refresh salon data/branding/settings
+        // so the styling and data come back without a manual reload or re-login.
+        let _lastWakeRefresh = 0;
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            if (!sessionToken) return;
+            const now = Date.now();
+            if (now - _lastWakeRefresh < 5000) return; // debounce
+            _lastWakeRefresh = now;
+            applyCachedBranding();
+            if (typeof getUserSalonAssignments === 'function') getUserSalonAssignments().catch(() => {});
+            if (typeof loadLoyaltyConfig === 'function') loadLoyaltyConfig();
+            if (typeof loadGlobalTimeoutSettings === 'function') loadGlobalTimeoutSettings();
+        });
+
         // Load social links when page loads
         window.addEventListener('DOMContentLoaded', async () => {
+
+            // Instant styling from cache (network refresh follows below).
+            applyCachedBranding();
 
             // Check authentication first
             const isAuthenticated = await checkAuthentication();
