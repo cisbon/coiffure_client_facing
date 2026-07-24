@@ -234,7 +234,7 @@
         .kiosk-fs:not(.hidden) { display: block; }
         .kiosk-fs-media { position: absolute; inset: 0; width: 100%; height: 100%; }
         #kiosk-camera-video.kiosk-fs-media { object-fit: cover; transform: scaleX(-1); } /* mirror like a selfie cam */
-        #kiosk-preview-image.kiosk-fs-media { object-fit: contain; }
+        #kiosk-preview-image.kiosk-fs-media { object-fit: cover; }
         .kiosk-countdown { position: absolute; top: calc(80px + env(safe-area-inset-top)); left: 20px; z-index: 3;
             width: 68px; height: 68px; border-radius: 9999px; background: rgba(0,0,0,0.45); color: #fff;
             font-size: 34px; font-weight: 800; display: flex; align-items: center; justify-content: center;
@@ -272,9 +272,12 @@
         .kiosk-result-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.85); text-align: center; margin-bottom: 6px; }
         .kiosk-result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 560px; margin: 0 auto; width: 100%; }
         .kiosk-result-actions .kiosk-cam-btn { width: 100%; min-width: 0; }
-        .kiosk-result-info { position: absolute; top: calc(84px + env(safe-area-inset-top)); left: 16px; z-index: 3;
-            font-size: 11px; color: rgba(255,255,255,0.65); }
         #kiosk-color-row.hidden { display: none; }
+        /* Error banner below the top bar; display driven by the .hidden class only
+           (never an inline display, which would keep it stuck open). */
+        .kiosk-error { position: absolute; top: calc(84px + env(safe-area-inset-top)); left: 0; right: 0; z-index: 4;
+            padding: 0 20px; justify-content: center; display: none; }
+        .kiosk-error:not(.hidden) { display: flex; }
 
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
@@ -1278,13 +1281,12 @@
                 <!-- Fullscreen result photo with overlaid controls (like the camera) -->
                 <div id="kiosk-step-results" class="hidden kiosk-fs">
                     <div id="kiosk-result-image-container" class="kiosk-fs-media">
-                        <img id="kiosk-result-image" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain" alt="AI Generated Hairstyle">
+                        <img id="kiosk-result-image" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="AI Generated Hairstyle">
                     </div>
-                    <div id="kiosk-processing-info" class="kiosk-result-info"></div>
 
-                    <!-- Error (centered over black) -->
-                    <div id="kiosk-error-message" class="hidden" style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:24px">
-                        <div class="p-5 bg-red-50 border-2 border-red-200 rounded-xl max-w-md text-center">
+                    <!-- Error banner (below the top bar; only shown on a real error) -->
+                    <div id="kiosk-error-message" class="kiosk-error hidden">
+                        <div class="p-4 bg-red-50 border-2 border-red-200 rounded-xl max-w-md text-center shadow-lg">
                             <p class="text-red-600 font-semibold"></p>
                         </div>
                     </div>
@@ -4510,10 +4512,6 @@
                 if (result.success && result.generated_image) {
                     // Show results
                     document.getElementById('kiosk-result-image').src = result.generated_image;
-
-                    // Show processing info
-                    const processingInfo = `Processing time: ${result.processing_time_ms || 'N/A'}ms | Model: ${result.model_used || 'N/A'}`;
-                    document.getElementById('kiosk-processing-info').innerHTML = processingInfo;
 
                     // Hide generating, show results
                     document.getElementById('kiosk-step-generating').classList.add('hidden');
