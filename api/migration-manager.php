@@ -164,6 +164,11 @@ function migrationCatalogue(): array
          'description' => 'Widen the audit log and add GDPR consent history',
          'file' => '024_audit_consent.sql',
          'probe' => ['table', 'coiffure_consent_history']],
+
+        ['number' => '025', 'name' => 'Customer Notes',
+         'description' => 'Staff notes and tags on a customer',
+         'file' => '025_customer_notes.sql',
+         'probe' => ['column', 'coiffure_customers', 'notes']],
     ];
 }
 

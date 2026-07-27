@@ -152,6 +152,13 @@ CREATE TABLE IF NOT EXISTS coiffure_customers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
+    -- Staff-authored notes and tags (migration 025). Salon-authored, not
+    -- customer-supplied, so excluded from the consent-aware marketing export.
+    notes TEXT DEFAULT NULL,
+    tags VARCHAR(255) DEFAULT NULL,
+    notes_updated_at TIMESTAMP NULL DEFAULT NULL,
+    notes_updated_by INT UNSIGNED DEFAULT NULL,
+
     -- Data retention
     data_retention_until DATE,
     is_deleted TINYINT(1) DEFAULT 0,
