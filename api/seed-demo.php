@@ -269,7 +269,14 @@ function insertCustomers(mysqli $conn, int $salonId): array
         $createdAt = date('Y-m-d H:i:s', strtotime("-$daysAgo day"));
         $memberSince = $isMember ? date('Y-m-d', strtotime("-$daysAgo day")) : null;
 
-        $email = sprintf('%s.%s%d@example.test', strtolower($firstName), strtolower(rtrim($lastName, 'ß')), $i);
+        // Transliterate umlauts: an address like "köhler@…" is not a valid
+        // e-mail local part and would be rejected before sending.
+        $email = sprintf(
+            '%s.%s%d@example.test',
+            asciiSlug($firstName),
+            asciiSlug($lastName),
+            $i
+        );
         $phone = sprintf('+4915%08d', 1000000 + $i * 137);
         $policy = '1.0';
         $source = $sources[$i % count($sources)];
@@ -367,4 +374,14 @@ function insertVisits(mysqli $conn, int $salonId, array $customerIds): int
 
     $stmt->close();
     return $count;
+}
+
+/** Lowercase ASCII form of a German name, safe for an e-mail local part. */
+function asciiSlug(string $value): string
+{
+    $map = ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss',
+            'Ä' => 'ae', 'Ö' => 'oe', 'Ü' => 'ue'];
+    $value = strtr($value, $map);
+    $value = strtolower($value);
+    return preg_replace('/[^a-z0-9]/', '', $value);
 }

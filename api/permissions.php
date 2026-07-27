@@ -286,6 +286,36 @@ function requireDashboardAccess(array $user): void
 }
 
 /**
+ * Bind statement parameters, deriving the type string from the values.
+ *
+ * mysqli's bind_param takes a hand-written type string, and a long INSERT makes
+ * it easy to transpose two characters -- which silently coerces values rather
+ * than erroring (an 'i' where a string belongs turns "unique" into 0). Deriving
+ * the types from the values themselves removes that whole class of mistake.
+ *
+ * Pass ints as int, floats as float, and everything else as string or null.
+ */
+function bindTyped(mysqli_stmt $stmt, array $args): bool
+{
+    if (empty($args)) {
+        return true;
+    }
+
+    $types = '';
+    foreach ($args as $value) {
+        if (is_int($value) || is_bool($value)) {
+            $types .= 'i';
+        } elseif (is_float($value)) {
+            $types .= 'd';
+        } else {
+            $types .= 's';
+        }
+    }
+
+    return $stmt->bind_param($types, ...$args);
+}
+
+/**
  * Build a `salon_id IN (?, ?, ...)` fragment plus its bind arguments.
  *
  * Every list endpoint needs this, and hand-rolling it invites an unparameterised
