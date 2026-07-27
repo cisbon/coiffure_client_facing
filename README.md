@@ -76,8 +76,21 @@ A complete, GDPR-compliant customer experience suite for hairdressing salons, fe
 coiffure/
 ├── index.html                  # Main webapp (deploy to GitHub Pages)
 ├── login.html                  # Login page
-├── admin-dashboard.html        # Admin dashboard UI
-├── admin-dashboard.js          # Dashboard functionality
+├── admin-dashboard.html        # Admin dashboard shell (sidebar SPA)
+├── css/
+│   └── admin.css              # Dashboard design system (CSS custom properties)
+├── js/
+│   ├── i18n.js                # Shared de/en translation system
+│   └── admin/                 # Dashboard app
+│       ├── app.js             # Boot, hash router, salon switcher, language
+│       ├── api.js             # Fetch wrapper (Bearer token, salon scope)
+│       ├── permissions.js     # Client mirror of the server permission matrix
+│       ├── ui.js              # Table, modal, drawer, toast, forms, charts
+│       └── views/             # One module per sidebar item
+├── lang/                       # de.json / en.json (German is the default)
+├── scripts/
+│   └── check-translations.mjs # Fails if a used translation key is missing
+├── migrations/                 # NNN_name.sql, applied via api/apply_migration_NNN.php
 ├── api/                        # Backend (deploy to clouedo.com/coiffure/api/)
 │   ├── .env                   # Environment variables (DO NOT COMMIT!)
 │   ├── .env.example           # Environment template

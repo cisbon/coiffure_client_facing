@@ -8,6 +8,9 @@
 
 require_once __DIR__ . '/config.php';
 
+require_once __DIR__ . '/migration_helpers.php';
+requireMigrationAuth();  // admin session, MIGRATION_TOKEN or CLI only
+
 header('Content-Type: text/plain; charset=utf-8');
 
 echo "Applying migration 016: coiffure_trends\n";
