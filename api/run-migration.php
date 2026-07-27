@@ -1,3 +1,18 @@
+<?php
+/**
+ * Database Migration Manager (HTML UI)
+ * -------------------------------------------------------------------
+ * Thin front end for migration-manager.php. Both are gated the same way:
+ * an administrator session, ?token=<MIGRATION_TOKEN>, or CLI.
+ *
+ * When a token is used to reach this page it is forwarded to the API calls
+ * below, so the operator authenticates once.
+ */
+require_once __DIR__ . '/migration_helpers.php';
+requireMigrationAuth();
+
+$forwardToken = isset($_GET['token']) ? (string)$_GET['token'] : '';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,10 +51,14 @@
     </div>
 
     <script>
+        // Forwarded so the API calls authenticate the same way this page did.
+        const MIGRATION_TOKEN = <?= json_encode($forwardToken) ?>;
+        const authQuery = MIGRATION_TOKEN ? '&token=' + encodeURIComponent(MIGRATION_TOKEN) : '';
+
         // Load available migrations
         async function loadMigrations() {
             try {
-                const response = await fetch('migration-manager.php?action=list');
+                const response = await fetch('migration-manager.php?action=list' + authQuery);
                 const data = await response.json();
 
                 if (data.success) {
@@ -60,9 +79,14 @@
                 const migrationDiv = document.createElement('div');
                 migrationDiv.className = 'border border-gray-200 rounded-lg p-4 hover:border-purple-400 transition-all';
 
-                const statusColor = migration.applied ? 'text-green-600' : 'text-gray-600';
-                const statusText = migration.applied ? '✓ Applied' : '○ Not Applied';
-                const buttonDisabled = migration.applied ? 'disabled opacity-50 cursor-not-allowed' : '';
+                const blocked = migration.description.startsWith('DO NOT APPLY');
+                const noRunner = migration.runner_exists === false;
+                const statusColor = migration.applied ? 'text-green-600'
+                    : (blocked ? 'text-red-600' : 'text-gray-600');
+                const statusText = migration.applied ? '✓ Applied'
+                    : (blocked ? '⛔ Blocked' : (noRunner ? '○ No runner script' : '○ Not Applied'));
+                const buttonDisabled = (migration.applied || blocked || noRunner)
+                    ? 'disabled opacity-50 cursor-not-allowed' : '';
 
                 migrationDiv.innerHTML = `
                     <div class="flex items-center justify-between">
@@ -90,7 +114,7 @@
             logMessage(`========================================\n`, 'info');
 
             try {
-                const response = await fetch('migration-manager.php?action=run&migration=' + number, {
+                const response = await fetch('migration-manager.php?action=run&migration=' + number + authQuery, {
                     method: 'POST'
                 });
                 const data = await response.json();

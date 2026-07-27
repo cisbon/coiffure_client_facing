@@ -513,8 +513,12 @@ function validateUserCreationPermissions($currentUser, $newUserRole, $newUserSal
         if ($newUserSalonId != $currentUser['salon_id']) {
             sendErrorResponse('Forbidden. Can only create users for your own salon.', 403);
         }
-        if (!in_array($newUserRole, ['customer_admin_delegate', 'customer_user'])) {
-            sendErrorResponse('Forbidden. Can only create customer_admin_delegate and customer_user roles.', 403);
+        // 'customer_user' was renamed to 'customer_facing_tablet_user' by
+        // migration 003, so the old value is no longer a valid enum member --
+        // allowing it here meant a customer_admin could not create the tablet
+        // account the UI offers, and creating one would have failed at insert.
+        if (!in_array($newUserRole, ['customer_admin_delegate', 'customer_facing_tablet_user'])) {
+            sendErrorResponse('Forbidden. Can only create customer_admin_delegate and customer_facing_tablet_user roles.', 403);
         }
         return;
     }

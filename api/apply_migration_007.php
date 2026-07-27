@@ -5,6 +5,9 @@
 
 require_once __DIR__ . '/config.php';
 
+require_once __DIR__ . '/migration_helpers.php';
+requireMigrationAuth();  // admin session, MIGRATION_TOKEN or CLI only
+
 echo "Applying migration 007: Add branding/white-labeling to salons table\n";
 
 $conn = getDbConnection();
