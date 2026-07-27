@@ -1,83 +1,100 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coiffure AI - Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Coiffure Digital – Anmeldung</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+
+    <!--
+        Resolve the language before the form paints. i18n.init() picks up the
+        cached user_data preference or localStorage.app_language and falls back
+        to German, which is the product default.
+    -->
+    <script src="js/i18n.js"></script>
+
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: var(--sp-4);
+            background:
+                radial-gradient(1100px 520px at 50% -10%, var(--brand-100), transparent 70%),
+                var(--bg);
         }
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            padding: var(--sp-8);
+        }
+        .login-logo {
+            width: 52px; height: 52px; margin: 0 auto var(--sp-4);
+            border-radius: var(--r-lg);
+            background: linear-gradient(135deg, var(--brand-400), var(--brand-600));
+            display: grid; place-items: center;
+            color: #fff; font-weight: 700; font-size: 1.25rem;
+        }
+        .login-lang {
+            display: flex; justify-content: center; gap: var(--sp-2);
+            margin-top: var(--sp-6);
+        }
+        .login-lang button {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px var(--sp-3); min-height: 36px;
+            border: 1px solid var(--border); border-radius: var(--r-full);
+            background: var(--surface); cursor: pointer; font-size: 0.82rem;
+        }
+        .login-lang button.active {
+            border-color: var(--brand-400); background: var(--brand-50);
+            color: var(--brand-700); font-weight: 600;
+        }
+        .login-lang svg { width: 20px; height: 14px; border-radius: 2px; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <!-- Logo/Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Coiffure AI</h1>
-            <p class="text-gray-600">Sign in to your account</p>
+<body>
+    <main class="card login-card">
+        <div class="login-logo" aria-hidden="true">CD</div>
+
+        <div style="text-align:center;margin-bottom:var(--sp-8)">
+            <h1 data-i18n="admin.login.title">Willkommen zurück</h1>
+            <p class="page-subtitle" data-i18n="admin.login.subtitle">Melden Sie sich bei Ihrem Konto an.</p>
         </div>
 
-        <!-- Login Form -->
-        <form id="loginForm" class="space-y-6">
-            <!-- Alert Container -->
-            <div id="alertContainer" class="hidden"></div>
+        <form id="loginForm" novalidate>
+            <div id="alertContainer" class="hidden" role="alert"></div>
 
-            <!-- Username Field -->
-            <div>
-                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-                    Username or Email
-                </label>
-                <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-                    placeholder="Enter your username"
-                    autocomplete="username"
-                >
+            <div class="form-grid">
+                <div class="field">
+                    <label class="field-label" for="username" data-i18n="admin.login.username">Benutzername oder E-Mail</label>
+                    <input class="input" type="text" id="username" name="username" required
+                           autocomplete="username" autocapitalize="none" spellcheck="false"
+                           data-i18n-placeholder="admin.login.username_placeholder"
+                           placeholder="Benutzername eingeben">
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="password" data-i18n="admin.login.password">Passwort</label>
+                    <input class="input" type="password" id="password" name="password" required
+                           autocomplete="current-password"
+                           data-i18n-placeholder="admin.login.password_placeholder"
+                           placeholder="Passwort eingeben">
+                </div>
+
+                <button type="submit" id="loginButton" class="btn btn-primary btn-lg btn-block"
+                        data-i18n="admin.login.submit">Anmelden</button>
             </div>
-
-            <!-- Password Field -->
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                </label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-                    placeholder="Enter your password"
-                    autocomplete="current-password"
-                >
-            </div>
-
-            <!-- Remember Me -->
-            <div class="flex items-center justify-between">
-                <label class="flex items-center">
-                    <input type="checkbox" id="rememberMe" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
-                    <span class="ml-2 text-sm text-gray-600">Remember me</span>
-                </label>
-            </div>
-
-            <!-- Submit Button -->
-            <button
-                type="submit"
-                id="loginButton"
-                class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition duration-200 transform hover:scale-[1.02]"
-            >
-                Sign In
-            </button>
         </form>
-    </div>
+
+        <div class="login-lang" id="loginLang"></div>
+    </main>
 
     <script>
-        // Configuration
-        const API_BASE_URL = 'https://clouedo.com/coiffure/api';  // Update with your API URL
+        const API_BASE_URL = 'https://clouedo.com/coiffure/api';
 
         // Already logged in? Forward straight to the app using the CACHED session
         // (no network round-trip that could fail and strand the tablet on login).
@@ -93,25 +110,61 @@
             } catch (e) { /* fall through to the login form */ }
         })();
 
-        // DOM Elements
         const loginForm = document.getElementById('loginForm');
         const loginButton = document.getElementById('loginButton');
         const alertContainer = document.getElementById('alertContainer');
 
-        // Show alert message
-        function showAlert(message, type = 'error') {
-            const bgColor = type === 'error' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-green-100 border-green-400 text-green-700';
-            alertContainer.className = `p-4 mb-4 border rounded-lg ${bgColor}`;
-            alertContainer.textContent = message;
-            alertContainer.classList.remove('hidden');
-
-            // Auto-hide after 5 seconds
-            setTimeout(() => {
-                alertContainer.classList.add('hidden');
-            }, 5000);
+        /** Translate with a literal fallback, in case lang/*.json has not loaded. */
+        function t(key, fallback) {
+            if (window.i18n && i18n.translations && Object.keys(i18n.translations).length) {
+                const value = i18n.t(key);
+                if (value !== key) return value;
+            }
+            return fallback;
         }
 
-        // Handle login form submission
+        function showAlert(message, type = 'error') {
+            alertContainer.className = `alert alert-${type === 'error' ? 'danger' : 'success'}`;
+            alertContainer.style.marginBottom = 'var(--sp-4)';
+            alertContainer.textContent = message;
+            alertContainer.classList.remove('hidden');
+            setTimeout(() => alertContainer.classList.add('hidden'), 5000);
+        }
+
+        /* ---------- Language switcher ---------- */
+        const FLAGS = {
+            de: '<svg viewBox="0 0 5 3" aria-hidden="true"><rect width="5" height="3" fill="#000"/><rect width="5" height="2" y="1" fill="#D00"/><rect width="5" height="1" y="2" fill="#FFCE00"/></svg>',
+            en: '<svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="lc"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#lc)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>'
+        };
+        const LANG_NAMES = { de: 'Deutsch', en: 'English' };
+
+        function renderLangSwitcher() {
+            const host = document.getElementById('loginLang');
+            const current = (window.i18n && i18n.currentLang) || 'de';
+            host.innerHTML = Object.keys(LANG_NAMES).map(code =>
+                `<button type="button" data-lang="${code}" class="${code === current ? 'active' : ''}">
+                    ${FLAGS[code]}<span>${LANG_NAMES[code]}</span>
+                 </button>`
+            ).join('');
+
+            host.querySelectorAll('[data-lang]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    // No user is signed in yet, so this only writes
+                    // localStorage.app_language -- i18n picks it up again after login.
+                    await i18n.setLanguage(button.dataset.lang);
+                    document.documentElement.lang = button.dataset.lang;
+                    renderLangSwitcher();
+                });
+            });
+        }
+
+        window.addEventListener('languageChanged', renderLangSwitcher);
+        document.addEventListener('DOMContentLoaded', () => {
+            renderLangSwitcher();
+            document.documentElement.lang = (window.i18n && i18n.currentLang) || 'de';
+        });
+
+        /* ---------- Submit ---------- */
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -119,56 +172,47 @@
             const password = document.getElementById('password').value;
 
             if (!username || !password) {
-                showAlert('Please enter both username and password', 'error');
+                showAlert(t('admin.login.error_missing', 'Bitte Benutzername und Passwort eingeben.'), 'error');
                 return;
             }
 
-            // Disable button and show loading state
             loginButton.disabled = true;
-            loginButton.textContent = 'Signing in...';
+            const originalLabel = loginButton.textContent;
+            loginButton.textContent = t('admin.login.signing_in', 'Anmeldung läuft …');
 
             try {
                 const response = await fetch(`${API_BASE_URL}/auth-login.php`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    // Store session token
-                    const sessionToken = data.session_token;
-                    localStorage.setItem('session_token', sessionToken);
+                    localStorage.setItem('session_token', data.session_token);
                     localStorage.setItem('user_data', JSON.stringify(data.user));
 
-                    // Show success message
-                    showAlert('Login successful! Redirecting...', 'success');
+                    showAlert(t('admin.login.success', 'Anmeldung erfolgreich. Sie werden weitergeleitet …'), 'success');
 
-                    // Redirect based on role
                     setTimeout(() => {
                         // replace() so the login page is not left in history.
                         if (['admin', 'admin_delegate', 'customer_admin', 'customer_admin_delegate'].includes(data.user.role)) {
                             window.location.replace('admin-dashboard.html');
                         } else {
-                            window.location.replace('index.html');  // Regular user goes to main app
+                            window.location.replace('index.html');  // Tablet users go to the kiosk
                         }
-                    }, 1000);
+                    }, 800);
                 } else {
-                    showAlert(data.error || 'Login failed. Please try again.', 'error');
+                    showAlert(data.error || t('admin.login.error_failed', 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.'), 'error');
                     loginButton.disabled = false;
-                    loginButton.textContent = 'Sign In';
+                    loginButton.textContent = originalLabel;
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showAlert('Network error. Please check your connection and try again.', 'error');
+                showAlert(t('admin.login.error_network', 'Netzwerkfehler. Bitte Verbindung prüfen und erneut versuchen.'), 'error');
                 loginButton.disabled = false;
-                loginButton.textContent = 'Sign In';
+                loginButton.textContent = originalLabel;
             }
         });
 

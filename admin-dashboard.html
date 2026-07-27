@@ -1,888 +1,108 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coiffure AI - Admin Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Coiffure Digital – Dashboard</title>
+    <meta name="description" content="Coiffure Digital Salon-Dashboard">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+
+    <!--
+        Gate the page before anything paints. js/admin/app.js re-checks with the
+        server via api/me.php; this only avoids flashing the shell at a visitor
+        who is signed out.
+    -->
+    <script>
+        (function () {
+            if (!localStorage.getItem('session_token') || !localStorage.getItem('user_data')) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+
+    <!--
+        js/i18n.js auto-initialises unless told otherwise. The dashboard resolves
+        the language itself (profile preference first) in app.js, so opt out.
+    -->
     <script>window.skipI18nAutoInit = true;</script>
     <script src="js/i18n.js"></script>
-    <style>
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .modal { display: none; }
-        .modal.active { display: flex; }
-    </style>
+
+    <!--
+        Chart.js for the dashboard charts and QRCode.js for social-link QR codes.
+        Both come from a CDN because the repo is served statically by GitHub
+        Pages with no build step - the same approach index.html already takes.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Navigation Bar -->
-    <nav class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
-        <div class="container mx-auto px-4 py-4">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-bold" data-i18n="admin.dashboard">Admin Dashboard</h1>
-                    <p class="text-sm text-purple-200" id="userInfo">Loading...</p>
-                </div>
-                <button
-                    id="logoutButton"
-                    class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-purple-50 transition duration-200"
-                    data-i18n="admin.logout"
-                >
-                    Logout
+<body>
+    <div class="app" id="app">
+        <!-- ==================== Sidebar ==================== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand" id="sidebar-brand">
+                <div class="sidebar-logo" aria-hidden="true">–</div>
+            </div>
+
+            <nav class="sidebar-nav" id="sidebar-nav" aria-label="Navigation">
+                <!-- Built at runtime from the user's permissions (app.js renderSidebar) -->
+            </nav>
+
+            <div class="sidebar-footer">
+                <span data-i18n="admin.app_name">Coiffure Digital</span>
+            </div>
+        </aside>
+
+        <!-- ==================== Impersonation banner ==================== -->
+        <div class="impersonation-bar hidden" id="impersonation-bar" role="status"></div>
+
+        <!-- ==================== Top bar ==================== -->
+        <header class="topbar">
+            <button type="button" class="topbar-menu" id="topbar-menu" aria-label="Menü">
+                <span aria-hidden="true">☰</span>
+            </button>
+
+            <div id="salon-switcher" class="salon-switcher"></div>
+
+            <div class="topbar-spacer"></div>
+
+            <div id="notif-host" style="position:relative">
+                <button type="button" class="icon-btn" id="notif-bell"
+                        aria-haspopup="true" aria-expanded="false" aria-label="Benachrichtigungen">
+                    <span aria-hidden="true">🔔</span>
                 </button>
             </div>
-        </div>
-    </nav>
 
-    <!-- Main Container -->
-    <div class="container mx-auto px-4 py-8">
-        <!-- Tabs -->
-        <div class="bg-white rounded-lg shadow-md mb-6">
-            <div class="flex flex-wrap border-b">
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200 active" data-tab="salons" data-i18n="admin_tabs.salon_management">
-                    Salons
-                </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="social-links" data-i18n="admin_tabs.social_links">
-                    Social Links
-                </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="customer-entries" data-i18n="admin_tabs.customer_entries">
-                    Customer Entries
-                </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="users" data-i18n="admin_tabs.user_management">
-                    Users
-                </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="salon-profile" data-i18n="admin_tabs.salon_profile">
-                    Salon Profile
-                </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="loyalty" data-i18n="admin_tabs.loyalty">
-                    Treueprogramm
-                </button>
-                <button id="globalSettingsTabBtn" style="display:none" class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="global-settings" data-i18n="admin_tabs.global_settings">
-                    Globale Einstellungen
-                </button>
-                <button class="tab-button px-6 py-4 font-semibold text-gray-600 hover:text-purple-600 border-b-2 border-transparent hover:border-purple-600 transition duration-200" data-tab="profile">
-                    My Profile
-                </button>
+            <div id="lang-switcher" class="lang-switcher"></div>
+
+            <div id="avatar-menu" style="position:relative"></div>
+        </header>
+
+        <!-- ==================== View container ==================== -->
+        <main class="main" id="view">
+            <div class="grid grid-4">
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
             </div>
-        </div>
-
-        <!-- Salons Tab -->
-        <div id="salons-tab" class="tab-content active">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800" data-i18n="salon_management.title">Salon Management</h2>
-                    <button id="addSalonButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="salon_management.add_salon">
-                        + Add Salon
-                    </button>
-                </div>
-
-                <!-- Salons Table -->
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.salon_name">Salon Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.email">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.phone">Phone</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.salons">Users</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="salon_management.is_active">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="admin.actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="salonsTableBody" class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-gray-500" data-i18n="admin.loading">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Social Links Tab -->
-        <div id="social-links-tab" class="tab-content">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800" data-i18n="social_links.title">Social Links & Reviews Management</h2>
-                    <button id="addSocialLinkButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="social_links.add_link">
-                        + Add Link
-                    </button>
-                </div>
-
-                <!-- Salon Filter for Social Links -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="admin.filter">Filter by Salon</label>
-                    <select id="socialLinkSalonFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="">All Salons</option>
-                    </select>
-                </div>
-
-                <!-- Social Links Grid -->
-                <div id="socialLinksContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="col-span-full text-center text-gray-500 py-8" data-i18n="admin.loading">Loading...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Customer Entries Tab -->
-        <div id="customer-entries-tab" class="tab-content">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6" data-i18n="customer_entries.title">Customer Entries</h2>
-
-                <!-- Search and Filters -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="admin.search">Search by Name</label>
-                        <input type="text" id="customerSearchInput" data-i18n-placeholder="customer_entries.search_placeholder"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="admin.filter">Filter by Salon</label>
-                        <select id="customerSalonFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                            <option value="">All Salons</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Customer Entries Table -->
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.full_name">Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.email">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.phone">Phone</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.consent_marketing">Marketing Consent</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="customer_entries.created_at">Created</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customerEntriesTableBody" class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td colspan="5" class="px-6 py-4 text-center text-gray-500" data-i18n="admin.loading">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Users Tab -->
-        <div id="users-tab" class="tab-content">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800" data-i18n="user_management.title">User Management</h2>
-                    <button id="addUserButton" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="user_management.add_user">
-                        + Add User
-                    </button>
-                </div>
-
-                <!-- Filters -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <select id="filterSalon" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="">All Salons</option>
-                    </select>
-                    <select id="filterRole" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="">All Roles</option>
-                        <option value="admin" data-i18n="roles.admin">Admin</option>
-                        <option value="admin_delegate" data-i18n="roles.admin_delegate">Admin Delegate</option>
-                        <option value="customer_admin" data-i18n="roles.customer_admin">Customer Admin</option>
-                        <option value="customer_admin_delegate" data-i18n="roles.customer_admin_delegate">Customer Admin Delegate</option>
-                        <option value="customer_facing_tablet_user" data-i18n="roles.customer_facing_tablet_user">Tablet User</option>
-                    </select>
-                    <select id="filterStatus" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="">All Status</option>
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
-                </div>
-
-                <!-- Users Table -->
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.username">Username</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.full_name">Full Name</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.email">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.role">Role</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.salon">Salon</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user_management.is_active">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="admin.actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td colspan="7" class="px-6 py-4 text-center text-gray-500" data-i18n="admin.loading">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Salon Profile Tab -->
-        <div id="salon-profile-tab" class="tab-content">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6" data-i18n="salon_profile.title">Salon Profile & Branding</h2>
-                <p class="text-gray-600 mb-6" data-i18n="salon_profile.description">Customize your salon's branding for the customer-facing application</p>
-
-                <form id="salonProfileForm" class="space-y-8 max-w-4xl">
-                    <!-- Current Salon Selection (for admins managing multiple salons) -->
-                    <div id="salonSelectorSection" class="bg-gray-50 p-4 rounded-lg hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.select_salon">Select Salon</label>
-                        <select id="salonProfileSelector" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                            <option value="">Loading salons...</option>
-                        </select>
-                    </div>
-
-                    <!-- Logo Upload -->
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="salon_profile.logo">Salon Logo</h3>
-                        <div class="flex items-start gap-6">
-                            <div class="flex-shrink-0">
-                                <div id="logoPreview" class="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                                    <span class="text-gray-400 text-sm text-center px-2" data-i18n="salon_profile.no_logo">No logo uploaded</span>
-                                </div>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.upload_logo">Upload Logo</label>
-                                <input type="file" id="logoUpload" accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                                <p class="text-xs text-gray-500 mt-2" data-i18n="salon_profile.logo_hint">Recommended: Square image, at least 200x200px. PNG or JPG format.</p>
-                                <button type="button" id="removeLogo" class="mt-2 text-red-600 text-sm hover:text-red-700 hidden" data-i18n="salon_profile.remove_logo">Remove Logo</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Color Scheme -->
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="salon_profile.color_scheme">Color Scheme</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.primary_color">Primary Color</label>
-                                <div class="flex gap-2">
-                                    <input type="color" id="primaryColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#9333EA" />
-                                    <input type="text" id="primaryColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#9333EA" pattern="^#[0-9A-Fa-f]{6}$" />
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.primary_hint">Main brand color (buttons, highlights)</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.secondary_color">Secondary Color</label>
-                                <div class="flex gap-2">
-                                    <input type="color" id="secondaryColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#EC4899" />
-                                    <input type="text" id="secondaryColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#EC4899" pattern="^#[0-9A-Fa-f]{6}$" />
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.secondary_hint">Accent color (gradients, highlights)</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.background_color">Background Color</label>
-                                <div class="flex gap-2">
-                                    <input type="color" id="backgroundColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#FFFFFF" />
-                                    <input type="text" id="backgroundColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#FFFFFF" pattern="^#[0-9A-Fa-f]{6}$" />
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.background_hint">Page background color</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.button_color">Button Color</label>
-                                <div class="flex gap-2">
-                                    <input type="color" id="buttonColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#9333EA" />
-                                    <input type="text" id="buttonColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#9333EA" pattern="^#[0-9A-Fa-f]{6}$" />
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.button_hint">Primary button color</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.text_color">Text Color</label>
-                                <div class="flex gap-2">
-                                    <input type="color" id="textColor" class="h-10 w-20 rounded border border-gray-300 cursor-pointer" value="#1F2937" />
-                                    <input type="text" id="textColorHex" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" value="#1F2937" pattern="^#[0-9A-Fa-f]{6}$" />
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="salon_profile.text_hint">Main text color</p>
-                            </div>
-                        </div>
-
-                        <!-- Reset to Defaults -->
-                        <div class="mt-4">
-                            <button type="button" id="resetColors" class="text-purple-600 text-sm hover:text-purple-700" data-i18n="salon_profile.reset_colors">
-                                Reset to Default Colors
-                            </button>
-                        </div>
-
-                        <!-- Guest WiFi -->
-                        <div class="mt-8 pt-6 border-t border-gray-200">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-1" data-i18n="salon_profile.wifi">Gäste-WLAN</h3>
-                            <p class="text-xs text-gray-500 mb-4" data-i18n="salon_profile.wifi_hint">Optional. Wenn Name und Passwort gesetzt sind, zeigt das Tablet einen „Social &amp; WLAN“-Bereich mit WLAN-QR-Code.</p>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.wifi_ssid">WLAN-Name (SSID)</label>
-                                    <input type="text" id="wifiSsid" autocomplete="off" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="z. B. Salon-Gast" />
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_profile.wifi_password">WLAN-Passwort</label>
-                                    <input type="text" id="wifiPassword" autocomplete="off" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Passwort" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Preview -->
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="salon_profile.preview">Preview</h3>
-                        <div id="brandingPreview" class="border-2 border-gray-200 rounded-lg p-8" style="background-color: #FFFFFF;">
-                            <div class="text-center mb-6">
-                                <div id="previewLogo" class="w-24 h-24 mx-auto mb-4 hidden">
-                                    <!-- Logo will be displayed here -->
-                                </div>
-                                <h1 id="previewTitle" class="text-3xl font-bold mb-2" style="color: #1F2937;">Salon Name</h1>
-                                <p class="text-gray-600" data-i18n="salon_profile.preview_text">Welcome to our salon!</p>
-                            </div>
-                            <button type="button" id="previewButton" class="px-6 py-3 text-white font-semibold rounded-lg transition-all" style="background-color: #9333EA;">
-                                <span data-i18n="salon_profile.preview_button">Book Appointment</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Save Button -->
-                    <div class="flex gap-4">
-                        <button type="submit" class="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition duration-200 font-semibold" data-i18n="admin.save">
-                            Save Salon Profile
-                        </button>
-                        <button type="button" id="cancelSalonProfile" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 transition duration-200 font-semibold" data-i18n="admin.cancel">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Loyalty Tab -->
-        <div id="loyalty-tab" class="tab-content">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-1" data-i18n="loyalty_admin.title">Treueprogramm</h2>
-                <p class="text-gray-600 mb-6" data-i18n="loyalty_admin.description">Legen Sie fest, wie oft ein Besuch belohnt wird und welchen Rabatt Ihre Mitglieder erhalten. Diese Werte erscheinen live auf dem Tablet.</p>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <form id="loyaltyForm" class="space-y-5 max-w-lg">
-                        <label class="flex items-center gap-3">
-                            <input type="checkbox" id="loyaltyActive" class="w-5 h-5 text-purple-600 rounded" checked />
-                            <span class="text-sm font-medium text-gray-800" data-i18n="loyalty_admin.active">Treueprogramm aktiv</span>
-                        </label>
-
-                        <div id="loyaltyFields" class="space-y-5">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="loyalty_admin.threshold">Belohnung bei jedem N. Besuch</label>
-                                <input type="number" id="loyaltyThreshold" min="2" max="50" step="1" value="5"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="loyalty_admin.threshold_hint">Ganze Zahl zwischen 2 und 50.</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="loyalty_admin.discount_type">Rabatt-Typ</label>
-                                <select id="loyaltyDiscountType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                                    <option value="fixed_eur" data-i18n="loyalty_admin.type_fixed">Fester Betrag (€)</option>
-                                    <option value="percentage" data-i18n="loyalty_admin.type_percentage">Prozentual (%)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="loyalty_admin.discount_value">Rabatt-Wert</label>
-                                <input type="number" id="loyaltyDiscountValue" min="0.5" step="0.5" value="10"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                                <p class="text-xs text-gray-500 mt-1" id="loyaltyValueHint"></p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="loyalty_admin.discount_label">Eigenes Label (optional)</label>
-                                <input type="text" id="loyaltyDiscountLabel" maxlength="50" placeholder="z. B. 10 €"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="loyalty_admin.label_hint">Leer lassen, um automatisch „10 €“ / „15 %“ anzuzeigen.</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="loyalty_admin.staff_pin">Personal-PIN (Tablet, 4 Ziffern)</label>
-                                <input type="text" id="loyaltyStaffPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off"
-                                    class="w-40 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 tracking-widest" />
-                                <p class="text-xs text-gray-500 mt-1" data-i18n="loyalty_admin.staff_pin_hint">Leer lassen, um die aktuelle PIN zu behalten.</p>
-                            </div>
-                        </div>
-
-                        <div class="flex gap-3 pt-2">
-                            <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="loyalty_admin.save">Speichern</button>
-                            <button type="button" id="loyaltyReload" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition duration-200" data-i18n="loyalty_admin.reset">Zurücksetzen</button>
-                        </div>
-                    </form>
-
-                    <!-- Live customer-facing preview -->
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3" data-i18n="loyalty_admin.preview">Vorschau (Tablet)</h3>
-                        <div class="border-2 border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
-                            <p class="text-lg font-bold text-gray-800 text-center">Hallo Anna!</p>
-                            <p class="text-sm text-gray-500 text-center mb-4" data-i18n="loyalty_admin.preview_sub">Schön, dass Sie da sind.</p>
-                            <div id="loyaltyPreviewBox" class="max-w-sm mx-auto">
-                                <div class="flex justify-between items-end mb-1">
-                                    <span id="loyaltyPreviewCount" class="text-base font-bold text-gray-800"></span>
-                                    <span id="loyaltyPreviewPercent" class="text-sm text-gray-500"></span>
-                                </div>
-                                <div style="width:100%;height:16px;border-radius:8px;background:#E5E7EB;overflow:hidden">
-                                    <div id="loyaltyPreviewFill" style="height:100%;border-radius:8px;width:0%;background:linear-gradient(90deg,#22C55E,#16A34A);transition:width .4s ease"></div>
-                                </div>
-                                <p id="loyaltyPreviewCaption" class="text-sm text-gray-600 mt-2"></p>
-                            </div>
-                            <p id="loyaltyPreviewInactive" class="hidden text-sm text-gray-500 text-center" data-i18n="loyalty_admin.preview_inactive">Treueprogramm ist deaktiviert – auf dem Tablet wird keine Fortschrittsanzeige gezeigt.</p>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-2" data-i18n="loyalty_admin.preview_note">Beispiel: 3. Besuch von N.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Global Settings Tab (admin only) -->
-        <div id="global-settings-tab" class="tab-content">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-1" data-i18n="global_settings.title">Globale Einstellungen</h2>
-                <p class="text-gray-600 mb-6" data-i18n="global_settings.description">Zeitlimits für den Tablet-Check-in (in Sekunden). Gilt für alle Salons. Nur für Administratoren.</p>
-
-                <form id="globalSettingsForm" class="space-y-5 max-w-2xl">
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3" data-i18n="global_settings.section_timeouts">Check-in Zeitlimits (Sekunden)</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.idle_return">Auto-Rückkehr zum Start (Leerlauf)</span>
-                                <input type="number" id="gsIdleReturn" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.birthday">Geburtstag-Auswahl</span>
-                                <input type="number" id="gsBirthday" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.autoconfirm">Bestätigung (einzelnes Ergebnis)</span>
-                                <input type="number" id="gsAutoconfirm" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.namelist">Namensliste</span>
-                                <input type="number" id="gsNamelist" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.names_confirm">Namens-Bestätigung (Unterschritt)</span>
-                                <input type="number" id="gsNamesConfirm" min="3" max="300" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.phone">Telefon-Eingabe</span>
-                                <input type="number" id="gsPhone" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.welcome_success">Willkommen (Auto-Rückkehr nach Check-in)</span>
-                                <input type="number" id="gsWelcomeSuccess" min="2" max="120" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.welcome_duplicate">Willkommen (bereits eingecheckt)</span>
-                                <input type="number" id="gsWelcomeDuplicate" min="2" max="120" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.staff_pin">Personal-PIN</span>
-                                <input type="number" id="gsStaffPin" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.staff_search">Personal-Suche</span>
-                                <input type="number" id="gsStaffSearch" min="5" max="600" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.autocheckout">Auto-Check-Out (eingecheckter Kunde)</span>
-                                <input type="number" id="gsAutocheckout" min="60" max="86400" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.autophoto">AI-Foto: Auto-Auslöser (Sekunden)</span>
-                                <input type="number" id="gsAutophoto" min="1" max="60" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                            <label class="block">
-                                <span class="text-sm text-gray-700" data-i18n="global_settings.autoslide">Trends-Slider: Auto-Wechsel (Sekunden)</span>
-                                <input type="number" id="gsAutoslide" min="1" max="60" step="1" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3 pt-2">
-                        <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="global_settings.save">Speichern</button>
-                        <button type="button" id="globalSettingsReload" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition duration-200" data-i18n="global_settings.reset">Zurücksetzen</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Profile Tab -->
-        <div id="profile-tab" class="tab-content">
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">My Profile</h2>
-                <form id="profileForm" class="space-y-4 max-w-2xl">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.username">Username</label>
-                            <input type="text" id="profileUsername" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.email">Email</label>
-                            <input type="email" id="profileEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.full_name">Full Name</label>
-                            <input type="text" id="profileFullName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone</label>
-                            <input type="tel" id="profilePhone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                        </div>
-                    </div>
-                    <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="admin.save">
-                        Update Profile
-                    </button>
-                </form>
-
-                <hr class="my-8" />
-
-                <h3 class="text-xl font-bold text-gray-800 mb-4" data-i18n="admin.language">Language Settings</h3>
-                <div class="max-w-2xl mb-8">
-                    <p class="text-sm text-gray-600 mb-4">Set the default language for all interfaces (admin dashboard and customer tablets) for your salon.</p>
-                    <div class="flex items-center gap-4">
-                        <label class="block text-sm font-medium text-gray-700">Default Language:</label>
-                        <select
-                            id="salonLanguageSelector"
-                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                        >
-                            <option value="de">🇩🇪 Deutsch</option>
-                            <option value="en">🇬🇧 English</option>
-                        </select>
-                        <button
-                            id="saveSalonLanguageBtn"
-                            class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200"
-                            data-i18n="admin.save"
-                        >
-                            Save
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">This language will be used for the admin dashboard and all customer-facing tablets.</p>
-                </div>
-
-                <hr class="my-8" />
-
-                <h3 class="text-xl font-bold text-gray-800 mb-4" data-i18n="user_management.password">Change Password</h3>
-                <form id="passwordForm" class="space-y-4 max-w-2xl">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.password">New Password</label>
-                        <input type="password" id="newPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required />
-                        <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.password">Confirm Password</label>
-                        <input type="password" id="confirmPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required />
-                    </div>
-                    <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200" data-i18n="admin.save">
-                        Change Password
-                    </button>
-                </form>
-            </div>
-        </div>
+        </main>
     </div>
 
-    <!-- Add/Edit Salon Modal -->
-    <div id="salonModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-6" id="salonModalTitle" data-i18n="salon_management.add_salon">Add Salon</h3>
-            <form id="salonForm" class="space-y-4">
-                <input type="hidden" id="salonId" />
+    <div class="toast-stack" id="toast-stack" role="status" aria-live="polite"></div>
 
-                <!-- Salon Information -->
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Salon Information</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.salon_name">Salon Name *</label>
-                            <input type="text" id="salonName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.email">Salon Email *</label>
-                            <input type="email" id="salonEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone *</label>
-                            <input type="tel" id="salonPhone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Policy Version *</label>
-                            <input type="text" id="salonPolicyVersion" value="1.0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.default_language">Default Language (for Tablets) *</label>
-                            <select id="salonDefaultLanguage" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                                <option value="de">🇩🇪 Deutsch</option>
-                                <option value="en">🇬🇧 English</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Owner Account Creation (only shown when adding new salon) -->
-                <div id="ownerAccountSection" class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-2">👤 Salon Owner Account</h4>
-                    <p class="text-sm text-gray-600 mb-4">A customer_admin account will be created for the salon owner</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Owner Email Address *</label>
-                            <input type="email" id="ownerEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="owner@salon.com" />
-                            <p class="text-xs text-gray-500 mt-1">Will receive login credentials</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Owner Full Name *</label>
-                            <input type="text" id="ownerFullName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="John Doe" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tablet Account Creation (only shown when adding new salon) -->
-                <div id="tabletAccountSection" class="bg-green-50 p-4 rounded-lg border-2 border-green-200">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-2">📱 Tablet Kiosk Account</h4>
-                    <p class="text-sm text-gray-600 mb-4">A customer_facing_tablet_user account will be created for the kiosk</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Tablet Username *</label>
-                            <input type="text" id="tabletUsername" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="salon_tablet" pattern="[a-zA-Z0-9_-]{3,50}" />
-                            <p class="text-xs text-gray-500 mt-1">Used for kiosk login</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Initial Password (Both Accounts) *</label>
-                            <input type="password" id="initialPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" placeholder="Min 8 characters" minlength="8" />
-                            <p class="text-xs text-gray-500 mt-1">Must be changed on first login</p>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.address">Address</label>
-                    <textarea id="salonAddress" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Google Reviews URL</label>
-                    <input type="url" id="salonGoogleUrl" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Facebook URL</label>
-                    <input type="url" id="salonFacebookUrl" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                </div>
-                <div class="flex justify-end gap-2 pt-4">
-                    <button type="button" id="closeSalonModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" data-i18n="admin.cancel">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" data-i18n="admin.save">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Add/Edit User Modal -->
-    <div id="userModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-6" id="userModalTitle" data-i18n="user_management.add_user">Add User</h3>
-            <form id="userForm" class="space-y-4">
-                <input type="hidden" id="userId" />
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.username">Username * (3-50 chars)</label>
-                        <input type="text" id="userUsername" required pattern="[a-zA-Z0-9_-]{3,50}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.email">Email *</label>
-                        <input type="email" id="userEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.full_name">Full Name *</label>
-                        <input type="text" id="userFullName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="salon_management.phone">Phone</label>
-                        <input type="tel" id="userPhone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.role">Role *</label>
-                        <select id="userRole" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                            <option value="">Select Role</option>
-                            <option value="admin" data-i18n="roles.admin">Admin</option>
-                            <option value="admin_delegate" data-i18n="roles.admin_delegate">Admin Delegate</option>
-                            <option value="customer_admin" data-i18n="roles.customer_admin">Customer Admin</option>
-                            <option value="customer_admin_delegate" data-i18n="roles.customer_admin_delegate">Customer Admin Delegate</option>
-                            <option value="customer_facing_tablet_user" data-i18n="roles.customer_facing_tablet_user">Tablet User</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.salon">Salon</label>
-                        <select id="userSalon" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                            <option value="">None (for admin roles)</option>
-                        </select>
-                    </div>
-                    <div id="passwordField">
-                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="user_management.password">Password * (min 8 chars)</label>
-                        <input type="password" id="userPassword" minlength="8" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                        <select id="userStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 pt-4">
-                    <button type="button" id="closeUserModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" data-i18n="admin.cancel">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" data-i18n="admin.save">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Add/Edit Social Link Modal -->
-    <div id="socialLinkModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-6" id="socialLinkModalTitle" data-i18n="social_links.add_link">Add Social Link</h3>
-            <form id="socialLinkForm" class="space-y-4">
-                <input type="hidden" id="linkId" />
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.select_salon">Salon *</label>
-                    <select id="linkSalonId" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="" data-i18n="social_links.select_salon">Select Salon</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.link_type">Link Type *</label>
-                    <select id="linkType" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <option value="">Select Type</option>
-                        <option value="instagram" data-i18n="social_links.types.instagram">Instagram</option>
-                        <option value="facebook" data-i18n="social_links.types.facebook">Facebook</option>
-                        <option value="tiktok" data-i18n="social_links.types.tiktok">TikTok</option>
-                        <option value="google_reviews" data-i18n="social_links.types.google_reviews">Google Reviews</option>
-                        <option value="yelp" data-i18n="social_links.types.yelp">Yelp</option>
-                        <option value="twitter" data-i18n="social_links.types.twitter">Twitter / X</option>
-                        <option value="linkedin" data-i18n="social_links.types.linkedin">LinkedIn</option>
-                        <option value="youtube" data-i18n="social_links.types.youtube">YouTube</option>
-                        <option value="pinterest" data-i18n="social_links.types.pinterest">Pinterest</option>
-                        <option value="custom" data-i18n="social_links.types.custom">Custom Link</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.display_name">Display Name *</label>
-                    <input type="text" id="linkDisplayName" required placeholder="e.g., Follow us on Instagram"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.link_url">URL *</label>
-                    <input type="url" id="linkUrl" required placeholder="https://..."
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.description">Description (for custom links)</label>
-                    <textarea id="linkDescription" rows="2" placeholder="Optional description shown below icon"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="social_links.display_order">Display Order</label>
-                    <input type="number" id="linkDisplayOrder" value="0" min="0"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
-                </div>
-                <div class="flex justify-end gap-2 pt-4">
-                    <button type="button" id="closeSocialLinkModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" data-i18n="admin.cancel">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" data-i18n="admin.save">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- View QR Code Modal -->
-    <div id="qrCodeViewModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
-            <h3 class="text-2xl font-bold mb-6" id="qrCodeViewTitle" data-i18n="social_links.qr_code">QR Code</h3>
-            <div class="text-center">
-                <div id="qrCodeDisplay" class="bg-gray-50 p-4 rounded-lg mb-4 flex items-center justify-center min-h-[300px]">
-                    <!-- QR Code will be displayed here -->
-                </div>
-                <p class="text-sm text-gray-600 mb-4" id="qrCodeUrl"></p>
-                <button type="button" id="closeQrCodeModal" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700" data-i18n="social_qr_modal.close">
-                    Close
-                </button>
+    <noscript>
+        <div style="padding:2rem">
+            <div class="alert alert-warning">
+                Für das Dashboard wird JavaScript benötigt.
+                &mdash; JavaScript is required to use the dashboard.
             </div>
         </div>
-    </div>
+    </noscript>
 
-    <script src="admin-dashboard.js"></script>
-    <script>
-        // Initialize i18n with salon's default language
-        // The i18n.js auto-init is already running, no need to manually call init() again
-
-        // Wait for i18n to load, then update salon language selector
-        window.addEventListener('DOMContentLoaded', function() {
-            // Wait a bit for i18n to initialize
-            setTimeout(() => {
-                updateSalonLanguageSelector();
-            }, 500);
-        });
-
-        function updateSalonLanguageSelector() {
-            const salonLanguageSelector = document.getElementById('salonLanguageSelector');
-            if (salonLanguageSelector && window.currentSalon) {
-                salonLanguageSelector.value = window.currentSalon.default_language || 'de';
-            }
-        }
-
-        // Handle salon language change
-        document.addEventListener('DOMContentLoaded', function() {
-            const saveSalonLanguageBtn = document.getElementById('saveSalonLanguageBtn');
-            if (saveSalonLanguageBtn) {
-                saveSalonLanguageBtn.addEventListener('click', async function() {
-                    const selectedLanguage = document.getElementById('salonLanguageSelector').value;
-
-                    console.log('Attempting to save language:', selectedLanguage);
-                    console.log('Current salon:', window.currentSalon);
-
-                    if (!window.currentSalon || !window.currentSalon.salon_id) {
-                        alert('No salon selected. Please ensure you are assigned to a salon.');
-                        return;
-                    }
-
-                    try {
-                        const sessionToken = localStorage.getItem('session_token');
-                        const url = `${API_BASE_URL}/salon-management.php?salon_id=${window.currentSalon.salon_id}`;
-                        const payload = { default_language: selectedLanguage };
-
-                        console.log('Request URL:', url);
-                        console.log('Request payload:', payload);
-
-                        const response = await fetch(url, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${sessionToken}`
-                            },
-                            body: JSON.stringify(payload)
-                        });
-
-                        console.log('Response status:', response.status);
-                        const result = await response.json();
-                        console.log('Response data:', result);
-
-                        if (result.success) {
-                            // Update current salon language
-                            window.currentSalon.default_language = selectedLanguage;
-
-                            // Apply language change immediately
-                            await i18n.setLanguage(selectedLanguage);
-
-                            alert('Language updated successfully! The page will reload.');
-                            window.location.reload();
-                        } else {
-                            alert('Failed to update language: ' + (result.error || 'Unknown error'));
-                        }
-                    } catch (error) {
-                        console.error('Error updating salon language:', error);
-                        alert('Error updating language. Please try again.');
-                    }
-                });
-            }
-        });
-    </script>
+    <script type="module" src="js/admin/app.js"></script>
 </body>
 </html>
