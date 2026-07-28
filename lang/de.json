@@ -873,7 +873,12 @@
       "cron_title": "Automatischer Versand",
       "cron_hint": "Automatische Kampagnen werden stündlich im Hintergrund geprüft und versendet.",
       "log_empty": "Noch nichts versendet",
-      "log_empty_text": "Sobald Sie eine Kampagne senden, erscheint sie hier."
+      "log_empty_text": "Sobald Sie eine Kampagne senden, erscheint sie hier.",
+      "auto_hint": "Automatische Kampagnen laufen stündlich von selbst. Hier können Sie sie für diesen Salon sofort ausführen.",
+      "run_now": "Jetzt ausführen",
+      "running": "Wird ausgeführt …",
+      "run_done": "{count} E-Mails versendet.",
+      "run_none": "Aktuell ist niemand fällig – es wurde nichts versendet."
     },
     "weekdays": {
       "0": "Montag",

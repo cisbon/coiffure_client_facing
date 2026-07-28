@@ -71,6 +71,21 @@ try {
     $visitCount = insertVisits($conn, $salonId, $customerIds);
     echo "  + $visitCount check-ins across the last 8 weeks\n";
 
+    $consentRows = insertConsentHistory($conn, $salonId, $customerIds);
+    echo "  + $consentRows consent records (Protokoll → Einwilligungen)\n";
+
+    $billing = insertBilling($conn, $salonId);
+    echo "  + $billing\n";
+
+    $notifications = insertNotifications($conn, $salonId, $ownerId, $delegateId);
+    echo "  + $notifications notifications for the owner\n";
+
+    $autos = insertAutoCampaigns($conn, $salonId);
+    echo "  + $autos\n";
+
+    $campaign = insertPastCampaign($conn, $salonId, $ownerId, $customerIds);
+    echo "  + $campaign\n";
+
     $conn->commit();
 } catch (Throwable $e) {
     $conn->rollback();
@@ -80,9 +95,9 @@ try {
 }
 
 echo "\n  Sign in with:\n";
-echo "    owner     bella.owner    / " . DEMO_PASSWORD . "   (Salon-Inhaber, full rights)\n";
-echo "    delegate  bella.delegate / " . DEMO_PASSWORD . "   (only 'Einblicke sehen')\n";
-echo "    tablet    bella.tablet   / " . DEMO_PASSWORD . "   (kiosk, no dashboard)\n";
+echo "    owner     bella_owner    / " . DEMO_PASSWORD . "   (Salon-Inhaber, full rights)\n";
+echo "    delegate  bella_delegate / " . DEMO_PASSWORD . "   (only 'Einblicke sehen')\n";
+echo "    tablet    bella_tablet   / " . DEMO_PASSWORD . "   (kiosk, no dashboard)\n";
 
 migFinish($conn, 'demo');
 
@@ -148,10 +163,13 @@ function insertUsers(mysqli $conn, int $salonId): array
 {
     $hash = password_hash(DEMO_PASSWORD, PASSWORD_BCRYPT, ['cost' => 12]);
 
+    // Underscores, not dots: the platform's own username rule is
+    // [a-zA-Z0-9_-]{3,50}, so a dotted name could be seeded but never created
+    // or edited through the dashboard afterwards.
     $people = [
-        ['bella.owner',    'owner@bella-vista.de',    'Bella Fischer',  'customer_admin'],
-        ['bella.delegate', 'delegate@bella-vista.de', 'Timo Krüger',    'customer_admin_delegate'],
-        ['bella.tablet',   'tablet@bella-vista.de',   'Bella Vista Tablet', 'customer_facing_tablet_user'],
+        ['bella_owner',    'owner@bella-vista.de',    'Bella Fischer',  'customer_admin'],
+        ['bella_delegate', 'delegate@bella-vista.de', 'Timo Krüger',    'customer_admin_delegate'],
+        ['bella_tablet',   'tablet@bella-vista.de',   'Bella Vista Tablet', 'customer_facing_tablet_user'],
     ];
 
     $ids = [];
@@ -374,6 +392,364 @@ function insertVisits(mysqli $conn, int $salonId, array $customerIds): int
 
     $stmt->close();
     return $count;
+}
+
+/**
+ * A consent record for every customer, plus a handful of later changes.
+ *
+ * Without this the Einwilligungen tab is empty on a fresh demo even though the
+ * customers plainly have consent flags -- the trail only fills going forward,
+ * so a seeded salon needs its history seeded too.
+ */
+function insertConsentHistory(mysqli $conn, int $salonId, array $customerIds): int
+{
+    if (!migTableExists($conn, 'coiffure_consent_history')) {
+        return 0;
+    }
+
+    $stmt = $conn->prepare(
+        'INSERT INTO coiffure_consent_history
+            (customer_id, salon_id, consent_field, old_value, new_value,
+             policy_version, source, changed_by, ip_address, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    if (!$stmt) {
+        throw new RuntimeException('consent insert prepare failed: ' . $conn->error);
+    }
+
+    $written = 0;
+    foreach (array_values($customerIds) as $index => $customerId) {
+        // What they agreed to at registration.
+        $registered = date('Y-m-d H:i:s', strtotime('-' . (int)(($index * 6.5) + ($index % 5)) . ' day'));
+        $marketing = ($index % 10) < 7 ? '1' : '0';
+
+        $grants = [
+            ['consent_data_processing', null, '1'],
+            ['consent_email_marketing', null, $marketing],
+            ['consent_sms_whatsapp', null, ($index % 4) === 0 ? '1' : '0'],
+        ];
+
+        foreach ($grants as [$field, $old, $new]) {
+            $source = 'tablet';
+            $changedBy = 'tablet_form';
+            $policy = '1.0';
+            $ip = '192.168.178.' . (20 + ($index % 200));
+            $stmt->bind_param(
+                'iissssssss',
+                $customerId, $salonId, $field, $old, $new, $policy, $source, $changedBy, $ip, $registered
+            );
+            if ($stmt->execute()) {
+                $written++;
+            }
+        }
+
+        // Every seventh customer later withdrew marketing consent, so the trail
+        // shows a real change and not only a wall of initial grants.
+        if ($index % 7 === 3 && $marketing === '1') {
+            $withdrawnAt = date('Y-m-d H:i:s', strtotime('-' . (5 + ($index % 20)) . ' day'));
+            $field = 'consent_email_marketing';
+            $old = '1';
+            $new = '0';
+            $policy = '1.0';
+            $source = 'dashboard';
+            $changedBy = 'bella_owner';
+            $ip = '192.168.178.10';
+            $stmt->bind_param(
+                'iissssssss',
+                $customerId, $salonId, $field, $old, $new, $policy, $source, $changedBy, $ip, $withdrawnAt
+            );
+            if ($stmt->execute()) {
+                $written++;
+            }
+        }
+    }
+
+    $stmt->close();
+    return $written;
+}
+
+/**
+ * A subscription and two invoices, so the Abrechnung screen has something to
+ * show. The plans themselves come from migration 022.
+ */
+function insertBilling(mysqli $conn, int $salonId): string
+{
+    if (!migTableExists($conn, 'coiffure_salon_subscriptions')) {
+        return 'billing skipped (migration 022 not applied)';
+    }
+
+    // Middle plan: expensive enough to be interesting, not the top tier.
+    $planRow = $conn->query(
+        'SELECT plan_id, name, monthly_price, currency FROM coiffure_subscription_plans
+         WHERE is_active = 1 ORDER BY sort_order, monthly_price LIMIT 1 OFFSET 1'
+    );
+    $plan = $planRow ? $planRow->fetch_assoc() : null;
+    if (!$plan) {
+        return 'billing skipped (no subscription plans)';
+    }
+
+    $planId = (int)$plan['plan_id'];
+    $startedAt = date('Y-m-d', strtotime('-8 month'));
+
+    $stmt = $conn->prepare(
+        "INSERT INTO coiffure_salon_subscriptions
+            (salon_id, plan_id, payment_status, started_at, notes)
+         VALUES (?, ?, 'active', ?, 'Demo-Abonnement')
+         ON DUPLICATE KEY UPDATE plan_id = VALUES(plan_id)"
+    );
+    if ($stmt) {
+        $stmt->bind_param('iis', $salonId, $planId, $startedAt);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    if (!migTableExists($conn, 'coiffure_invoices')) {
+        return "subscription on the '{$plan['name']}' plan";
+    }
+
+    // Last month paid, this month still open -- one of each status.
+    $invoices = 0;
+    foreach ([['-2 month', 'paid'], ['-1 month', 'open']] as $offset => $spec) {
+        [$when, $status] = $spec;
+        $year = (int)date('Y', strtotime($when));
+        $month = (int)date('n', strtotime($when));
+        $number = sprintf('%d-%04d', $year, 9000 + $offset);   // demo range
+        $subtotal = (float)$plan['monthly_price'];
+        $taxRate = 19.0;
+        $taxAmount = round($subtotal * $taxRate / 100, 2);
+        $total = round($subtotal + $taxAmount, 2);
+        $currency = $plan['currency'];
+        $issuedAt = date('Y-m-01', strtotime($when));
+        $paidAt = $status === 'paid' ? date('Y-m-05', strtotime($when)) : null;
+
+        $insert = $conn->prepare(
+            'INSERT INTO coiffure_invoices
+                (invoice_number, salon_id, plan_id, period_year, period_month,
+                 subtotal, tax_rate, tax_amount, total, currency, status, issued_at, paid_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        if (!$insert) {
+            continue;
+        }
+        $insert->bind_param(
+            'siiiddddsssss',
+            $number, $salonId, $planId, $year, $month,
+            $subtotal, $taxRate, $taxAmount, $total, $currency, $status, $issuedAt, $paidAt
+        );
+        if (!$insert->execute()) {
+            $insert->close();
+            continue;
+        }
+        $invoiceId = $insert->insert_id;
+        $insert->close();
+        $invoices++;
+
+        $item = $conn->prepare(
+            'INSERT INTO coiffure_invoice_items
+                (invoice_id, description, quantity, unit_price, amount, sort_order)
+             VALUES (?, ?, 1, ?, ?, 0)'
+        );
+        if ($item) {
+            $description = sprintf('%s – %02d/%d', $plan['name'], $month, $year);
+            $item->bind_param('isdd', $invoiceId, $description, $subtotal, $subtotal);
+            $item->execute();
+            $item->close();
+        }
+    }
+
+    return "subscription on the '{$plan['name']}' plan and $invoices invoices";
+}
+
+/**
+ * A few unread notifications so the bell has a badge on first sign-in.
+ * Stored as translation keys, exactly as the live writers do.
+ */
+function insertNotifications(mysqli $conn, int $salonId, int $ownerId, int $delegateId): int
+{
+    if (!migTableExists($conn, 'coiffure_notifications')) {
+        return 0;
+    }
+
+    $stmt = $conn->prepare(
+        'INSERT INTO coiffure_notifications
+            (user_id, salon_id, type, title_key, params, link, read_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    if (!$stmt) {
+        throw new RuntimeException('notification insert prepare failed: ' . $conn->error);
+    }
+
+    $items = [
+        ['registration', 'admin.notify.registration',
+         ['name' => 'Emma Zimmermann'], '#/kunden', null, '-2 hour'],
+        ['campaign_sent', 'admin.notify.campaign_sent',
+         ['name' => 'Frühlingsaktion', 'count' => 28], '#/kampagnen?tab=log', null, '-1 day'],
+        ['registration', 'admin.notify.registration',
+         ['name' => 'Paul Werner'], '#/kunden', null, '-2 day'],
+        // One already read, so the list is not uniformly bold.
+        ['user_invited', 'admin.notify.user_invited',
+         ['name' => 'Timo Krüger'], '#/benutzer', '-3 day', '-3 day'],
+    ];
+
+    $written = 0;
+    foreach ($items as [$type, $key, $params, $link, $readOffset, $createdOffset]) {
+        $paramsJson = json_encode($params, JSON_UNESCAPED_UNICODE);
+        $readAt = $readOffset ? date('Y-m-d H:i:s', strtotime($readOffset)) : null;
+        $createdAt = date('Y-m-d H:i:s', strtotime($createdOffset));
+
+        $stmt->bind_param(
+            'iissssss',
+            $ownerId, $salonId, $type, $key, $paramsJson, $link, $readAt, $createdAt
+        );
+        if ($stmt->execute()) {
+            $written++;
+        }
+    }
+
+    // The delegate holds view_insights, so they get the registration only --
+    // the same rule notifySalonAdmins() applies at runtime.
+    $type = 'registration';
+    $key = 'admin.notify.registration';
+    $paramsJson = json_encode(['name' => 'Emma Zimmermann'], JSON_UNESCAPED_UNICODE);
+    $link = '#/kunden';
+    $readAt = null;
+    $createdAt = date('Y-m-d H:i:s', strtotime('-2 hour'));
+    $stmt->bind_param('iissssss', $delegateId, $salonId, $type, $key, $paramsJson, $link, $readAt, $createdAt);
+    if ($stmt->execute()) {
+        $written++;
+    }
+
+    $stmt->close();
+    return $written;
+}
+
+/**
+ * The four automatic campaign types, with birthday and we-miss-you switched on.
+ *
+ * ensureAutoCampaigns() creates them on first visit to the Kampagnen screen,
+ * but a demo should already have something enabled -- otherwise "Jetzt
+ * ausführen" reports nothing due and looks broken.
+ */
+function insertAutoCampaigns(mysqli $conn, int $salonId): string
+{
+    if (!migTableExists($conn, 'coiffure_automatic_campaigns')) {
+        return 'automatic campaigns skipped (migration 020 not applied)';
+    }
+
+    require_once __DIR__ . '/campaign_engine.php';
+    ensureAutoCampaigns($conn, $salonId);
+
+    // Two of the four on, so the screen shows both states.
+    $stmt = $conn->prepare(
+        "UPDATE coiffure_automatic_campaigns SET enabled = 1
+         WHERE salon_id = ? AND type IN ('birthday', 'we_miss_you')"
+    );
+    if ($stmt) {
+        $stmt->bind_param('i', $salonId);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    return 'automatic campaigns (Geburtstag and Wir vermissen Dich enabled)';
+}
+
+/**
+ * One completed campaign with its recipients, so the Kampagnen screen and its
+ * log are not empty on a fresh demo.
+ *
+ * No mail is sent -- this writes the record of a send that happened three weeks
+ * ago, including opens and clicks, so the log shows realistic numbers.
+ */
+function insertPastCampaign(mysqli $conn, int $salonId, int $ownerId, array $customerIds): string
+{
+    if (!migTableExists($conn, 'coiffure_campaigns')) {
+        return 'campaign log skipped (migration 020 not applied)';
+    }
+
+    $sentAt = date('Y-m-d H:i:s', strtotime('-21 day'));
+
+    // Only customers who consented to marketing e-mail, exactly as a real send
+    // would resolve them.
+    $stmt = $conn->prepare(
+        'SELECT customer_id, email FROM coiffure_customers
+         WHERE salon_id = ? AND is_deleted = 0
+           AND (consent_email_marketing = 1 OR consent_marketing = 1)'
+    );
+    if (!$stmt) {
+        return 'campaign log skipped';
+    }
+    $stmt->bind_param('i', $salonId);
+    $stmt->execute();
+    $recipients = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    if (empty($recipients)) {
+        return 'campaign log skipped (no consenting customers)';
+    }
+
+    $name = 'Frühlingsaktion';
+    $subject = 'Frühlingsfrisur gefällig, {vorname}?';
+    $body = '<p>Hallo {vorname},</p><p>der Frühling ist da – und mit ihm unsere neue Farbaktion. '
+          . 'Mit dem Code <strong>{rabattcode}</strong> bekommst du diesen Monat 15 % auf jede Coloration.</p>'
+          . '<p>Wir freuen uns auf dich!<br>Dein Team von {salonname}</p>';
+    $code = 'FRUEHLING15';
+    $count = count($recipients);
+
+    $insert = $conn->prepare(
+        "INSERT INTO coiffure_campaigns
+            (salon_id, name, kind, status, recipient_type, recipient_count,
+             subject, body, discount_enabled, discount_mode, discount_code,
+             discount_type, discount_value, started_at, completed_at,
+             sent_count, open_count, click_count, created_by, created_at)
+         VALUES (?, ?, 'once', 'sent', 'all', ?, ?, ?, 1, 'generic', ?,
+                 'percentage', 15.00, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    if (!$insert) {
+        return 'campaign log skipped';
+    }
+
+    // Plausible engagement: ~45% opened, ~12% clicked.
+    $opens = (int)round($count * 0.45);
+    $clicks = (int)round($count * 0.12);
+
+    $insert->bind_param(
+        'isisssssiiiis',
+        $salonId, $name, $count, $subject, $body, $code,
+        $sentAt, $sentAt, $count, $opens, $clicks, $ownerId, $sentAt
+    );
+    if (!$insert->execute()) {
+        $insert->close();
+        return 'campaign log skipped: ' . $insert->error;
+    }
+    $campaignId = $insert->insert_id;
+    $insert->close();
+
+    $recipientStmt = $conn->prepare(
+        "INSERT INTO coiffure_campaign_recipients
+            (campaign_id, customer_id, salon_id, email, status, discount_code,
+             tracking_token, sent_at, opened_at, clicked_at)
+         VALUES (?, ?, ?, ?, 'sent', ?, ?, ?, ?, ?)"
+    );
+    if (!$recipientStmt) {
+        return "campaign 'Frühlingsaktion' in the log";
+    }
+
+    foreach (array_values($recipients) as $index => $recipient) {
+        $customerId = (int)$recipient['customer_id'];
+        $email = (string)$recipient['email'];
+        $token = bin2hex(random_bytes(16));
+        $openedAt = $index < $opens ? date('Y-m-d H:i:s', strtotime('-21 day +' . (2 + $index % 30) . ' hour')) : null;
+        $clickedAt = $index < $clicks ? date('Y-m-d H:i:s', strtotime('-21 day +' . (3 + $index % 30) . ' hour')) : null;
+
+        $recipientStmt->bind_param(
+            'iiissssss',
+            $campaignId, $customerId, $salonId, $email, $code, $token, $sentAt, $openedAt, $clickedAt
+        );
+        $recipientStmt->execute();
+    }
+    $recipientStmt->close();
+
+    return "campaign 'Frühlingsaktion' sent to $count recipients ($opens opens, $clicks clicks)";
 }
 
 /** Lowercase ASCII form of a German name, safe for an e-mail local part. */
