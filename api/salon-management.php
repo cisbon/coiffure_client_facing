@@ -5,6 +5,8 @@
  */
 
 require_once __DIR__ . '/config.php';
+// Onboarding invites the salon owner by e-mail rather than mailing a password.
+require_once __DIR__ . '/mailer.php';
 
 // Set CORS headers
 setCorsHeaders();
@@ -195,27 +197,25 @@ function handleCreateSalon($conn, $currentUser, $data) {
         sendErrorResponse($validation['message'], 400, ['missing_fields' => $validation['missing_fields']]);
     }
 
-    // Check for onboarding fields (owner and tablet account creation)
-    $createOwnerAccount = isset($data['owner_email']) && isset($data['owner_full_name']) && isset($data['initial_password']);
+    // Onboarding fields. The owner is invited rather than given an account with
+    // a password chosen here -- see inviteSalonOwner() below. The tablet is a
+    // shared kiosk login with no mailbox, so it still needs a password.
+    $inviteOwner = isset($data['owner_email']) && isset($data['owner_full_name']);
     $createTabletAccount = isset($data['tablet_username']) && isset($data['initial_password']);
 
-    if ($createOwnerAccount || $createTabletAccount) {
-        // Validate onboarding fields
-        if ($createOwnerAccount) {
-            if (!validateEmail($data['owner_email'])) {
-                sendErrorResponse('Invalid owner email address', 400);
-            }
-            if (strlen(trim($data['owner_full_name'])) < 2) {
-                sendErrorResponse('Owner full name must be at least 2 characters', 400);
-            }
+    if ($inviteOwner) {
+        if (!validateEmail($data['owner_email'])) {
+            sendErrorResponse('Invalid owner email address', 400);
         }
-
-        if ($createTabletAccount) {
-            if (!preg_match('/^[a-zA-Z0-9_-]{3,50}$/', $data['tablet_username'])) {
-                sendErrorResponse('Invalid tablet username. Must be 3-50 alphanumeric characters', 400);
-            }
+        if (strlen(trim($data['owner_full_name'])) < 2) {
+            sendErrorResponse('Owner full name must be at least 2 characters', 400);
         }
+    }
 
+    if ($createTabletAccount) {
+        if (!preg_match('/^[a-zA-Z0-9_-]{3,50}$/', $data['tablet_username'])) {
+            sendErrorResponse('Invalid tablet username. Must be 3-50 alphanumeric characters', 400);
+        }
         if (strlen($data['initial_password']) < 8) {
             sendErrorResponse('Initial password must be at least 8 characters', 400);
         }
@@ -264,8 +264,9 @@ function handleCreateSalon($conn, $currentUser, $data) {
             throw new Exception("Failed to prepare salon insert: " . $conn->error);
         }
 
+        // 11 placeholders: nine strings, is_active, default_language.
         $stmt->bind_param(
-            "sssssssssiss",
+            "sssssssssis",
             $salonName,
             $email,
             $phone,
@@ -289,10 +290,11 @@ function handleCreateSalon($conn, $currentUser, $data) {
         // Create user accounts if onboarding data is provided
         $createdAccounts = [];
 
-        if ($createOwnerAccount) {
+        $ownerInvitation = null;
+
+        if ($inviteOwner) {
             $ownerEmail = trim($data['owner_email']);
             $ownerFullName = trim($data['owner_full_name']);
-            $initialPassword = $data['initial_password'];
 
             // Check if email already exists
             $checkStmt = $conn->prepare("SELECT user_id FROM coiffure_users WHERE email = ?");
@@ -304,40 +306,9 @@ function handleCreateSalon($conn, $currentUser, $data) {
             }
             $checkStmt->close();
 
-            // Generate username from email
-            $ownerUsername = strtolower(explode('@', $ownerEmail)[0]) . '_' . substr(md5($ownerEmail), 0, 6);
-
-            // Create customer_admin account
-            $passwordHash = password_hash($initialPassword, PASSWORD_ARGON2ID);
-            $stmt = $conn->prepare(
-                "INSERT INTO coiffure_users
-                (username, email, password_hash, full_name, role, is_active, force_password_change, created_at)
-                VALUES (?, ?, ?, ?, 'customer_admin', 1, 1, NOW())"
+            $ownerInvitation = inviteSalonOwner(
+                $conn, $newSalonId, $ownerEmail, $ownerFullName, (int)$currentUser['user_id']
             );
-            $stmt->bind_param("ssss", $ownerUsername, $ownerEmail, $passwordHash, $ownerFullName);
-
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to create owner account: " . $stmt->error);
-            }
-
-            $ownerUserId = $stmt->insert_id;
-            $stmt->close();
-
-            // Link owner to salon
-            $stmt = $conn->prepare("INSERT INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)");
-            $stmt->bind_param("ii", $ownerUserId, $newSalonId);
-            $stmt->execute();
-            $stmt->close();
-
-            $createdAccounts['owner'] = [
-                'user_id' => $ownerUserId,
-                'username' => $ownerUsername,
-                'email' => $ownerEmail,
-                'role' => 'customer_admin'
-            ];
-
-            // Send welcome email to owner
-            sendOwnerWelcomeEmail($ownerEmail, $ownerFullName, $salonName, $ownerUsername, $initialPassword);
         }
 
         if ($createTabletAccount) {
@@ -403,6 +374,10 @@ function handleCreateSalon($conn, $currentUser, $data) {
             $response['message'] .= ' with ' . count($createdAccounts) . ' user account(s)';
         }
 
+        if ($ownerInvitation) {
+            $response['owner_invitation'] = $ownerInvitation;
+        }
+
         sendJsonResponse($response, 201);
 
     } catch (Exception $e) {
@@ -414,48 +389,70 @@ function handleCreateSalon($conn, $currentUser, $data) {
 }
 
 /**
- * Send welcome email to salon owner
+ * Invite the salon owner instead of creating an account for them.
+ *
+ * This used to create a customer_admin with a password chosen by whoever filled
+ * in the onboarding form, and mail that password in the clear through a bare
+ * @mail() call. Now it writes the same invitation row the dashboard's "Einladen"
+ * button writes, and the owner picks their own password through
+ * set-password.html -- no password is ever transmitted or stored by a third
+ * party, and the mail goes through the branded, salon-aware mailer.
+ *
+ * @return array|null Summary for the API response, or null when invitations are
+ *                    unavailable (migration 017 not applied).
  */
-function sendOwnerWelcomeEmail($email, $fullName, $salonName, $username, $initialPassword) {
-    $subject = "Welcome to Coiffure AI - Your Salon Account";
+function inviteSalonOwner($conn, $salonId, $email, $fullName, $invitedBy) {
+    $check = $conn->query("SHOW TABLES LIKE 'coiffure_user_invitations'");
+    if (!$check || $check->num_rows === 0) {
+        error_log('salon-management: cannot invite owner, migration 017 is not applied');
+        return null;
+    }
 
-    $message = "
-    <html>
-    <body style='font-family: Arial, sans-serif;'>
-        <h2>Welcome to Coiffure AI!</h2>
-        <p>Dear $fullName,</p>
-        <p>Your salon <strong>$salonName</strong> has been successfully onboarded to Coiffure AI.</p>
+    $token = bin2hex(random_bytes(32));
+    $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
+    $permissions = json_encode([]);
+    $role = 'customer_admin';
 
-        <h3>Your Login Credentials:</h3>
-        <ul>
-            <li><strong>Username:</strong> $username</li>
-            <li><strong>Temporary Password:</strong> $initialPassword</li>
-            <li><strong>Login URL:</strong> <a href='https://coiffureai.com/admin-dashboard.html'>https://coiffureai.com/admin-dashboard.html</a></li>
-        </ul>
+    $stmt = $conn->prepare(
+        "INSERT INTO coiffure_user_invitations
+            (token, email, full_name, role, salon_id, permissions, invited_by, status, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)"
+    );
+    if (!$stmt) {
+        throw new Exception('Failed to prepare the owner invitation: ' . $conn->error);
+    }
+    $stmt->bind_param(
+        'ssssisis',
+        $token, $email, $fullName, $role, $salonId, $permissions, $invitedBy, $expiresAt
+    );
+    if (!$stmt->execute()) {
+        $stmt->close();
+        throw new Exception('Failed to create the owner invitation');
+    }
+    $invitationId = $stmt->insert_id;
+    $stmt->close();
 
-        <p><strong>Important:</strong> You will be required to change your password on first login.</p>
+    // Sending must not roll back a salon that was otherwise created fine; the
+    // link comes back in the response so it can be passed on by hand.
+    $sent = false;
+    $result = $conn->query('SELECT * FROM coiffure_salons WHERE salon_id = ' . (int)$salonId);
+    $salon = $result ? $result->fetch_assoc() : null;
+    if ($salon) {
+        try {
+            $sent = sendInvitationEmail($conn, $salon, ['email' => $email, 'full_name' => $fullName], $token);
+        } catch (Throwable $e) {
+            error_log('salon-management: owner invitation mail failed: ' . $e->getMessage());
+        }
+    }
 
-        <h3>What's Next?</h3>
-        <ul>
-            <li>Log in to your admin dashboard</li>
-            <li>Set up your salon branding (logo, colors)</li>
-            <li>Configure your social media links</li>
-            <li>Start using the AI hairstyle consultation on your tablets</li>
-        </ul>
+    $base = rtrim(getenv('DASHBOARD_URL') ?: 'https://coiffureai.com', '/');
 
-        <p>If you have any questions, please contact our support team.</p>
-
-        <p>Best regards,<br>The Coiffure AI Team</p>
-    </body>
-    </html>
-    ";
-
-    $headers = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: Coiffure AI <noreply@coiffureai.com>\r\n";
-
-    // Send email (will fail gracefully if mail server not configured)
-    @mail($email, $subject, $message, $headers);
+    return [
+        'invitation_id' => $invitationId,
+        'email' => $email,
+        'email_sent' => $sent,
+        'accept_url' => $base . '/set-password.html?token=' . urlencode($token),
+    ];
 }
 
 /**

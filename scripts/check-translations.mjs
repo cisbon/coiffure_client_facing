@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Files scanned for translation keys. */
-const HTML_FILES = ['admin-dashboard.html', 'login.html'];
+const HTML_FILES = ['admin-dashboard.html', 'login.html', 'set-password.html'];
 const JS_DIRS = ['js/admin'];
 
 /**
@@ -59,6 +59,8 @@ const DYNAMIC_GROUPS = {
         'instagram', 'facebook', 'tiktok', 'google_reviews', 'yelp',
         'twitter', 'linkedin', 'youtube', 'pinterest', 'custom',
     ],
+    // Monday-first, matching coiffure_salon_hours.weekday.
+    'admin.weekdays': ['0', '1', '2', '3', '4', '5', '6'],
 };
 
 /* ============================================================

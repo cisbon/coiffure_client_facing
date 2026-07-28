@@ -1,15 +1,19 @@
 /**
  * Einstellungen (salon settings)
  * ------------------------------------------------------------
- * Sub-tabbed settings screen. Three sections are migrated from the old
- * admin-dashboard.js and keep their existing endpoints:
+ * Sub-tabbed settings screen covering the six sections of spec 3.3. They are
+ * split across three endpoints, by what each one needs rather than by topic:
  *
- *   Allgemein       salon-branding.php  (logo upload, five colours, guest WiFi)
- *   Treueprogramm   loyalty-config.php  (threshold, discount, staff PIN)
- *   Social & QR     social-links.php    (link CRUD + QR preview)
- *
- * The Tablet, Geburtstagskampagne and Öffnungszeiten sections join them once
- * api/salon-settings.php lands; the tab list below is where they slot in.
+ *   Allgemein       salon-settings.php?section=general   (name, contact, website)
+ *                   + salon-branding.php                 (logo upload, colours —
+ *                     multipart, which is why it stays its own endpoint)
+ *   Tablet          salon-settings.php?section=tablet
+ *   Mitgliedschaft  loyalty-config.php (loyalty programme)
+ *                   + salon-settings.php?section=membership (refer-a-friend)
+ *   Geburtstag      salon-settings.php?section=birthday
+ *   Social & QR     social-links.php (link CRUD + QR preview)
+ *                   + salon-settings.php?section=social  (WiFi)
+ *   Öffnungszeiten  salon-settings.php?section=hours
  */
 
 import { API_BASE_URL, apiGet, apiPost, apiDelete, apiRequest, getToken } from '../api.js';
@@ -21,9 +25,41 @@ import {
 
 const TABS = [
     { id: 'general', labelKey: 'admin.settings.tab_general' },
+    { id: 'tablet', labelKey: 'admin.settings.tab_tablet' },
     { id: 'loyalty', labelKey: 'admin.settings.tab_loyalty' },
+    { id: 'birthday', labelKey: 'admin.settings.tab_birthday' },
     { id: 'social', labelKey: 'admin.settings.tab_social' },
+    { id: 'hours', labelKey: 'admin.settings.tab_hours' },
 ];
+
+/**
+ * The whole settings payload, fetched once per section render. Sections that
+ * only touch salon-settings.php share it rather than each issuing their own
+ * request for the same row.
+ */
+async function loadSettings(ctx) {
+    return apiGet(`salon-settings.php?salon_id=${encodeURIComponent(ctx.salonId)}`, { salonScope: false });
+}
+
+/** POST one section back, mapping 422 field errors onto the form. */
+async function saveSection(section, payload, form, button, ctx, onDone) {
+    clearFormErrors(form);
+    const reset = buttonBusy(button, t('admin.common.saving'));
+    try {
+        await apiPost(
+            `salon-settings.php?section=${section}&salon_id=${encodeURIComponent(ctx.salonId)}`,
+            payload,
+            { salonScope: false }
+        );
+        reset();
+        toastSuccess(t('admin.settings.saved'));
+        if (onDone) onDone();
+    } catch (error) {
+        reset();
+        if (error.details?.fields) showFormErrors(form, error.details.fields);
+        else toastApiError(error);
+    }
+}
 
 export async function render(container, ctx) {
     if (ctx.isAllSalons) {
@@ -61,8 +97,11 @@ async function renderSection(id, host, ctx) {
     host.appendChild(skeletonRows(6));
 
     try {
-        if (id === 'loyalty') await renderLoyalty(host, ctx);
+        if (id === 'tablet') await renderTablet(host, ctx);
+        else if (id === 'loyalty') await renderLoyalty(host, ctx);
+        else if (id === 'birthday') await renderBirthday(host, ctx);
         else if (id === 'social') await renderSocial(host, ctx);
+        else if (id === 'hours') await renderHours(host, ctx);
         else await renderGeneral(host, ctx);
     } catch (error) {
         host.innerHTML = '';
@@ -91,7 +130,10 @@ const COLOR_FIELDS = [
 ];
 
 async function renderGeneral(host, ctx) {
-    const data = await apiGet(`salon-branding.php?salon_id=${encodeURIComponent(ctx.salonId)}`, { salonScope: false });
+    const [data, settings] = await Promise.all([
+        apiGet(`salon-branding.php?salon_id=${encodeURIComponent(ctx.salonId)}`, { salonScope: false }),
+        loadSettings(ctx),
+    ]);
     const branding = data.branding || {};
 
     /** A stored logo_path is relative to the API host, not to this page. */
@@ -174,6 +216,7 @@ async function renderGeneral(host, ctx) {
     `);
 
     host.innerHTML = '';
+    host.appendChild(masterDataCard(settings.general || {}, ctx));
     host.appendChild(form);
 
     // Keep each colour picker and its hex box in step.
@@ -261,12 +304,399 @@ async function renderGeneral(host, ctx) {
     });
 }
 
+/** Salon master data (salon-settings.php?section=general). */
+function masterDataCard(general, ctx) {
+    const form = el(`
+        <form id="general-form" class="card mb-6" novalidate>
+            <div class="card-header"><h2>${esc(t('admin.settings.master_data'))}</h2></div>
+            <div class="card-body">
+                <div class="form-grid form-grid-2">
+                    <div class="field">
+                        <label class="field-label" for="salon_name">${esc(t('admin.settings.salon_name'))}<span class="req">*</span></label>
+                        <input class="input" id="salon_name" name="salon_name" required value="${esc(general.salon_name || '')}">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="salon_email">${esc(t('admin.settings.salon_email'))}<span class="req">*</span></label>
+                        <input class="input" id="salon_email" name="email" type="email" required value="${esc(general.email || '')}">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="salon_phone">${esc(t('admin.settings.salon_phone'))}</label>
+                        <input class="input" id="salon_phone" name="phone" type="tel" value="${esc(general.phone || '')}">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="salon_website">${esc(t('admin.settings.salon_website'))}</label>
+                        <input class="input" id="salon_website" name="website" type="url"
+                               placeholder="https://..." value="${esc(general.website || '')}">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="salon_address">${esc(t('admin.settings.salon_address'))}</label>
+                        <textarea class="textarea" id="salon_address" name="address" rows="2">${esc(general.address || '')}</textarea>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="default_language">${esc(t('admin.profile.salon_language'))}</label>
+                        <select class="select" id="default_language" name="default_language">
+                            <option value="de" ${(general.default_language || 'de') === 'de' ? 'selected' : ''}>Deutsch</option>
+                            <option value="en" ${general.default_language === 'en' ? 'selected' : ''}>English</option>
+                        </select>
+                        <span class="field-hint">${esc(t('admin.profile.salon_language_hint'))}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+            </div>
+        </form>
+    `);
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const values = formValues(form);
+        saveSection('general', {
+            salon_name: values.salon_name,
+            email: values.email,
+            phone: values.phone,
+            address: values.address,
+            website: values.website,
+            default_language: values.default_language,
+        }, form, form.querySelector('button[type=submit]'), ctx, () => ctx.reload());
+    });
+
+    return form;
+}
+
+/* ============================================================
+   Tablet  (salon-settings.php?section=tablet)
+   ============================================================ */
+
+const TABLET_MODULES = [
+    ['register', 'admin.settings.module_register', 'admin.settings.module_register_desc'],
+    ['checkin', 'admin.settings.module_checkin', 'admin.settings.module_checkin_desc'],
+    ['browse', 'admin.settings.module_browse', 'admin.settings.module_browse_desc'],
+];
+
+async function renderTablet(host, ctx) {
+    const settings = await loadSettings(ctx);
+    const tablet = settings.tablet || {};
+    const modules = tablet.modules || { register: true, checkin: true, browse: true };
+
+    const form = el(`
+        <form id="tablet-form" novalidate>
+            <div class="stack">
+                <div class="card">
+                    <div class="card-header"><h2>${esc(t('admin.settings.tablet_welcome'))}</h2></div>
+                    <div class="card-body">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label class="field-label" for="headline">${esc(t('admin.settings.tablet_headline'))}</label>
+                                <input class="input" id="headline" name="headline" maxlength="120"
+                                       value="${esc(tablet.headline || '')}"
+                                       placeholder="${esc(t('admin.settings.tablet_headline_placeholder'))}">
+                                <span class="field-hint">${esc(t('admin.settings.tablet_headline_hint'))}</span>
+                            </div>
+                            <div class="form-grid form-grid-2">
+                                <div class="field">
+                                    <label class="field-label" for="bg_image">${esc(t('admin.settings.tablet_bg_image'))}</label>
+                                    <input class="input" id="bg_image" name="bg_image" type="url"
+                                           placeholder="https://..." value="${esc(tablet.bg_image || '')}">
+                                    <span class="field-hint">${esc(t('admin.settings.tablet_bg_image_hint'))}</span>
+                                </div>
+                                <div class="field">
+                                    <label class="field-label" for="bg_color_hex">${esc(t('admin.settings.tablet_bg_color'))}</label>
+                                    <div class="color-field">
+                                        <input type="color" id="bg_color" value="${esc(tablet.bg_color || '#FFFFFF')}"
+                                               aria-label="${esc(t('admin.settings.tablet_bg_color'))}">
+                                        <input class="input" type="text" id="bg_color_hex" name="bg_color"
+                                               value="${esc(tablet.bg_color || '')}" maxlength="7" placeholder="#FFFFFF">
+                                    </div>
+                                    <span class="field-hint">${esc(t('admin.settings.tablet_bg_color_hint'))}</span>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="field-label" for="idle_timeout_s">${esc(t('admin.settings.tablet_idle'))}</label>
+                                <input class="input" id="idle_timeout_s" name="idle_timeout_s" type="number"
+                                       min="5" max="600" step="5" style="max-width:160px"
+                                       value="${tablet.idle_timeout_s ?? ''}"
+                                       placeholder="${esc(t('admin.settings.tablet_idle_default'))}">
+                                <span class="field-hint">${esc(t('admin.settings.tablet_idle_hint'))}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2>${esc(t('admin.settings.tablet_modules'))}</h2></div>
+                    <div class="card-body">
+                        <p class="card-hint mb-4">${esc(t('admin.settings.tablet_modules_hint'))}</p>
+                        <div class="form-grid form-grid-2" id="module-boxes">
+                            ${TABLET_MODULES.map(([key, labelKey, descKey]) => `
+                                <label class="check">
+                                    <input type="checkbox" name="module_${key}" ${modules[key] ? 'checked' : ''}>
+                                    <span class="check-text">
+                                        <span class="check-title">${esc(t(labelKey))}</span>
+                                        <span class="check-desc">${esc(t(descKey))}</span>
+                                    </span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    `);
+
+    host.innerHTML = '';
+    host.appendChild(form);
+
+    const picker = form.querySelector('#bg_color');
+    const hex = form.querySelector('#bg_color_hex');
+    picker.addEventListener('input', () => { hex.value = picker.value.toUpperCase(); });
+    hex.addEventListener('input', () => {
+        if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) picker.value = hex.value;
+    });
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        clearFormErrors(form);
+
+        const modulesOut = {};
+        TABLET_MODULES.forEach(([key]) => { modulesOut[key] = form.elements[`module_${key}`].checked; });
+
+        // The server refuses this too; catching it here says why in place.
+        if (!Object.values(modulesOut).some(Boolean)) {
+            toastError(t('admin.settings.modules_min_error'));
+            return;
+        }
+
+        const values = formValues(form);
+        saveSection('tablet', {
+            headline: values.headline,
+            bg_image: values.bg_image,
+            bg_color: values.bg_color,
+            idle_timeout_s: values.idle_timeout_s || null,
+            modules: modulesOut,
+        }, form, form.querySelector('button[type=submit]'), ctx);
+    });
+}
+
+/* ============================================================
+   Geburtstagskampagne  (salon-settings.php?section=birthday)
+   ============================================================ */
+
+async function renderBirthday(host, ctx) {
+    const settings = await loadSettings(ctx);
+    const birthday = settings.birthday || {};
+
+    const form = el(`
+        <form id="birthday-form" novalidate>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>${esc(t('admin.settings.birthday_title'))}</h2>
+                        <p class="card-hint">${esc(t('admin.settings.birthday_hint'))}</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <label class="switch mb-6">
+                        <input type="checkbox" name="enabled" ${birthday.enabled ? 'checked' : ''}>
+                        <span class="switch-track"></span>
+                        <span class="switch-label">${esc(t('admin.settings.birthday_enabled'))}</span>
+                    </label>
+
+                    <div class="form-grid" id="birthday-fields">
+                        <div class="form-grid form-grid-2">
+                            <div class="field">
+                                <label class="field-label" for="days_before">${esc(t('admin.settings.birthday_days'))}</label>
+                                <input class="input" id="days_before" name="days_before" type="number"
+                                       min="0" max="60" step="1" value="${Number(birthday.days_before ?? 7)}">
+                                <span class="field-hint">${esc(t('admin.settings.birthday_days_hint'))}</span>
+                            </div>
+                            <div class="field">
+                                <label class="field-label" for="discount_code">${esc(t('admin.settings.birthday_code'))}</label>
+                                <input class="input" id="discount_code" name="discount_code" maxlength="40"
+                                       value="${esc(birthday.discount_code || '')}"
+                                       placeholder="${esc(t('admin.settings.birthday_code_placeholder'))}">
+                                <span class="field-hint">${esc(t('admin.settings.birthday_code_hint'))}</span>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="subject">${esc(t('admin.settings.birthday_subject'))}</label>
+                            <input class="input" id="subject" name="subject" maxlength="200"
+                                   value="${esc(birthday.subject || '')}"
+                                   placeholder="${esc(t('admin.settings.birthday_subject_placeholder'))}">
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="body">${esc(t('admin.settings.birthday_body'))}</label>
+                            <textarea class="textarea" id="body" name="body" rows="8">${esc(birthday.body || '')}</textarea>
+                            <span class="field-hint">${esc(t('admin.settings.birthday_body_hint'))}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+                </div>
+            </div>
+        </form>
+    `);
+
+    host.innerHTML = '';
+    host.appendChild(form);
+
+    // Tokens the mailer substitutes at send time, insertable at the caret.
+    const tokenRow = el(`<div class="row mt-2" style="gap:6px;flex-wrap:wrap"></div>`);
+    tokenRow.appendChild(el(`<span class="text-xs text-muted">${esc(t('admin.campaigns.tokens'))}</span>`));
+    ['vorname', 'salonname', 'rabattcode'].forEach((token) => {
+        const chip = el(`<button type="button" class="chip btn-sm">{${esc(token)}}</button>`);
+        chip.addEventListener('click', () => {
+            const area = form.elements.body;
+            const at = area.selectionStart ?? area.value.length;
+            area.value = `${area.value.slice(0, at)}{${token}}${area.value.slice(at)}`;
+            area.focus();
+        });
+        tokenRow.appendChild(chip);
+    });
+    form.querySelector('#body').parentElement.appendChild(tokenRow);
+
+    const sync = () => {
+        const on = form.elements.enabled.checked;
+        const fields = form.querySelector('#birthday-fields');
+        fields.style.opacity = on ? '1' : '0.45';
+        fields.querySelectorAll('input, textarea').forEach((input) => { input.disabled = !on; });
+    };
+    form.elements.enabled.addEventListener('change', sync);
+    sync();
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const values = formValues(form);
+        saveSection('birthday', {
+            enabled: form.elements.enabled.checked,
+            days_before: Number(values.days_before) || 0,
+            subject: values.subject,
+            body: values.body,
+            discount_code: values.discount_code,
+        }, form, form.querySelector('button[type=submit]'), ctx);
+    });
+}
+
+/* ============================================================
+   Öffnungszeiten  (salon-settings.php?section=hours)
+   ============================================================ */
+
+async function renderHours(host, ctx) {
+    const settings = await loadSettings(ctx);
+    // The server always returns all seven days, Monday first.
+    const week = settings.hours || [];
+
+    const form = el(`
+        <form id="hours-form" novalidate>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>${esc(t('admin.settings.hours_title'))}</h2>
+                        <p class="card-hint">${esc(t('admin.settings.hours_hint'))}</p>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" id="copy-first">${esc(t('admin.settings.hours_copy'))}</button>
+                </div>
+                <div class="card-body">
+                    <div class="stack" style="gap:var(--sp-3)">
+                        ${week.map((day) => `
+                            <div class="row hours-row" data-weekday="${day.weekday}"
+                                 style="gap:var(--sp-3);flex-wrap:wrap;align-items:center">
+                                <strong class="text-sm" style="min-width:120px">${esc(t(`admin.weekdays.${day.weekday}`))}</strong>
+                                <label class="switch" style="min-width:150px">
+                                    <input type="checkbox" data-open ${day.is_closed ? '' : 'checked'}>
+                                    <span class="switch-track"></span>
+                                    <span class="switch-label">${esc(t('admin.settings.hours_open'))}</span>
+                                </label>
+                                <input class="input" type="time" data-from style="max-width:130px"
+                                       value="${esc(day.open_time || '09:00')}"
+                                       aria-label="${esc(t('admin.settings.hours_from'))}">
+                                <span class="text-muted">–</span>
+                                <input class="input" type="time" data-to style="max-width:130px"
+                                       value="${esc(day.close_time || '18:00')}"
+                                       aria-label="${esc(t('admin.settings.hours_to'))}">
+                                <span class="field-error hidden" data-row-error></span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+                </div>
+            </div>
+        </form>
+    `);
+
+    host.innerHTML = '';
+    host.appendChild(form);
+
+    const rows = [...form.querySelectorAll('.hours-row')];
+
+    const syncRow = (row) => {
+        const open = row.querySelector('[data-open]').checked;
+        row.querySelectorAll('[data-from], [data-to]').forEach((input) => { input.disabled = !open; });
+    };
+    rows.forEach((row) => {
+        row.querySelector('[data-open]').addEventListener('change', () => syncRow(row));
+        syncRow(row);
+    });
+
+    // Most salons keep the same hours all week; copying the first open day
+    // beats typing the same two times seven times over.
+    form.querySelector('#copy-first').addEventListener('click', () => {
+        const source = rows.find((row) => row.querySelector('[data-open]').checked);
+        if (!source) return;
+        const from = source.querySelector('[data-from]').value;
+        const to = source.querySelector('[data-to]').value;
+        rows.forEach((row) => {
+            if (row === source || !row.querySelector('[data-open]').checked) return;
+            row.querySelector('[data-from]').value = from;
+            row.querySelector('[data-to]').value = to;
+        });
+    });
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        let valid = true;
+        const hours = rows.map((row) => {
+            const weekday = Number(row.dataset.weekday);
+            const isClosed = !row.querySelector('[data-open]').checked;
+            const openTime = row.querySelector('[data-from]').value;
+            const closeTime = row.querySelector('[data-to]').value;
+            const error = row.querySelector('[data-row-error]');
+
+            error.classList.add('hidden');
+            if (!isClosed && (!openTime || !closeTime || closeTime <= openTime)) {
+                error.textContent = `⚠ ${t('admin.settings.hours_error')}`;
+                error.classList.remove('hidden');
+                valid = false;
+            }
+
+            return { weekday, is_closed: isClosed, open_time: openTime, close_time: closeTime };
+        });
+
+        if (!valid) {
+            toastError(t('admin.settings.hours_error'));
+            return;
+        }
+
+        saveSection('hours', { hours }, form, form.querySelector('button[type=submit]'), ctx);
+    });
+}
+
 /* ============================================================
    Treueprogramm  (loyalty-config.php)
    ============================================================ */
 
 async function renderLoyalty(host, ctx) {
-    const data = await apiGet(`loyalty-config.php?salon_id=${encodeURIComponent(ctx.salonId)}`, { salonScope: false });
+    const [data, settings] = await Promise.all([
+        apiGet(`loyalty-config.php?salon_id=${encodeURIComponent(ctx.salonId)}`, { salonScope: false }),
+        loadSettings(ctx),
+    ]);
     const config = data.loyalty || data.config || data;
 
     const active = Number(config.loyalty_active ?? 1) === 1;
@@ -345,6 +775,7 @@ async function renderLoyalty(host, ctx) {
 
     host.innerHTML = '';
     host.appendChild(form);
+    host.appendChild(referralCard(settings.membership || {}, ctx));
 
     const updatePreview = () => {
         const values = formValues(form);
@@ -430,6 +861,52 @@ async function renderLoyalty(host, ctx) {
             toastApiError(error);
         }
     });
+}
+
+/**
+ * Freunde werben (salon-settings.php?section=membership). Kept beside the
+ * loyalty programme because both are the salon's membership perks, even though
+ * they are stored by two different endpoints.
+ */
+function referralCard(membership, ctx) {
+    const form = el(`
+        <form id="referral-form" class="card mt-6" novalidate>
+            <div class="card-header">
+                <div>
+                    <h2>${esc(t('admin.settings.referral_title'))}</h2>
+                    <p class="card-hint">${esc(t('admin.settings.referral_hint'))}</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <label class="switch mb-6">
+                    <input type="checkbox" name="referral_enabled" ${membership.referral_enabled ? 'checked' : ''}>
+                    <span class="switch-track"></span>
+                    <span class="switch-label">${esc(t('admin.settings.referral_enabled'))}</span>
+                </label>
+                <div class="field" style="max-width:220px">
+                    <label class="field-label" for="referral_discount_value">${esc(t('admin.settings.referral_value'))}</label>
+                    <input class="input" id="referral_discount_value" name="referral_discount_value"
+                           type="number" min="0" step="0.5"
+                           value="${Number(membership.referral_discount_value ?? 10)}">
+                    <span class="field-hint">${esc(t('admin.settings.referral_value_hint'))}</span>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+            </div>
+        </form>
+    `);
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const values = formValues(form);
+        saveSection('membership', {
+            referral_enabled: form.elements.referral_enabled.checked,
+            referral_discount_value: Number(values.referral_discount_value) || 0,
+        }, form, form.querySelector('button[type=submit]'), ctx);
+    });
+
+    return form;
 }
 
 /* ============================================================

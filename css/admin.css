@@ -431,7 +431,12 @@ button { font: inherit; color: inherit; }
     display: flex; align-items: center; gap: var(--sp-3);
     padding: var(--sp-5) var(--sp-6);
     border-bottom: 1px solid var(--border);
+    /* A header action (e.g. "Auf alle Tage übertragen") must drop under the
+       title on a phone rather than push the card past the viewport. */
+    flex-wrap: wrap;
 }
+/* Covers both a bare <h2> and a <div> wrapping a title plus a .card-hint. */
+.card-header > :first-child { flex: 1 1 auto; min-width: 0; }
 .card-header h2, .card-header h3 { flex: 1; min-width: 0; }
 .card-body { padding: var(--sp-6); }
 .card-footer {
@@ -554,8 +559,10 @@ button { font: inherit; color: inherit; }
 .check:has(input:disabled) { opacity: 0.55; cursor: not-allowed; background: var(--surface-2); }
 .check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--brand-600); flex-shrink: 0; }
 .check-text { min-width: 0; }
-.check-title { font-size: 0.88rem; font-weight: 600; }
-.check-desc { font-size: 0.78rem; color: var(--text-muted); }
+/* Block, so the description starts on its own line instead of running on
+   from the title as one sentence. */
+.check-title { display: block; font-size: 0.88rem; font-weight: 600; }
+.check-desc { display: block; margin-top: 2px; font-size: 0.78rem; color: var(--text-muted); }
 
 /* Toggle switch */
 .switch { display: inline-flex; align-items: center; gap: var(--sp-3); cursor: pointer; min-height: var(--tap); }
