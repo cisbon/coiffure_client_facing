@@ -5,17 +5,21 @@
  * renderSalonsTable, openSalonModal, saveSalon, deleteSalon), rebuilt on the
  * shared table/modal primitives and fully translated.
  *
- * One behaviour change worth calling out: the old "Salon Owner Account" and
- * "Tablet Kiosk Account" sections existed in the markup but saveSalon() never
- * read them, so no accounts were ever created. api/salon-management.php has
- * always accepted owner_email / owner_full_name / tablet_username /
- * initial_password, so those fields are now actually submitted.
+ * Two behaviour changes worth calling out:
+ *
+ *   1. The old "Salon Owner Account" and "Tablet Kiosk Account" sections
+ *      existed in the markup but saveSalon() never read them, so no accounts
+ *      were ever created. Those fields are now actually submitted.
+ *   2. The owner is invited by e-mail and chooses their own password, rather
+ *      than being given one typed here (which the API then mailed in the
+ *      clear). The typed password now applies to the tablet kiosk only, which
+ *      has no mailbox to invite.
  */
 
 import { apiGet, apiPost, apiPut, apiDelete } from '../api.js';
 import {
     t, esc, el, createTable, modal, confirmDialog, pageHeader, statusBadge,
-    toastSuccess, toastApiError, formatDate, formatNumber, showFormErrors,
+    toastSuccess, toastError, toastApiError, formatDate, formatNumber, showFormErrors,
     clearFormErrors, formValues, buttonBusy, skeletonRows,
 } from '../ui.js';
 
@@ -283,10 +287,10 @@ function openSalonModal(salonId, ctx) {
                         <span class="field-hint">${esc(t('admin.salons.tablet_username_hint'))}</span>
                     </div>
                     <div class="field">
-                        <label class="field-label" for="initial_password">${esc(t('admin.salons.initial_password'))}<span class="req">*</span></label>
+                        <label class="field-label" for="initial_password">${esc(t('admin.salons.tablet_password'))}<span class="req">*</span></label>
                         <input class="input" id="initial_password" name="initial_password" type="text"
                                minlength="8" required autocomplete="new-password">
-                        <span class="field-hint">${esc(t('admin.salons.initial_password_hint'))}</span>
+                        <span class="field-hint">${esc(t('admin.salons.tablet_password_hint'))}</span>
                     </div>
                 </div>` : ''}
             </div>
@@ -375,8 +379,17 @@ async function submitSalon(form, salon, close, button, ctx) {
             await apiPut(`salon-management.php?salon_id=${salon.salon_id}`, values, { salonScope: false });
             toastSuccess(t('admin.salons.updated'));
         } else {
-            await apiPost('salon-management.php', values, { salonScope: false });
-            toastSuccess(t('admin.salons.created'));
+            const result = await apiPost('salon-management.php', values, { salonScope: false });
+            // The owner is invited rather than handed a password, so say what
+            // happened to that invitation instead of a bare "created".
+            const invitation = result.owner_invitation;
+            if (!invitation) {
+                toastSuccess(t('admin.salons.created'));
+            } else if (invitation.email_sent) {
+                toastSuccess(t('admin.salons.invited', { email: invitation.email }));
+            } else {
+                toastError(t('admin.salons.invite_pending', { email: invitation.email }));
+            }
         }
         close();
         ctx.reload();

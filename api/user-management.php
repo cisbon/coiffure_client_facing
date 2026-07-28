@@ -302,6 +302,11 @@ function handleCreateUser($conn, $currentUser, $data) {
     $newUserId = $stmt->insert_id;
     $stmt->close();
 
+    // coiffure_user_salons is what auth-login.php and getAccessibleSalonIds()
+    // read, so a user created here has to be linked there too -- otherwise they
+    // sign in with no salon assigned at all.
+    linkUserToSalon($conn, $newUserId, $salonId, null);
+
     // Log audit
     logAudit($conn, 'user', $newUserId, 'create', "User created: $username (role: $role)", $currentUser['username']);
 
@@ -415,6 +420,16 @@ function handleUpdateUser($conn, $currentUser, $userId, $data) {
 
     $updateStmt->close();
 
+    // Keep the junction table in step when the assignment moved.
+    if (array_key_exists('salon_id', $data)) {
+        linkUserToSalon(
+            $conn,
+            $userId,
+            $data['salon_id'] !== null && $data['salon_id'] !== '' ? (int)$data['salon_id'] : null,
+            $existingUser['salon_id'] !== null ? (int)$existingUser['salon_id'] : null
+        );
+    }
+
     // Log audit
     logAudit($conn, 'user', $userId, 'update', "User updated: " . $existingUser['username'], $currentUser['username']);
 
@@ -422,6 +437,39 @@ function handleUpdateUser($conn, $currentUser, $userId, $data) {
         'success' => true,
         'message' => 'User updated successfully'
     ]);
+}
+
+/**
+ * Mirror a user's primary salon into coiffure_user_salons.
+ *
+ * Only the pair that actually moved is touched: a user may be assigned to
+ * several salons through the multi-salon feature, and those extra rows must
+ * survive an edit made through this form, which only ever sets one salon.
+ */
+function linkUserToSalon($conn, $userId, $salonId, $previousSalonId) {
+    if ($previousSalonId && $previousSalonId !== $salonId) {
+        $unlink = $conn->prepare(
+            "DELETE FROM coiffure_user_salons WHERE user_id = ? AND salon_id = ?"
+        );
+        if ($unlink) {
+            $unlink->bind_param("ii", $userId, $previousSalonId);
+            $unlink->execute();
+            $unlink->close();
+        }
+    }
+
+    if (!$salonId) {
+        return;
+    }
+
+    $link = $conn->prepare(
+        "INSERT IGNORE INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)"
+    );
+    if ($link) {
+        $link->bind_param("ii", $userId, $salonId);
+        $link->execute();
+        $link->close();
+    }
 }
 
 /**
