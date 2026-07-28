@@ -61,6 +61,35 @@ const DYNAMIC_GROUPS = {
     ],
     // Monday-first, matching coiffure_salon_hours.weekday.
     'admin.weekdays': ['0', '1', '2', '3', '4', '5', '6'],
+    // Audit values are free-form strings written by many endpoints. The view
+    // falls back to the raw value, so this list is what SHOULD be translated,
+    // and the check catches a label that was added on one side only.
+    'admin.audit.entities': [
+        'customer', 'user', 'salon', 'visit', 'login', 'campaign',
+        'billing', 'settings', 'employee',
+    ],
+    'admin.audit.actions': [
+        'create', 'update', 'delete', 'login', 'logout', 'export', 'data_export',
+        'campaign_sent', 'user_invited', 'permission_granted', 'impersonate',
+        'invoice_created', 'subscription_changed', 'whitelabel_changed',
+        'whitelabel_test', 'update_language', 'settings_changed',
+    ],
+    'admin.audit.consents': [
+        'consent_data_processing', 'consent_email_marketing', 'consent_marketing',
+        'consent_sms_whatsapp', 'consent_postal', 'consent_cancellation_policy',
+    ],
+    'admin.audit.sources': ['tablet', 'dashboard', 'import'],
+    // NOTIFICATION_TYPES in api/notifications.php.
+    'admin.notifications.events': [
+        'registration', 'campaign_sent', 'birthday', 'user_invited',
+        'subscription', 'system',
+    ],
+    // Rendered from coiffure_notifications.title_key, so never a literal here.
+    'admin.notify': [
+        'registration', 'campaign_sent', 'user_invited',
+        'subscription_changed', 'birthday',
+    ],
+    'admin.whitelabel': ['primary_color', 'secondary_color', 'secure_tls', 'secure_ssl', 'secure_none'],
 };
 
 /* ============================================================

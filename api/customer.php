@@ -16,6 +16,8 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/loyalty_helpers.php';
+require_once __DIR__ . '/notify.php';
+require_once __DIR__ . '/consent_log.php';
 
 setCorsHeaders();
 
@@ -242,6 +244,16 @@ if ($existingRow) {
     $update->close();
     $action = 'updated';
     logAudit($conn, 'customer', $customerId, 'update', 'Registration updated', 'tablet_form');
+
+    // Prove what changed and when (GDPR). Only differences are recorded, so
+    // re-saving without touching a checkbox adds nothing.
+    recordConsentChanges($conn, $customerId, (int)$salonId, $existingRow, [
+        'consent_data_processing' => $consentDataProcessing,
+        'consent_email_marketing' => $consentEmailMarketing,
+        'consent_sms_whatsapp'    => $consentSmsWhatsapp,
+        'consent_postal'          => $consentPostal,
+        'consent_marketing'       => $consentMarketing,
+    ], 'tablet', 'tablet_form', $policyVersion);
 } else {
     $insert = $conn->prepare(
         "INSERT INTO coiffure_customers
@@ -279,6 +291,26 @@ if ($existingRow) {
     $insert->close();
     $action = 'created';
     logAudit($conn, 'customer', $customerId, 'create', 'New customer registered', 'tablet_form');
+
+    // A first registration has no previous value, recorded as NULL → granted.
+    recordConsentChanges($conn, $customerId, (int)$salonId, [], [
+        'consent_data_processing' => $consentDataProcessing,
+        'consent_email_marketing' => $consentEmailMarketing,
+        'consent_sms_whatsapp'    => $consentSmsWhatsapp,
+        'consent_postal'          => $consentPostal,
+        'consent_marketing'       => $consentMarketing,
+    ], 'tablet', 'tablet_form', $policyVersion);
+
+    // Tell the salon's dashboard users someone signed up at the tablet.
+    notifySalonAdmins(
+        $conn,
+        (int)$salonId,
+        'registration',
+        'admin.notify.registration',
+        ['name' => trim($firstName . ' ' . $lastName)],
+        '#/kunden?id=' . $customerId,
+        'view_insights'
+    );
 }
 
 // ------------------------------------------------------------------

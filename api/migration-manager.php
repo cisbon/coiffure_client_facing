@@ -169,6 +169,11 @@ function migrationCatalogue(): array
          'description' => 'Staff notes and tags on a customer',
          'file' => '025_customer_notes.sql',
          'probe' => ['column', 'coiffure_customers', 'notes']],
+
+        ['number' => '026', 'name' => 'Support Impersonation',
+         'description' => 'Record which admin started a support session',
+         'file' => '026_impersonation.sql',
+         'probe' => ['column', 'coiffure_sessions', 'impersonated_by']],
     ];
 }
 
