@@ -493,6 +493,19 @@ function createUserSession($conn, $userId, $expiryHours = 24) {
 }
 
 /**
+ * Whether migration 026 has added coiffure_sessions.impersonated_by.
+ * Cached: this is checked on every authenticated request.
+ */
+function sessionsHaveImpersonation($conn) {
+    static $exists = null;
+    if ($exists === null) {
+        $result = $conn->query("SHOW COLUMNS FROM coiffure_sessions LIKE 'impersonated_by'");
+        $exists = $result && $result->num_rows > 0;
+    }
+    return $exists;
+}
+
+/**
  * Validate session token and return user data
  * @param mysqli $conn Database connection
  * @param string $token Session token
@@ -504,9 +517,17 @@ function validateSession($conn, $token) {
             return null;
         }
 
+        // Support sessions carry the administrator who started them
+        // (migration 026). Selected only when the column exists, so an
+        // unmigrated database still authenticates rather than failing every
+        // request with an unknown-column error.
+        $impersonationColumn = sessionsHaveImpersonation($conn)
+            ? 's.impersonated_by,'
+            : 'NULL AS impersonated_by,';
+
         // Get session and user data
         $stmt = $conn->prepare(
-            "SELECT s.session_id, s.user_id, s.expires_at, s.ip_address,
+            "SELECT s.session_id, s.user_id, s.expires_at, s.ip_address, $impersonationColumn
                     u.username, u.email, u.full_name, u.role, u.salon_id, u.is_active
             FROM coiffure_sessions s
             JOIN coiffure_users u ON s.user_id = u.user_id
@@ -544,15 +565,21 @@ function validateSession($conn, $token) {
         // Sliding renewal: keep actively-used (kiosk) sessions alive so a tablet
         // that is used at least once every few weeks never gets logged out. Only
         // writes when the expiry has drifted, to avoid a write on every request.
-        $renew = $conn->prepare(
-            "UPDATE coiffure_sessions
-             SET expires_at = DATE_ADD(NOW(), INTERVAL 30 DAY)
-             WHERE session_id = ? AND expires_at < DATE_ADD(NOW(), INTERVAL 29 DAY)"
-        );
-        if ($renew) {
-            $renew->bind_param("i", $session['session_id']);
-            @$renew->execute();
-            $renew->close();
+        //
+        // Support sessions are excluded: impersonate.php issues them with a
+        // deliberately short expiry, and renewing them to 30 days would turn a
+        // two-hour support window into a month of access.
+        if (empty($session['impersonated_by'])) {
+            $renew = $conn->prepare(
+                "UPDATE coiffure_sessions
+                 SET expires_at = DATE_ADD(NOW(), INTERVAL 30 DAY)
+                 WHERE session_id = ? AND expires_at < DATE_ADD(NOW(), INTERVAL 29 DAY)"
+            );
+            if ($renew) {
+                $renew->bind_param("i", $session['session_id']);
+                @$renew->execute();
+                $renew->close();
+            }
         }
 
         // Optional: Check if IP matches (can be disabled for mobile users)

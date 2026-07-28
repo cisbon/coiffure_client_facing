@@ -105,9 +105,21 @@ if ($user['role'] === 'customer_admin_delegate') {
 // ------------------------------------------------------------------
 $impersonation = null;
 if (!empty($user['impersonated_by'])) {
+    // Show who is behind the session, not a bare user id.
+    $adminName = null;
+    $adminStmt = $conn->prepare('SELECT username, full_name FROM coiffure_users WHERE user_id = ?');
+    if ($adminStmt) {
+        $adminId = (int)$user['impersonated_by'];
+        $adminStmt->bind_param('i', $adminId);
+        $adminStmt->execute();
+        $adminRow = $adminStmt->get_result()->fetch_assoc();
+        $adminStmt->close();
+        $adminName = $adminRow ? ($adminRow['full_name'] ?: $adminRow['username']) : null;
+    }
+
     $impersonation = [
-        'active'            => true,
-        'impersonated_by'   => $user['impersonated_by'],
+        'active'          => true,
+        'impersonated_by' => $adminName ?? ('#' . (int)$user['impersonated_by']),
     ];
 }
 

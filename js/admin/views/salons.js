@@ -16,7 +16,7 @@
  *      has no mailbox to invite.
  */
 
-import { apiGet, apiPost, apiPut, apiDelete } from '../api.js';
+import { apiGet, apiPost, apiPut, apiDelete, apiDownload } from '../api.js';
 import {
     t, esc, el, createTable, modal, confirmDialog, pageHeader, statusBadge,
     toastSuccess, toastError, toastApiError, formatDate, formatNumber, showFormErrors,
@@ -152,6 +152,8 @@ function buildTable(ctx) {
                 cardHidden: true,
                 render: (s) => `
                     <button type="button" class="btn btn-ghost btn-sm" data-edit="${s.salon_id}">${esc(t('admin.common.edit'))}</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-support="${s.salon_id}">${esc(t('admin.impersonation.start'))}</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-export="${s.salon_id}">${esc(t('admin.salons.export'))}</button>
                     <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger-600)" data-delete="${s.salon_id}">${esc(t('admin.common.delete'))}</button>
                 `,
             },
@@ -167,6 +169,20 @@ function buildTable(ctx) {
             return;
         }
 
+        const supportId = event.target.closest('[data-support]')?.dataset.support;
+        if (supportId) {
+            event.stopPropagation();
+            await startSupportSession(Number(supportId));
+            return;
+        }
+
+        const exportId = event.target.closest('[data-export]')?.dataset.export;
+        if (exportId) {
+            event.stopPropagation();
+            await exportSalon(Number(exportId));
+            return;
+        }
+
         const deleteId = event.target.closest('[data-delete]')?.dataset.delete;
         if (deleteId) {
             event.stopPropagation();
@@ -175,6 +191,60 @@ function buildTable(ctx) {
     });
 
     return table.element;
+}
+
+/**
+ * Take over a salon's account for support.
+ *
+ * The current session token is replaced, so the administrator is signed in as
+ * the salon until they end the session -- which is why it is confirmed first
+ * and why the dashboard shows a banner for the whole time.
+ */
+async function startSupportSession(salonId) {
+    const salon = salons.find((s) => Number(s.salon_id) === Number(salonId));
+
+    const confirmed = await confirmDialog({
+        title: t('admin.impersonation.start'),
+        message: t('admin.impersonation.start_confirm', { salon: salon?.salon_name || '' }),
+        confirmLabel: t('admin.impersonation.start'),
+        variant: 'primary',
+    });
+    if (!confirmed) return;
+
+    try {
+        const result = await apiPost('impersonate.php', { salon_id: salonId }, { salonScope: false });
+        localStorage.setItem('session_token', result.session_token);
+        localStorage.setItem('user_data', JSON.stringify(result.user));
+        // Full reload rather than a re-render: everything the shell holds --
+        // permissions, salon list, nav -- belongs to the other identity now.
+        window.location.replace('admin-dashboard.html');
+    } catch (error) {
+        toastApiError(error);
+    }
+}
+
+/** Download everything held about a salon, for a GDPR request or a handover. */
+async function exportSalon(salonId) {
+    const salon = salons.find((s) => Number(s.salon_id) === Number(salonId));
+
+    const confirmed = await confirmDialog({
+        title: t('admin.salons.export_title'),
+        message: t('admin.salons.export_message', { salon: salon?.salon_name || '' }),
+        confirmLabel: t('admin.salons.export'),
+        variant: 'primary',
+    });
+    if (!confirmed) return;
+
+    try {
+        await apiDownload(
+            `salon-export.php?salon_id=${salonId}&format=json`,
+            `salon-${salonId}-export.json`,
+            { salonScope: false }
+        );
+        toastSuccess(t('admin.salons.exported'));
+    } catch (error) {
+        toastApiError(error);
+    }
 }
 
 /**

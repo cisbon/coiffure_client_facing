@@ -10,7 +10,7 @@
  * the *salon's* default language, which is what the tablet boots into.
  */
 
-import { apiPut } from '../api.js';
+import { apiGet, apiPost, apiPut } from '../api.js';
 import {
     t, esc, el, pageHeader, toastSuccess, toastApiError, showFormErrors,
     clearFormErrors, formValues, buttonBusy,
@@ -27,6 +27,7 @@ export async function render(container, ctx) {
 
     stack.appendChild(profileCard(ctx));
     stack.appendChild(passwordCard(ctx));
+    stack.appendChild(await notificationCard());
 
     // Changing what the tablet boots into is a salon setting, so it is only
     // offered to someone who may change settings for the selected salon.
@@ -109,6 +110,94 @@ function profileCard(ctx) {
     });
 
     return form;
+}
+
+/**
+ * Notification preferences (spec: Notifications Centre).
+ *
+ * "mode" decides whether a notification is ALSO e-mailed; the bell in the top
+ * bar always shows everything either way, so switching e-mail off never means
+ * missing something -- only that it does not arrive twice.
+ */
+async function notificationCard() {
+    const card = el(`
+        <form id="notif-form" class="card" novalidate>
+            <div class="card-header">
+                <div>
+                    <h2>${esc(t('admin.notifications.prefs_title'))}</h2>
+                    <p class="card-hint">${esc(t('admin.notifications.prefs_hint'))}</p>
+                </div>
+            </div>
+            <div class="card-body" id="notif-body">
+                <div class="skeleton skeleton-row"></div>
+            </div>
+        </form>
+    `);
+
+    const body = card.querySelector('#notif-body');
+
+    let prefs = { mode: 'off', events: [] };
+    let available = [];
+    try {
+        const data = await apiGet('notifications.php?action=prefs', { salonScope: false });
+        prefs = data.prefs || prefs;
+        available = data.available_events || [];
+    } catch {
+        // Without migration 021 there are no preferences to set; hiding the
+        // card beats showing one that cannot save.
+        card.classList.add('hidden');
+        return card;
+    }
+
+    body.innerHTML = `
+        <div class="field" style="max-width:320px">
+            <label class="field-label" for="notif-mode">${esc(t('admin.notifications.mode'))}</label>
+            <select class="select" id="notif-mode" name="mode">
+                ${['off', 'instant', 'daily'].map((mode) =>
+                    `<option value="${mode}" ${prefs.mode === mode ? 'selected' : ''}>${esc(t(`admin.notifications.mode_${mode}`))}</option>`
+                ).join('')}
+            </select>
+            <span class="field-hint">${esc(t('admin.notifications.mode_hint'))}</span>
+        </div>
+        <hr class="divider">
+        <p class="card-hint mb-4">${esc(t('admin.notifications.events_hint'))}</p>
+        <div class="form-grid form-grid-2">
+            ${available.map((event) => `
+                <label class="check">
+                    <input type="checkbox" name="events" value="${esc(event)}" ${prefs.events.includes(event) ? 'checked' : ''}>
+                    <span class="check-text">
+                        <span class="check-title">${esc(t(`admin.notifications.events.${event}`))}</span>
+                    </span>
+                </label>
+            `).join('')}
+        </div>
+    `;
+
+    const footer = el(`
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+        </div>
+    `);
+    card.appendChild(footer);
+
+    card.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const button = footer.querySelector('button');
+        const reset = buttonBusy(button, t('admin.common.saving'));
+        try {
+            await apiPost('notifications.php?action=prefs', {
+                mode: card.elements.mode.value,
+                events: [...card.querySelectorAll('input[name="events"]:checked')].map((box) => box.value),
+            }, { salonScope: false });
+            reset();
+            toastSuccess(t('admin.notifications.prefs_saved'));
+        } catch (error) {
+            reset();
+            toastApiError(error);
+        }
+    });
+
+    return card;
 }
 
 function passwordCard(ctx) {

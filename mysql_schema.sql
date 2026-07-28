@@ -497,6 +497,11 @@ CREATE TABLE IF NOT EXISTS coiffure_sessions (
     expires_at TIMESTAMP NOT NULL,
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
+    -- Support impersonation (migration 026). Deliberately not a foreign key:
+    -- deleting an administrator must not erase the record that they
+    -- impersonated a salon account.
+    impersonated_by INT UNSIGNED DEFAULT NULL COMMENT 'user_id of the admin who started this support session',
+
     -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -506,7 +511,8 @@ CREATE TABLE IF NOT EXISTS coiffure_sessions (
     -- Indexes
     INDEX idx_session_token (session_token),
     INDEX idx_session_user (user_id),
-    INDEX idx_session_expires (expires_at)
+    INDEX idx_session_expires (expires_at),
+    INDEX idx_session_impersonated (impersonated_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

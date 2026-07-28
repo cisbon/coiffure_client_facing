@@ -20,6 +20,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/permissions.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/notify.php';
 
 setCorsHeaders();
 
@@ -211,6 +212,13 @@ function handleCreate(mysqli $conn, int $salonId, array $user, array $input): vo
     logAdminAudit(
         $conn, $user, 'user', $invitationId, 'user_invited',
         "Invited $email as $role", $salonId
+    );
+
+    // The other administrators of this salon should see that the team changed,
+    // without the inviter being told about their own action.
+    notifySalonAdmins(
+        $conn, $salonId, 'user_invited', 'admin.notify.user_invited',
+        ['name' => $fullName], '#/benutzer', 'manage_users', (int)$user['user_id']
     );
 
     sendJsonResponse([

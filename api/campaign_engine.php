@@ -15,6 +15,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/customer_filters.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/notify.php';
 
 /** The four automatic campaign types from spec 3.6. */
 const AUTO_TYPES = ['birthday', 'we_miss_you', 'thank_you', 'referral_reminder'];
@@ -345,6 +346,18 @@ function executeCampaign(mysqli $conn, array $campaign, ?array $audience = null)
         'failed_count'    => $failed,
         'recipient_count' => count($recipients) + $skipped,
     ]);
+
+    // A campaign often runs from cron, hours after it was scheduled, so the
+    // result has to find its way back to the people who scheduled it.
+    notifySalonAdmins(
+        $conn,
+        $salonId,
+        'campaign_sent',
+        'admin.notify.campaign_sent',
+        ['name' => (string)($campaign['name'] ?? ''), 'count' => $sent],
+        '#/kampagnen?tab=log',
+        'manage_campaigns'
+    );
 
     return ['sent' => $sent, 'skipped' => $skipped, 'failed' => $failed];
 }
