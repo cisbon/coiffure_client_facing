@@ -873,7 +873,12 @@
       "cron_title": "Automatic sending",
       "cron_hint": "Automatic campaigns are checked and sent hourly in the background.",
       "log_empty": "Nothing sent yet",
-      "log_empty_text": "Campaigns appear here once you send them."
+      "log_empty_text": "Campaigns appear here once you send them.",
+      "auto_hint": "Automatic campaigns run hourly on their own. Here you can run them for this salon right away.",
+      "run_now": "Run now",
+      "running": "Running …",
+      "run_done": "{count} e-mails sent.",
+      "run_none": "Nobody is due right now – nothing was sent."
     },
     "weekdays": {
       "0": "Monday",

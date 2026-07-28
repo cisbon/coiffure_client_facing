@@ -972,6 +972,34 @@ async function renderAuto(host, ctx) {
     const data = await apiGet(`campaigns.php?${scope(ctx)}&action=auto`, { salonScope: false });
     host.innerHTML = '';
 
+    // Automatic campaigns normally fire from the hourly cron. This runs the
+    // same code for this salon on demand -- the quickest way to check that a
+    // template and its trigger actually produce the mail you expect.
+    const toolbar = el(`
+        <div class="row mb-4">
+            <span class="text-sm text-muted" style="flex:1">${esc(t('admin.campaigns.auto_hint'))}</span>
+        </div>
+    `);
+    const runNow = el(`<button type="button" class="btn btn-secondary btn-sm">▶ ${esc(t('admin.campaigns.run_now'))}</button>`);
+    runNow.addEventListener('click', async () => {
+        const reset = buttonBusy(runNow, t('admin.campaigns.running'));
+        try {
+            const result = await apiPost(
+                `campaigns.php?${scope(ctx)}&action=run_auto`, {}, { salonScope: false }
+            );
+            reset();
+            toastSuccess(result.sent
+                ? t('admin.campaigns.run_done', { count: result.sent })
+                : t('admin.campaigns.run_none'));
+            ctx.reload();
+        } catch (error) {
+            reset();
+            toastApiError(error);
+        }
+    });
+    toolbar.appendChild(runNow);
+    host.appendChild(toolbar);
+
     const grid = el('<div class="grid grid-2"></div>');
 
     (data.campaigns || []).forEach((auto) => {

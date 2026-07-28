@@ -1027,6 +1027,10 @@ VALUES
 -- ============================================================
 -- Insert Default Salon (for testing/setup)
 -- ============================================================
+-- Guarded with NOT EXISTS rather than ON DUPLICATE KEY UPDATE: there is no
+-- unique key on salon_name, so the ON DUPLICATE clause never fires and running
+-- this file a second time against an existing database would quietly add
+-- another "Demo Salon" to the salon list.
 INSERT INTO coiffure_salons (
     salon_name,
     email,
@@ -1034,14 +1038,17 @@ INSERT INTO coiffure_salons (
     policy_version,
     cancellation_policy,
     data_processing_policy
-) VALUES (
+)
+SELECT
     'Demo Salon',
     'info@demosalon.com',
     '+1234567890',
     '1.0',
     'Cancellations must be made at least 24 hours in advance. Late cancellations may incur a fee of 50% of the service cost.',
     'Your personal data will be processed for appointment management, service delivery, and customer relationship management. Data is stored securely and will not be shared with third parties without your consent.'
-) ON DUPLICATE KEY UPDATE salon_name=salon_name;
+WHERE NOT EXISTS (
+    SELECT 1 FROM coiffure_salons WHERE salon_name = 'Demo Salon'
+);
 
 -- ============================================================
 -- Insert Default Admin User (for initial setup)

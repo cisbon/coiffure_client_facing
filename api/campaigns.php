@@ -69,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'cancel':         handleCancel($conn, $salonId, $user, $input); break;
         case 'save_auto':      handleSaveAuto($conn, $salonId, $user, $input); break;
         case 'send_birthday':  handleSendBirthday($conn, $salonId, $user, $input); break;
+        case 'run_auto':       handleRunAuto($conn, $salonId, $user); break;
         default:               sendErrorResponse('Unknown action.', 400);
     }
 }
@@ -546,6 +547,39 @@ function handleSaveAuto(mysqli $conn, int $salonId, array $user, array $input): 
  * Recorded as a one-off campaign of kind 'auto' so it shows in the log and
  * counts towards the spam limit like any other mail.
  */
+/**
+ * Run this salon's automatic campaigns now.
+ *
+ * Deliberately not a call to cron-campaigns.php: that endpoint is guarded by
+ * CRON_TOKEN, and a shared secret has no business in a browser. This runs the
+ * same runSalonAutomatics() from campaign_engine.php behind an ordinary session
+ * and scoped to one salon, so a manual run and the hourly cron cannot drift.
+ *
+ * Safe to press repeatedly: every automatic type checks
+ * coiffure_campaign_recipients before sending, so nobody is mailed twice.
+ */
+function handleRunAuto(mysqli $conn, int $salonId, array $user): void
+{
+    $salon = loadSalonForCampaign($conn, $salonId);
+    if (!$salon) {
+        sendErrorResponse('Salon not found.', 404);
+    }
+
+    $sentByType = runSalonAutomatics($conn, $salon);
+    $total = array_sum($sentByType);
+
+    logAdminAudit(
+        $conn, $user, 'campaign', $salonId, 'campaign_sent',
+        "Automatic campaigns run manually: $total sent", $salonId
+    );
+
+    sendJsonResponse([
+        'success' => true,
+        'sent' => $total,
+        'by_type' => $sentByType,
+    ], 200);
+}
+
 function handleSendBirthday(mysqli $conn, int $salonId, array $user, array $input): void
 {
     $customerId = (int)($input['customer_id'] ?? 0);

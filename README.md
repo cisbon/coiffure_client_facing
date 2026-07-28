@@ -34,22 +34,31 @@ A complete, GDPR-compliant customer experience suite for hairdressing salons, fe
   - **admin**: Full system access (manages all salons and users)
   - **admin_delegate**: Super admin (manages customers, cannot assign admin_delegates)
   - **customer_admin**: Salon Owner/Admin (manages their salon's users)
-  - **customer_admin_delegate**: Salon staff with admin rights (manages their salon only)
-  - **customer_user**: iPad webapp user (no admin access)
-- **Session Management**: Secure token-based authentication with 24-hour expiry
-- **Account Security**: Login attempt tracking with automatic lockout (15 minutes after 5 failed attempts)
-- **Admin Dashboard**: Modern, responsive interface for managing salons and users
-- **User Management**: Create, edit, delete users with role-based permissions
-- **Salon Management**: Full CRUD operations for salon data (admin only)
-- **Profile Management**: Users can update their own profile and password
-- **Audit Logging**: Complete tracking of all login and administrative actions
+  - **customer_admin_delegate**: Salon staff, with per-permission rights granted by the owner
+  - **customer_facing_tablet_user**: iPad kiosk account (no dashboard access)
+- **Granular Permissions**: A salon delegate is granted individual rights
+  (`view_insights`, `manage_campaigns`, `manage_users`, `change_settings`);
+  the server enforces them on every endpoint, the sidebar only reflects them
+- **Session Management**: Secure token-based authentication with sliding renewal
+- **Invitations**: New users receive a one-time link and choose their own
+  password — no password is ever sent by e-mail
+- **Admin Dashboard**: A sidebar SPA covering KPIs, customer segmentation,
+  e-mail campaigns, users, salon settings, the audit log, billing and
+  white-labelling. See **[ADMIN_DASHBOARD.md](ADMIN_DASHBOARD.md)**.
+- **Bilingual**: German and English throughout, switchable without a reload
+- **Audit Logging**: Every login and administrative action, with a separate
+  read-only GDPR consent trail
 
 ## Tech Stack
 
 ### Frontend
-- **Single HTML File**: Pure HTML/CSS/JavaScript (no frameworks)
-- **Styling**: Tailwind CSS (CDN)
-- **QR Generation**: QRCode.js library
+- **No build step**: plain HTML/CSS/JavaScript, served as-is. No bundler, no npm.
+- **Tablet** (`index.html`): a single file, styled with Tailwind (CDN)
+- **Dashboard** (`admin-dashboard.html`): ES modules under `js/admin/`, styled
+  with `css/admin.css` — a CSS custom-property design system, so a salon's
+  colour can restyle the whole page by changing one token
+- **Libraries** (all CDN, all with a graceful fallback): QRCode.js, Chart.js,
+  Quill
 - **Hosting**: GitHub Pages compatible
 
 ### Backend
@@ -64,11 +73,19 @@ A complete, GDPR-compliant customer experience suite for hairdressing salons, fe
 - **Tables**:
   - `coiffure_salons` - Salon information
   - `coiffure_customers` - GDPR-compliant customer data
+  - `coiffure_visits` - Check-ins and loyalty progress
   - `coiffure_qr_codes` - QR code generation tracking
   - `coiffure_ai_consultations` - AI consultation sessions
-  - `coiffure_users` - User accounts with role-based access control
+  - `coiffure_users` / `coiffure_user_salons` - Accounts and salon assignment
+  - `coiffure_user_permissions` / `coiffure_user_invitations` - Granular rights
   - `coiffure_sessions` - Active user sessions
+  - `coiffure_segments` - Saved customer filters
+  - `coiffure_campaigns` / `_campaign_recipients` / `_automatic_campaigns` - E-mail campaigns
+  - `coiffure_notifications` / `_notification_prefs` - The dashboard bell
+  - `coiffure_subscription_plans` / `_salon_subscriptions` / `_invoices` - Billing
+  - `coiffure_salon_whitelabel` - Per-salon domain, SMTP and colours
   - `coiffure_audit_log` - GDPR compliance and security audit trail
+  - `coiffure_consent_history` - Read-only trail of every consent change
 
 ## File Structure
 
@@ -91,18 +108,32 @@ coiffure/
 ├── scripts/
 │   └── check-translations.mjs # Fails if a used translation key is missing
 ├── migrations/                 # NNN_name.sql, applied via api/apply_migration_NNN.php
+├── set-password.html           # Invitation acceptance (choose your own password)
 ├── api/                        # Backend (deploy to clouedo.com/coiffure/api/)
 │   ├── .env                   # Environment variables (DO NOT COMMIT!)
 │   ├── .env.example           # Environment template
 │   ├── config.php             # Database, auth & utility functions
+│   ├── permissions.php        # Permission matrix, salon scoping, admin audit
 │   ├── customer.php           # Customer onboarding endpoint
 │   ├── qr-generate.php        # QR code generation endpoint
 │   ├── ai-consultation.php    # AI consultation endpoint
 │   ├── auth-login.php         # User login endpoint
 │   ├── auth-logout.php        # User logout endpoint
 │   ├── user-management.php    # User CRUD operations
-│   └── salon-management.php   # Salon CRUD operations
+│   ├── salon-management.php   # Salon CRUD operations
+│   ├── dashboard-stats.php    # KPIs, check-in series, birthdays
+│   ├── insights.php           # Customer list, profile, consent-aware export
+│   ├── campaigns.php          # Campaign lifecycle (engine in campaign_engine.php)
+│   ├── cron-campaigns.php     # Hourly runner for scheduled/automatic campaigns
+│   ├── salon-settings.php     # The six settings sections
+│   ├── user-invite.php        # Invitations and granular permissions
+│   ├── audit-log.php          # Role-scoped audit log
+│   ├── notifications.php      # Bell list, read state, preferences
+│   ├── billing.php            # Plans, subscriptions, invoices
+│   ├── whitelabel.php         # Per-salon domain, SMTP and colours
+│   └── seed-demo.php          # Demo salon with realistic data
 ├── mysql_schema.sql           # Database schema
+├── ADMIN_DASHBOARD.md         # Dashboard: roles, screens, setup, cron, extending
 └── README.md                  # This file
 ```
 
@@ -232,6 +263,44 @@ coiffure/
    ```env
    OPENROUTER_API_KEY=sk-or-v1-your-actual-api-key-here
    ```
+
+### Step 5: Admin Dashboard Setup
+
+1. **Apply the migrations** in order — each runner is idempotent, so running one
+   twice is safe:
+
+   ```bash
+   for n in 017 018 019 020 021 022 023 024 025 026; do
+       php api/apply_migration_$n.php
+   done
+   ```
+
+   > **Never apply `004_remove_salon_id_from_users.sql`.** `validateSession()`
+   > still selects `coiffure_users.salon_id`; dropping it breaks all
+   > authentication.
+
+2. **Add the dashboard variables to `api/.env`**:
+
+   ```env
+   MIGRATION_TOKEN=<long random string>
+   CRON_TOKEN=<long random string>
+   DASHBOARD_URL=https://coiffureai.com
+   ```
+
+3. **Schedule the campaign runner** (hourly is plenty):
+
+   ```cron
+   5 * * * * curl -fsS "https://clouedo.com/coiffure/api/cron-campaigns.php?token=YOUR_CRON_TOKEN" >/dev/null
+   ```
+
+4. **Optionally seed demo data** to see every screen populated:
+
+   ```bash
+   php api/seed-demo.php          # bella_owner / demo1234
+   ```
+
+Full documentation — roles, screens, extending it, known gaps — is in
+**[ADMIN_DASHBOARD.md](ADMIN_DASHBOARD.md)**.
 
 ## Configuration
 
@@ -613,6 +682,26 @@ If you're experiencing 500 errors, the `coiffure_audit_log` table may be missing
    ```javascript
    const API_BASE_URL = 'http://localhost:8080';
    ```
+
+   Serve the repo root rather than `api/` when you want the dashboard too, so
+   one origin covers both:
+
+   ```bash
+   php -S 127.0.0.1:8080 -t .
+   ```
+
+### Checks before committing
+
+There is no build step and no test runner, so two scripts stand in:
+
+```bash
+node scripts/check-translations.mjs        # de/en parity + every used key resolves
+php -l <changed file>                      # syntax
+node --check <changed file>                # syntax
+```
+
+The translation check fails the moment a key is used but not defined, which
+would otherwise render a raw key like `admin.users.title` to a salon owner.
 
 ## License
 
