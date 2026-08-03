@@ -517,7 +517,7 @@ function openUserModal(userId, ctx) {
                     <div class="field">
                         <label class="field-label" for="username">${esc(t('admin.users.username'))}<span class="req">*</span></label>
                         <input class="input" id="username" name="username" required
-                               pattern="[a-zA-Z0-9_\-]{3,50}"
+                               pattern="[a-zA-Z0-9_\\-]{3,50}"
                                value="${esc(user?.username || '')}" ${isNew ? '' : 'readonly'}>
                         <span class="field-hint">${esc(isNew ? t('admin.users.username_hint') : t('admin.users.username_locked'))}</span>
                     </div>

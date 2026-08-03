@@ -63,6 +63,23 @@ CREATE TABLE IF NOT EXISTS coiffure_user_invitations (
     INDEX idx_invitation_salon (salon_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- force_password_change
+-- ------------------------------------------------------------
+-- Present in mysql_schema.sql but never created by any numbered migration:
+-- only the broken PDO script in api/migrations/add_force_password_change.php
+-- ever added it. A database built from an older baseline therefore lacks it,
+-- while a fresh install has it -- so the two paths disagreed.
+--
+-- This statement was previously only in api/apply_migration_017.php, which
+-- meant applying migrations from the .sql files skipped it silently. Kept here
+-- so both paths produce the same schema.
+--
+-- Nothing reads the column; it is carried purely so migrated and fresh
+-- databases match. Drop the whole statement if you are starting clean.
+ALTER TABLE coiffure_users
+    ADD COLUMN force_password_change TINYINT(1) NOT NULL DEFAULT 0;
+
 -- ============================================================
 -- End of migration 017
 -- ============================================================

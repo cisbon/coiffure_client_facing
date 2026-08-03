@@ -353,7 +353,7 @@ function openSalonModal(salonId, ctx) {
                     <div class="field">
                         <label class="field-label" for="tablet_username">${esc(t('admin.salons.tablet_username'))}<span class="req">*</span></label>
                         <input class="input" id="tablet_username" name="tablet_username" required
-                               pattern="[a-zA-Z0-9_\-]{3,50}" placeholder="salon_tablet">
+                               pattern="[a-zA-Z0-9_\\-]{3,50}" placeholder="salon_tablet">
                         <span class="field-hint">${esc(t('admin.salons.tablet_username_hint'))}</span>
                     </div>
                     <div class="field">
