@@ -506,6 +506,19 @@ function openUserModal(userId, ctx) {
     const isNew = !user;
     const roles = assignableRoles(ctx.permissions);
 
+    // Only a platform role administers more than one salon, so only they are
+    // asked which one. For a salon owner or their staff the answer is always
+    // "this salon" -- offering a dropdown that defaults to "Kein Salon" invited
+    // them to create a user belonging to nobody. The server fills the salon in
+    // from the session either way, so this is presentation, not enforcement.
+    const canChooseSalon = ctx.permissions.isPlatform;
+    const assignedSalonId = canChooseSalon ? (user?.salon_id ?? null) : ctx.salonId;
+    const assignedSalonName =
+        ctx.salons.find((s) => String(s.salon_id) === String(assignedSalonId))?.salon_name
+        || user?.salon_name
+        || ctx.salon?.salon_name
+        || '—';
+
     const salonOptions = ctx.salons.map((s) =>
         `<option value="${s.salon_id}" ${String(user?.salon_id) === String(s.salon_id) ? 'selected' : ''}>${esc(s.salon_name)}</option>`
     ).join('');
@@ -544,6 +557,7 @@ function openUserModal(userId, ctx) {
                             ).join('')}
                         </select>
                     </div>
+                    ${canChooseSalon ? `
                     <div class="field">
                         <label class="field-label" for="salon_id">${esc(t('admin.users.salon'))}</label>
                         <select class="select" id="salon_id" name="salon_id">
@@ -551,7 +565,12 @@ function openUserModal(userId, ctx) {
                             ${salonOptions}
                         </select>
                         <span class="field-hint">${esc(t('admin.users.salon_hint'))}</span>
-                    </div>
+                    </div>` : `
+                    <div class="field">
+                        <span class="field-label">${esc(t('admin.users.salon'))}</span>
+                        <p class="field-static">${esc(assignedSalonName)}</p>
+                        <span class="field-hint">${esc(t('admin.users.salon_fixed_hint'))}</span>
+                    </div>`}
                     <div class="field">
                         <label class="field-label" for="password">
                             ${esc(isNew ? t('admin.users.password') : t('admin.users.password_optional'))}
@@ -662,9 +681,15 @@ async function submitUser(form, user, close, button, ctx) {
     if (!values.full_name) errors.full_name = t('admin.validation.required');
     if (!values.role) errors.role = t('admin.validation.required');
 
+    // The dropdown only exists for a platform role; everyone else gets the
+    // salon they are working in, which is also what the server assigns.
+    const salonId = ctx.permissions.isPlatform
+        ? (values.salon_id || null)
+        : (ctx.salonId || null);
+
     // Salon-bound roles need a salon; platform roles must not have one.
     const needsSalon = ['customer_admin', 'customer_admin_delegate', 'customer_facing_tablet_user'];
-    if (needsSalon.includes(values.role) && !values.salon_id) {
+    if (needsSalon.includes(values.role) && !salonId) {
         errors.salon_id = t('admin.validation.salon_required');
     }
 
@@ -678,7 +703,7 @@ async function submitUser(form, user, close, button, ctx) {
         full_name: values.full_name,
         phone: values.phone || null,
         role: values.role,
-        salon_id: values.salon_id || null,
+        salon_id: salonId,
         is_active: values.is_active === '1',
     };
     if (!user) payload.username = values.username;
@@ -698,10 +723,10 @@ async function submitUser(form, user, close, button, ctx) {
         }
 
         // Grants live in their own table, so they are a second call.
-        if (values.role === 'customer_admin_delegate' && userId && values.salon_id) {
+        if (values.role === 'customer_admin_delegate' && userId && salonId) {
             try {
                 await apiPost(
-                    `user-invite.php?action=permissions&salon_id=${encodeURIComponent(values.salon_id)}`,
+                    `user-invite.php?action=permissions&salon_id=${encodeURIComponent(salonId)}`,
                     { user_id: userId, permissions },
                     { salonScope: false }
                 );
