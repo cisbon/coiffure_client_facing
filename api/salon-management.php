@@ -369,11 +369,17 @@ function handleCreateSalon($conn, $currentUser, $data) {
             $tabletEmail = $tabletUsername . '@kiosk.local'; // Dummy email for tablets
             $tabletFullName = $salonName . ' - Kiosk';
 
+            // force_password_change is deliberately not set. Nothing in the
+            // codebase ever reads that column -- no login check, nothing --
+            // and a shared kiosk login cannot meaningfully be made to change
+            // its password on first use anyway. Writing it only created a
+            // dependency on a column some databases never got, which is what
+            // made salon creation fail.
             $stmt = prepareOrFail(
                 $conn,
                 "INSERT INTO coiffure_users
-                (username, email, password_hash, full_name, role, is_active, force_password_change, created_at)
-                VALUES (?, ?, ?, ?, 'customer_facing_tablet_user', 1, 1, NOW())",
+                (username, email, password_hash, full_name, role, is_active, created_at)
+                VALUES (?, ?, ?, ?, 'customer_facing_tablet_user', 1, NOW())",
                 'tablet account insert'
             );
             $stmt->bind_param("ssss", $tabletUsername, $tabletEmail, $passwordHash, $tabletFullName);
