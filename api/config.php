@@ -13,6 +13,71 @@ if (getenv('APP_DEBUG') === 'true') {
     ini_set('display_errors', 0);
 }
 
+/**
+ * Never let an endpoint answer with an empty 500.
+ * -------------------------------------------------------------------
+ * With display_errors off, an uncaught Error or a fatal produced a blank
+ * response body: the browser saw "500" and nothing else, which says nothing
+ * about what actually broke. Worse, a `catch (Exception $e)` does not catch an
+ * Error at all (undefined function, wrong argument count, type error), so a
+ * handler could die mid-transaction without even rolling back.
+ *
+ * These two handlers guarantee a JSON body with the real reason. The message
+ * and exception class are always included -- the caller is an authenticated
+ * administrator and the existing catch blocks already returned as much -- while
+ * the file, line and trace are only added with APP_DEBUG=true.
+ */
+if (php_sapi_name() !== 'cli') {
+    set_exception_handler(function ($e) {
+        _sendFatalJson(get_class($e), $e->getMessage(), $e->getFile(), $e->getLine(), $e->getTraceAsString());
+    });
+
+    register_shutdown_function(function () {
+        $error = error_get_last();
+        if (!$error || !in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+            return;
+        }
+        _sendFatalJson('FatalError', $error['message'], $error['file'], $error['line'], null);
+    });
+}
+
+/**
+ * Emit the error as JSON, unless a response has already gone out.
+ * Deliberately does not use sendJsonResponse(): this runs when things are
+ * already broken and must not depend on anything further down the file.
+ */
+function _sendFatalJson($type, $message, $file, $line, $trace) {
+    error_log(sprintf('[api] %s: %s in %s:%d', $type, $message, $file, $line));
+
+    if (headers_sent()) {
+        return;
+    }
+
+    // A partially written body would produce invalid JSON.
+    if (ob_get_length()) {
+        @ob_clean();
+    }
+
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+
+    $payload = [
+        'success' => false,
+        'error'   => $message !== '' ? $message : 'Internal server error',
+        'details' => ['type' => $type],
+    ];
+
+    if (getenv('APP_DEBUG') === 'true') {
+        $payload['details']['file'] = $file;
+        $payload['details']['line'] = $line;
+        if ($trace !== null) {
+            $payload['details']['trace'] = explode("\n", $trace);
+        }
+    }
+
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+}
+
 // Load environment variables from .env file
 function loadEnv($path = __DIR__ . '/.env') {
     if (!file_exists($path)) {

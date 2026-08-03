@@ -291,24 +291,57 @@ function handleCreateSalon($conn, $currentUser, $data) {
         $createdAccounts = [];
 
         $ownerInvitation = null;
+        $ownerLinked = null;
 
         if ($inviteOwner) {
             $ownerEmail = trim($data['owner_email']);
             $ownerFullName = trim($data['owner_full_name']);
 
-            // Check if email already exists
-            $checkStmt = $conn->prepare("SELECT user_id FROM coiffure_users WHERE email = ?");
+            // An address that already has an account is not an error: one
+            // person can own several salons, which is what the many-to-many
+            // coiffure_user_salons table is for. Attach them and skip the
+            // invitation -- they already have a password.
+            $checkStmt = $conn->prepare(
+                "SELECT user_id, role, full_name FROM coiffure_users WHERE email = ?"
+            );
             $checkStmt->bind_param("s", $ownerEmail);
             $checkStmt->execute();
-            if ($checkStmt->get_result()->num_rows > 0) {
-                $checkStmt->close();
-                throw new Exception("Owner email already exists");
-            }
+            $existingOwner = $checkStmt->get_result()->fetch_assoc();
             $checkStmt->close();
 
-            $ownerInvitation = inviteSalonOwner(
-                $conn, $newSalonId, $ownerEmail, $ownerFullName, (int)$currentUser['user_id']
-            );
+            if ($existingOwner) {
+                // Only a salon role can own a salon. A platform administrator
+                // or a kiosk account sharing the address is a real conflict.
+                if (!in_array($existingOwner['role'], ['customer_admin', 'customer_admin_delegate'], true)) {
+                    throw new InvalidArgumentException(
+                        'Diese E-Mail-Adresse gehört bereits zu einem Konto, das kein Salon-Konto ist.'
+                    );
+                }
+
+                $link = $conn->prepare(
+                    "INSERT IGNORE INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)"
+                );
+                if ($link) {
+                    $link->bind_param("ii", $existingOwner['user_id'], $newSalonId);
+                    $link->execute();
+                    $link->close();
+                }
+
+                $ownerLinked = [
+                    'user_id'   => (int)$existingOwner['user_id'],
+                    'email'     => $ownerEmail,
+                    'full_name' => $existingOwner['full_name'],
+                ];
+            } else {
+                // Creates the invitation row only. The e-mail is sent after the
+                // commit below -- talking to an SMTP server while holding an
+                // open transaction keeps row locks for the length of a network
+                // round-trip to a third party, and a slow server there can run
+                // the request past max_execution_time and kill it outright.
+                $ownerInvitation = inviteSalonOwner(
+                    $conn, $newSalonId, $ownerEmail, $ownerFullName, (int)$currentUser['user_id']
+                );
+            }
         }
 
         if ($createTabletAccount) {
@@ -360,6 +393,17 @@ function handleCreateSalon($conn, $currentUser, $data) {
         // Commit transaction
         $conn->commit();
 
+        // Only now, with the salon safely stored, try to deliver the
+        // invitation. A mail failure must never undo a created salon: the
+        // response carries the link so it can be passed on by hand, and the
+        // Benutzer screen can resend it.
+        if ($ownerInvitation) {
+            $ownerInvitation['email_sent'] = deliverOwnerInvitation(
+                $conn, $newSalonId, $ownerEmail, $ownerFullName, $ownerInvitation['token']
+            );
+            unset($ownerInvitation['token']);
+        }
+
         // Log audit
         logAudit($conn, 'salon', $newSalonId, 'create', "Salon created: $salonName with " . count($createdAccounts) . " user accounts", $currentUser['username']);
 
@@ -378,13 +422,30 @@ function handleCreateSalon($conn, $currentUser, $data) {
             $response['owner_invitation'] = $ownerInvitation;
         }
 
+        if ($ownerLinked) {
+            $response['owner_linked'] = $ownerLinked;
+        }
+
         sendJsonResponse($response, 201);
 
-    } catch (Exception $e) {
-        // Rollback on error
+    } catch (InvalidArgumentException $e) {
+        // A rejected input, not a server failure: 422 with the message against
+        // the field, rather than a 500 that reads like the server broke.
         $conn->rollback();
-        error_log("Salon creation error: " . $e->getMessage());
-        sendErrorResponse('Failed to create salon: ' . $e->getMessage(), 500);
+        sendErrorResponse($e->getMessage(), 422, [
+            'fields' => ['owner_email' => $e->getMessage()],
+        ]);
+    } catch (Throwable $e) {
+        // Throwable, not Exception: an Error (undefined function, wrong
+        // argument count, type error) is not an Exception, so catching only
+        // Exception let it escape -- which skipped this rollback and left the
+        // transaction open, and returned a 500 with no body at all.
+        $conn->rollback();
+        error_log('Salon creation error: ' . get_class($e) . ': ' . $e->getMessage()
+            . ' in ' . $e->getFile() . ':' . $e->getLine());
+        sendErrorResponse('Failed to create salon: ' . $e->getMessage(), 500, [
+            'type' => get_class($e),
+        ]);
     }
 }
 
@@ -432,27 +493,42 @@ function inviteSalonOwner($conn, $salonId, $email, $fullName, $invitedBy) {
     $invitationId = $stmt->insert_id;
     $stmt->close();
 
-    // Sending must not roll back a salon that was otherwise created fine; the
-    // link comes back in the response so it can be passed on by hand.
-    $sent = false;
-    $result = $conn->query('SELECT * FROM coiffure_salons WHERE salon_id = ' . (int)$salonId);
-    $salon = $result ? $result->fetch_assoc() : null;
-    if ($salon) {
-        try {
-            $sent = sendInvitationEmail($conn, $salon, ['email' => $email, 'full_name' => $fullName], $token);
-        } catch (Throwable $e) {
-            error_log('salon-management: owner invitation mail failed: ' . $e->getMessage());
-        }
-    }
-
     $base = rtrim(getenv('DASHBOARD_URL') ?: 'https://coiffureai.com', '/');
 
+    // No mail is sent here on purpose -- see deliverOwnerInvitation(), which the
+    // caller runs after committing. The token travels back so that call can use
+    // it; handleCreateSalon() strips it before the response goes out.
     return [
         'invitation_id' => $invitationId,
         'email' => $email,
-        'email_sent' => $sent,
+        'email_sent' => false,
+        'token' => $token,
         'accept_url' => $base . '/set-password.html?token=' . urlencode($token),
     ];
+}
+
+/**
+ * Send the owner invitation, after the salon has been committed.
+ *
+ * Always best-effort: the invitation row already exists, the link is already in
+ * the response, and the Benutzer screen can resend it. A mail server that is
+ * down must cost nothing more than a warning.
+ */
+function deliverOwnerInvitation($conn, $salonId, $email, $fullName, $token) {
+    $result = $conn->query('SELECT * FROM coiffure_salons WHERE salon_id = ' . (int)$salonId);
+    $salon = $result ? $result->fetch_assoc() : null;
+    if (!$salon) {
+        return false;
+    }
+
+    try {
+        return (bool)sendInvitationEmail(
+            $conn, $salon, ['email' => $email, 'full_name' => $fullName], $token
+        );
+    } catch (Throwable $e) {
+        error_log('salon-management: owner invitation mail failed: ' . $e->getMessage());
+        return false;
+    }
 }
 
 /**

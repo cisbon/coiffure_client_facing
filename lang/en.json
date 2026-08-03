@@ -383,7 +383,8 @@
       "export": "Export data",
       "export_title": "Export salon data?",
       "export_message": "A complete copy of all data for {salon} will be downloaded – including all customer data. The export is logged.",
-      "exported": "Export downloaded."
+      "exported": "Export downloaded.",
+      "owner_linked": "Salon created – {email} was linked as the owner account."
     },
     "users": {
       "title": "Users",

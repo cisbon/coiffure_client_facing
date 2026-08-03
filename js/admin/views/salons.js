@@ -453,7 +453,11 @@ async function submitSalon(form, salon, close, button, ctx) {
             // The owner is invited rather than handed a password, so say what
             // happened to that invitation instead of a bare "created".
             const invitation = result.owner_invitation;
-            if (!invitation) {
+            if (result.owner_linked) {
+                // The address already had a salon account, so they were simply
+                // attached to this salon as well -- no invitation needed.
+                toastSuccess(t('admin.salons.owner_linked', { email: result.owner_linked.email }));
+            } else if (!invitation) {
                 toastSuccess(t('admin.salons.created'));
             } else if (invitation.email_sent) {
                 toastSuccess(t('admin.salons.invited', { email: invitation.email }));
@@ -465,10 +469,18 @@ async function submitSalon(form, salon, close, button, ctx) {
         ctx.reload();
     } catch (error) {
         reset();
-        // Surface a duplicate subdomain or e-mail against the right field
-        // instead of only as a toast.
+
+        // Prefer what the server said the problem was. Guessing the field from
+        // the message text put "Owner email already exists" on the salon's own
+        // e-mail field, which sent people looking in the wrong place.
+        if (error.details?.fields) {
+            showFormErrors(form, error.details.fields);
+            return;
+        }
+
         const message = String(error?.message || '');
         if (/subdomain/i.test(message)) showFormErrors(form, { subdomain: message });
+        else if (/owner/i.test(message)) showFormErrors(form, { owner_email: message });
         else if (/e-?mail/i.test(message)) showFormErrors(form, { email: message });
         else toastApiError(error);
     }

@@ -234,16 +234,34 @@ function _sendViaSmtp($to, $encodedSubject, $html, $fromEmail, $encodedFrom, ?ar
     $pass   = $config['password'] ?? getenv('SMTP_PASSWORD');
     $secure = strtolower($config['secure'] ?? (getenv('SMTP_SECURE') ?: 'tls')); // tls | ssl | none
 
+    /**
+     * A whole SMTP conversation must fit inside a web request.
+     *
+     * The connect timeout plus a per-read timeout bounds each individual step,
+     * but a server that answers every step slowly can still run past PHP's
+     * max_execution_time -- and that fatal cannot be caught, so the endpoint
+     * dies with an empty 500 instead of reporting that mail failed. The
+     * deadline below bounds the conversation as a whole.
+     */
+    $budget = (int)(getenv('SMTP_TIMEOUT') ?: 12);
+    $deadline = microtime(true) + $budget;
+
     $remote = ($secure === 'ssl' ? 'ssl://' : '') . $host . ':' . $port;
-    $fp = @stream_socket_client($remote, $errno, $errstr, 15);
+    $fp = @stream_socket_client($remote, $errno, $errstr, min(8, $budget));
     if (!$fp) {
         error_log("mailer SMTP connect failed: $errstr ($errno)");
         return false;
     }
 
-    stream_set_timeout($fp, 20);
+    stream_set_timeout($fp, max(2, (int)ceil($budget / 3)));
 
-    $read = function () use ($fp) { return fgets($fp, 1024); };
+    $read = function () use ($fp, $deadline) {
+        if (microtime(true) >= $deadline) {
+            error_log('mailer SMTP: time budget exhausted');
+            return false;
+        }
+        return fgets($fp, 1024);
+    };
 
     /** Write everything, looping because a socket may accept a partial write. */
     $write = function ($data) use ($fp) {
