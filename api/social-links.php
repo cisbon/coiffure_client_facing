@@ -166,6 +166,9 @@ function handlePost($conn, $currentUser) {
     $description = isset($data['description']) ? trim($data['description']) : null;
     $iconName = isset($data['icon_name']) ? trim($data['icon_name']) : $linkType;
     $displayOrder = isset($data['display_order']) ? intval($data['display_order']) : 0;
+    // The dialog offers an "active" switch on create as well as on edit, so
+    // honour it here rather than always inserting an active link.
+    $isActive = isset($data['is_active']) ? (intval($data['is_active']) ? 1 : 0) : 1;
 
     // Check if customer_admin has access to this salon
     if (in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'])) {
@@ -191,8 +194,8 @@ function handlePost($conn, $currentUser) {
     // Insert into database
     $stmt = $conn->prepare(
         "INSERT INTO coiffure_social_links
-        (salon_id, link_type, link_url, display_name, description, icon_name, qr_code_data, display_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        (salon_id, link_type, link_url, display_name, description, icon_name, qr_code_data, display_order, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
     if (!$stmt) {
@@ -200,7 +203,7 @@ function handlePost($conn, $currentUser) {
     }
 
     $stmt->bind_param(
-        "issssssi",
+        "issssssii",
         $salonId,
         $linkType,
         $linkUrl,
@@ -208,7 +211,8 @@ function handlePost($conn, $currentUser) {
         $description,
         $iconName,
         $qrCodeData,
-        $displayOrder
+        $displayOrder,
+        $isActive
     );
 
     if (!$stmt->execute()) {

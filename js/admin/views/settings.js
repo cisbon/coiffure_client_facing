@@ -11,8 +11,8 @@
  *   Mitgliedschaft  loyalty-config.php (loyalty programme)
  *                   + salon-settings.php?section=membership (refer-a-friend)
  *   Geburtstag      salon-settings.php?section=birthday
- *   Social & QR     social-links.php (link CRUD + QR preview)
- *                   + salon-settings.php?section=social  (WiFi)
+ *   Social & QR     social-links.php (link CRUD + QR preview). Guest WiFi
+ *                   lives on the Allgemein tab, with salon-branding.php.
  *   Öffnungszeiten  salon-settings.php?section=hours
  */
 
@@ -925,7 +925,9 @@ async function renderSocial(host, ctx) {
         `social-links.php?salon_id=${encodeURIComponent(ctx.salonId)}&include_inactive=true`,
         { salonScope: false }
     );
-    links = data.links || [];
+    // social-links.php answers with `data`, which is also what index.html
+    // reads. `links` is tolerated in case that ever changes.
+    links = data.data || data.links || [];
 
     host.innerHTML = '';
 
@@ -1092,8 +1094,13 @@ function openLinkModal(linkId, ctx) {
                     const reset = buttonBusy(button, t('admin.common.saving'));
                     try {
                         if (link) {
-                            await apiRequest(`social-links.php?link_id=${link.link_id}`, {
-                                method: 'PUT', body: payload, salonScope: false,
+                            // handlePut() reads link_id from the JSON body, not
+                            // from the query string -- sending it only in the
+                            // URL failed with "link_id is required".
+                            await apiRequest('social-links.php', {
+                                method: 'PUT',
+                                body: { ...payload, link_id: link.link_id },
+                                salonScope: false,
                             });
                         } else {
                             await apiPost('social-links.php', payload, { salonScope: false });
