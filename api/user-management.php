@@ -238,11 +238,17 @@ function handleCreateUser($conn, $currentUser, $data) {
     // A salon role never picks the salon -- it is always the one they
     // administer, so the dialog does not offer the choice and the value is
     // filled in here rather than trusted from the request.
-    if (in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'], true)) {
-        $accessible = getAccessibleSalonIds($conn, $currentUser);
-        if (!$salonId || !in_array((int)$salonId, $accessible, true)) {
-            $salonId = !empty($accessible) ? (int)$accessible[0] : null;
-        }
+    // Fill in the salon ONLY when the request did not name one -- that is the
+    // single-salon case, where the dialog shows it read-only and sends
+    // nothing. A salon that was named explicitly is left exactly as sent, so
+    // an unauthorised one is refused below rather than quietly swapped for a
+    // different salon than the caller asked for.
+    if (!$salonId && in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'], true)) {
+        $manageable = array_values(array_filter(
+            getAccessibleSalonIds($conn, $currentUser),
+            static fn($id) => hasPermission($conn, $currentUser, 'manage_users', (int)$id)
+        ));
+        $salonId = !empty($manageable) ? (int)$manageable[0] : null;
     }
 
     // Validate role permissions
@@ -567,23 +573,24 @@ function validateUserCreationPermissions($conn, $currentUser, $newUserRole, $new
         return;
     }
 
-    // A salon owner, and salon staff holding manage_users, may add people to
-    // the salons they administer. The delegate case was previously refused
-    // outright even though the dashboard grants manage_users and shows them
-    // the Benutzer screen.
+    // Managing users is a permission, not a role. A salon owner holds
+    // manage_users for their salons by virtue of being the owner, and a
+    // delegate holds it only where it has been granted -- so both go through
+    // the same check and neither gets a special case.
     $isSalonRole = in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'], true);
     if ($isSalonRole) {
-        if ($currentUser['role'] === 'customer_admin_delegate'
-            && !hasPermission($conn, $currentUser, 'manage_users', $newUserSalonId ? (int)$newUserSalonId : null)) {
-            sendErrorResponse('Forbidden. Insufficient permissions to create users.', 403);
-        }
-
         // Every salon they administer, not just users.salon_id -- that legacy
         // column holds one salon, so a multi-salon owner could not add anyone
         // to their second salon.
         $accessible = getAccessibleSalonIds($conn, $currentUser);
         if (!$newUserSalonId || !in_array((int)$newUserSalonId, $accessible, true)) {
             sendErrorResponse('Forbidden. Can only create users for your own salon.', 403);
+        }
+
+        // ...and manage_users must be held for that specific salon, so a
+        // delegate granted it in one salon cannot use it in another.
+        if (!hasPermission($conn, $currentUser, 'manage_users', (int)$newUserSalonId)) {
+            sendErrorResponse('Forbidden. Insufficient permissions to create users.', 403);
         }
 
         // 'customer_user' was renamed to 'customer_facing_tablet_user' by

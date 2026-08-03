@@ -506,21 +506,32 @@ function openUserModal(userId, ctx) {
     const isNew = !user;
     const roles = assignableRoles(ctx.permissions);
 
-    // Only a platform role administers more than one salon, so only they are
-    // asked which one. For a salon owner or their staff the answer is always
-    // "this salon" -- offering a dropdown that defaults to "Kein Salon" invited
-    // them to create a user belonging to nobody. The server fills the salon in
-    // from the session either way, so this is presentation, not enforcement.
-    const canChooseSalon = ctx.permissions.isPlatform;
-    const assignedSalonId = canChooseSalon ? (user?.salon_id ?? null) : ctx.salonId;
+    // The salon field follows the permission, not the role: you may place a
+    // user in any salon where you hold manage_users. With one such salon there
+    // is nothing to choose, so it is shown read-only -- a dropdown defaulting
+    // to "Kein Salon" invited people to create a user belonging to nobody.
+    // With several, the choice is real and is offered. The server re-checks
+    // both the permission and the salon, so this is presentation only.
+    const manageableIds = ctx.permissions.salonsWith('manage_users');
+    const manageableSalons = ctx.salons.filter(
+        (s) => manageableIds.includes(String(s.salon_id))
+    );
+    const canChooseSalon = manageableSalons.length > 1;
+
+    // Editing keeps the user's own salon; creating defaults to the one in the
+    // top bar, falling back to the only salon they manage.
+    const assignedSalonId = user?.salon_id
+        ?? (manageableIds.includes(String(ctx.salonId))
+            ? ctx.salonId
+            : (manageableSalons[0]?.salon_id ?? null));
     const assignedSalonName =
         ctx.salons.find((s) => String(s.salon_id) === String(assignedSalonId))?.salon_name
         || user?.salon_name
         || ctx.salon?.salon_name
         || '—';
 
-    const salonOptions = ctx.salons.map((s) =>
-        `<option value="${s.salon_id}" ${String(user?.salon_id) === String(s.salon_id) ? 'selected' : ''}>${esc(s.salon_name)}</option>`
+    const salonOptions = manageableSalons.map((s) =>
+        `<option value="${s.salon_id}" ${String(assignedSalonId) === String(s.salon_id) ? 'selected' : ''}>${esc(s.salon_name)}</option>`
     ).join('');
 
     const form = el(`
@@ -561,7 +572,9 @@ function openUserModal(userId, ctx) {
                     <div class="field">
                         <label class="field-label" for="salon_id">${esc(t('admin.users.salon'))}</label>
                         <select class="select" id="salon_id" name="salon_id">
-                            <option value="">${esc(t('admin.users.no_salon'))}</option>
+                            ${ctx.permissions.isPlatform
+                                ? `<option value="" ${assignedSalonId ? '' : 'selected'}>${esc(t('admin.users.no_salon'))}</option>`
+                                : ''}
                             ${salonOptions}
                         </select>
                         <span class="field-hint">${esc(t('admin.users.salon_hint'))}</span>
@@ -681,11 +694,15 @@ async function submitUser(form, user, close, button, ctx) {
     if (!values.full_name) errors.full_name = t('admin.validation.required');
     if (!values.role) errors.role = t('admin.validation.required');
 
-    // The dropdown only exists for a platform role; everyone else gets the
-    // salon they are working in, which is also what the server assigns.
-    const salonId = ctx.permissions.isPlatform
-        ? (values.salon_id || null)
-        : (ctx.salonId || null);
+    // The dropdown is only rendered when there is more than one salon to
+    // choose from; otherwise the single manageable salon is used, which is
+    // also what the server assigns.
+    const manageableIds = ctx.permissions.salonsWith('manage_users');
+    const salonId = form.elements.salon_id
+        ? (form.elements.salon_id.value || null)
+        : (user?.salon_id
+            ?? (manageableIds.includes(String(ctx.salonId)) ? ctx.salonId : manageableIds[0])
+            ?? null);
 
     // Salon-bound roles need a salon; platform roles must not have one.
     const needsSalon = ['customer_admin', 'customer_admin_delegate', 'customer_facing_tablet_user'];
