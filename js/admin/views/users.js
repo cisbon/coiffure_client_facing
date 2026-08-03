@@ -45,6 +45,22 @@ function invitableRoles(permissions) {
     return assignableRoles(permissions).filter((role) => role !== 'customer_facing_tablet_user');
 }
 
+/**
+ * Salon ids where this user may manage users.
+ *
+ * Reads permissions_by_salon through the Permissions helper, but tolerates its
+ * absence: js/admin/** are separate ES modules with no cache busting, so a
+ * browser can briefly hold a stale permissions.js against a fresh users.js. A
+ * blank dialog would be a baffling way to find that out.
+ */
+function manageableSalonIds(ctx) {
+    if (typeof ctx.permissions.salonsWith === 'function') {
+        return ctx.permissions.salonsWith('manage_users');
+    }
+    const bySalon = ctx.permissions.bySalon || {};
+    return Object.keys(bySalon).filter((id) => (bySalon[id] || []).includes('manage_users'));
+}
+
 let users = [];
 let invitations = [];
 
@@ -501,29 +517,53 @@ async function revokeInvitation(invitationId, ctx) {
    Add / edit
    ============================================================ */
 
+/**
+ * A button that does nothing is the worst failure mode there is: an exception
+ * while building the dialog left no modal and no message. Report it instead.
+ */
 function openUserModal(userId, ctx) {
+    try {
+        buildUserModal(userId, ctx);
+    } catch (error) {
+        console.error('openUserModal failed', error);
+        toastError(t('admin.errors.generic'));
+    }
+}
+
+function buildUserModal(userId, ctx) {
     const user = userId ? users.find((u) => Number(u.user_id) === Number(userId)) : null;
     const isNew = !user;
     const roles = assignableRoles(ctx.permissions);
 
-    // The salon field follows the permission, not the role: you may place a
-    // user in any salon where you hold manage_users. With one such salon there
-    // is nothing to choose, so it is shown read-only -- a dropdown defaulting
-    // to "Kein Salon" invited people to create a user belonging to nobody.
-    // With several, the choice is real and is offered. The server re-checks
-    // both the permission and the salon, so this is presentation only.
-    const manageableIds = ctx.permissions.salonsWith('manage_users');
-    const manageableSalons = ctx.salons.filter(
-        (s) => manageableIds.includes(String(s.salon_id))
-    );
-    const canChooseSalon = manageableSalons.length > 1;
+    // Which salons may this user place someone in?
+    //
+    //   admin / admin_delegate  every salon, always -- they administer the
+    //                           platform, so the chooser is never hidden from
+    //                           them even when only one salon exists yet.
+    //   salon roles             the salons where they hold manage_users.
+    //
+    // The dropdown appears when that set has more than one entry; with exactly
+    // one there is nothing to choose, so it is shown read-only. A dropdown
+    // defaulting to "Kein Salon" invited people to create a user belonging to
+    // nobody. The server re-checks both the permission and the salon, so this
+    // is presentation only.
+    const manageableSalons = ctx.permissions.isPlatform
+        ? ctx.salons
+        : ctx.salons.filter((s) => manageableSalonIds(ctx).includes(String(s.salon_id)));
+    const manageableIds = manageableSalons.map((s) => String(s.salon_id));
+    const canChooseSalon = ctx.permissions.isPlatform || manageableSalons.length > 1;
 
     // Editing keeps the user's own salon; creating defaults to the one in the
     // top bar, falling back to the only salon they manage.
     const assignedSalonId = user?.salon_id
         ?? (manageableIds.includes(String(ctx.salonId))
             ? ctx.salonId
-            : (manageableSalons[0]?.salon_id ?? null));
+            // With "Alle Salons" in the top bar an administrator has no salon
+            // in scope. Preselecting whichever happens to be first would let a
+            // mis-click file someone under the wrong salon, so they start on
+            // "Kein Salon" and pick deliberately. A salon role has only one
+            // candidate, so there is nothing to mis-pick.
+            : (ctx.permissions.isPlatform ? null : (manageableSalons[0]?.salon_id ?? null)));
     const assignedSalonName =
         ctx.salons.find((s) => String(s.salon_id) === String(assignedSalonId))?.salon_name
         || user?.salon_name
@@ -697,7 +737,7 @@ async function submitUser(form, user, close, button, ctx) {
     // The dropdown is only rendered when there is more than one salon to
     // choose from; otherwise the single manageable salon is used, which is
     // also what the server assigns.
-    const manageableIds = ctx.permissions.salonsWith('manage_users');
+    const manageableIds = manageableSalonIds(ctx);
     const salonId = form.elements.salon_id
         ? (form.elements.salon_id.value || null)
         : (user?.salon_id
