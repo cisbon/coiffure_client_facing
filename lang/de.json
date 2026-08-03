@@ -383,7 +383,8 @@
       "export": "Daten exportieren",
       "export_title": "Salondaten exportieren?",
       "export_message": "Es wird eine vollständige Kopie aller Daten von {salon} heruntergeladen – inklusive aller Kundendaten. Der Export wird protokolliert.",
-      "exported": "Export heruntergeladen."
+      "exported": "Export heruntergeladen.",
+      "owner_linked": "Salon angelegt – {email} wurde als Inhaber-Zugang verknüpft."
     },
     "users": {
       "title": "Benutzer",
