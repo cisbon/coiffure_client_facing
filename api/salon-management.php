@@ -287,6 +287,30 @@ function handleCreateSalon($conn, $currentUser, $data) {
         $newSalonId = $stmt->insert_id;
         $stmt->close();
 
+        // The base INSERT above only covers the original columns. Everything
+        // migration 018 added -- subdomain, status, currency, website -- is
+        // applied here through the same validation the edit path uses, so a
+        // field accepted in one and dropped in the other is not possible.
+        $optional = collectSalonUpdates($conn, array_diff_key($data, array_flip([
+            'salon_name', 'email', 'phone', 'address', 'google_reviews_url',
+            'facebook_url', 'policy_version', 'cancellation_policy',
+            'data_processing_policy', 'is_active', 'default_language',
+        ])), $newSalonId);
+
+        if (!empty($optional['updates'])) {
+            $optionalStmt = prepareOrFail(
+                $conn,
+                'UPDATE coiffure_salons SET ' . implode(', ', $optional['updates']) . ' WHERE salon_id = ?',
+                'salon optional columns'
+            );
+            $optionalParams = array_merge($optional['params'], [$newSalonId]);
+            $optionalStmt->bind_param($optional['types'] . 'i', ...$optionalParams);
+            if (!$optionalStmt->execute()) {
+                throw new Exception('Failed to apply salon settings: ' . $optionalStmt->error);
+            }
+            $optionalStmt->close();
+        }
+
         // Create user accounts if onboarding data is provided
         $createdAccounts = [];
 
@@ -375,14 +399,18 @@ function handleCreateSalon($conn, $currentUser, $data) {
             // its password on first use anyway. Writing it only created a
             // dependency on a column some databases never got, which is what
             // made salon creation fail.
+            // salon_id must be set here, not only in coiffure_user_salons.
+            // validateSession() returns coiffure_users.salon_id on every
+            // request, and the tablet reads it to know which salon it is --
+            // a kiosk account created without it comes up unassigned.
             $stmt = prepareOrFail(
                 $conn,
                 "INSERT INTO coiffure_users
-                (username, email, password_hash, full_name, role, is_active, created_at)
-                VALUES (?, ?, ?, ?, 'customer_facing_tablet_user', 1, NOW())",
+                (username, email, password_hash, full_name, role, salon_id, is_active, created_at)
+                VALUES (?, ?, ?, ?, 'customer_facing_tablet_user', ?, 1, NOW())",
                 'tablet account insert'
             );
-            $stmt->bind_param("ssss", $tabletUsername, $tabletEmail, $passwordHash, $tabletFullName);
+            $stmt->bind_param("ssssi", $tabletUsername, $tabletEmail, $passwordHash, $tabletFullName, $newSalonId);
 
             if (!$stmt->execute()) {
                 throw new Exception("Failed to create tablet account: " . $stmt->error);
@@ -550,6 +578,141 @@ function deliverOwnerInvitation($conn, $salonId, $email, $fullName, $token) {
 }
 
 /**
+ * Turn a request payload into UPDATE fragments for coiffure_salons.
+ *
+ * Shared by create and update. Every field is validated here once, and only
+ * columns the database actually has are touched -- so an installation without
+ * migration 018 can still rename a salon.
+ *
+ * @param int $salonId 0 when checking uniqueness for a salon being created.
+ * @return array{updates: string[], params: array, types: string}
+ */
+function collectSalonUpdates($conn, $data, $salonId) {
+    $allowedFields = [
+        'salon_name' => 's',
+        'email' => 's',
+        'phone' => 's',
+        'address' => 's',
+        'google_reviews_url' => 's',
+        'facebook_url' => 's',
+        'policy_version' => 's',
+        'cancellation_policy' => 's',
+        'data_processing_policy' => 's',
+        'is_active' => 'i',
+        'default_language' => 's',
+        // Added by migration 018. The dialog has always shown these, but they
+        // were missing from this list, so the server quietly dropped them and
+        // still answered "success" -- picking a status appeared to save and
+        // then reverted on the next load.
+        'status' => 's',
+        'subdomain' => 's',
+        'currency' => 's',
+        'website' => 's',
+    ];
+
+    $existingColumns = [];
+    $columnResult = $conn->query("SHOW COLUMNS FROM coiffure_salons");
+    if ($columnResult) {
+        while ($column = $columnResult->fetch_assoc()) {
+            $existingColumns[$column['Field']] = true;
+        }
+    }
+
+    $updates = [];
+    $params = [];
+    $types = '';
+
+    foreach ($allowedFields as $field => $type) {
+        if (!isset($data[$field]) || !isset($existingColumns[$field])) {
+            continue;
+        }
+
+        $value = is_string($data[$field]) ? trim($data[$field]) : $data[$field];
+
+        if ($field === 'email' && !validateEmail($value)) {
+            sendErrorResponse('Invalid email address', 400);
+        }
+
+        if ($field === 'phone' && !validatePhone($value)) {
+            sendErrorResponse('Invalid phone number', 400);
+        }
+
+        if ($field === 'default_language' && !in_array($value, ['de', 'en'], true)) {
+            sendErrorResponse('Invalid language. Must be "de" or "en"', 400);
+        }
+
+        if ($field === 'status' && !in_array($value, ['active', 'trial', 'suspended'], true)) {
+            sendErrorResponse('Bitte prüfen Sie Ihre Eingaben.', 422, [
+                'fields' => ['status' => 'Unbekannter Status.'],
+            ]);
+        }
+
+        if ($field === 'subdomain') {
+            if ($value === '') {
+                // NULL, not '': subdomain carries a UNIQUE index, and empty
+                // strings collide with each other while NULLs do not. Saving a
+                // second salon without a subdomain would otherwise fail.
+                $updates[] = "$field = NULL";
+                continue;
+            }
+            $value = strtolower($value);
+            if (!preg_match('/^[a-z0-9][a-z0-9-]{1,62}$/', $value)) {
+                sendErrorResponse('Bitte prüfen Sie Ihre Eingaben.', 422, [
+                    'fields' => ['subdomain' => 'Nur Kleinbuchstaben, Ziffern und Bindestriche.'],
+                ]);
+            }
+            if (subdomainTaken($conn, $value, (int)$salonId)) {
+                sendErrorResponse('Bitte prüfen Sie Ihre Eingaben.', 422, [
+                    'fields' => ['subdomain' => 'Diese Subdomain ist bereits vergeben.'],
+                ]);
+            }
+        }
+
+        if ($field === 'website' && $value !== '' && !preg_match('#^https?://#i', $value)) {
+            sendErrorResponse('Bitte prüfen Sie Ihre Eingaben.', 422, [
+                'fields' => ['website' => 'Bitte eine vollständige URL angeben (mit https://).'],
+            ]);
+        }
+
+        if ($field === 'currency' && $value !== '') {
+            $value = strtoupper(substr($value, 0, 3));
+        }
+
+        $updates[] = "$field = ?";
+        $params[] = $type === 'i' ? (int)$value : $value;
+        $types .= $type;
+    }
+
+    // Keep is_active in step with status. Everything else in the codebase --
+    // the cron runner, the salon lists, the tablet -- filters on is_active, so
+    // a salon marked "suspended" through status alone would go on working
+    // everywhere that matters.
+    if (isset($data['status']) && isset($existingColumns['status']) && !isset($data['is_active'])) {
+        $updates[] = 'is_active = ?';
+        $params[] = $data['status'] === 'suspended' ? 0 : 1;
+        $types .= 'i';
+    }
+
+    return ['updates' => $updates, 'params' => $params, 'types' => $types];
+}
+
+/** Is this subdomain already used by a different salon? */
+function subdomainTaken($conn, $subdomain, $salonId) {
+    $stmt = $conn->prepare(
+        "SELECT 1 FROM coiffure_salons WHERE subdomain = ? AND salon_id <> ? LIMIT 1"
+    );
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param("si", $subdomain, $salonId);
+    $stmt->execute();
+    $taken = $stmt->get_result()->num_rows > 0;
+    $stmt->close();
+
+    return $taken;
+}
+
+/**
  * Update salon
  */
 function handleUpdateSalon($conn, $currentUser, $salonId, $data) {
@@ -597,47 +760,11 @@ function handleUpdateSalon($conn, $currentUser, $salonId, $data) {
         }
     }
 
-    // Build update query dynamically
-    $updates = [];
-    $params = [];
-    $types = '';
-
-    $allowedFields = [
-        'salon_name' => 's',
-        'email' => 's',
-        'phone' => 's',
-        'address' => 's',
-        'google_reviews_url' => 's',
-        'facebook_url' => 's',
-        'policy_version' => 's',
-        'cancellation_policy' => 's',
-        'data_processing_policy' => 's',
-        'is_active' => 'i',
-        'default_language' => 's'
-    ];
-
-    foreach ($allowedFields as $field => $type) {
-        if (isset($data[$field])) {
-            // Validate email
-            if ($field === 'email' && !validateEmail($data[$field])) {
-                sendErrorResponse('Invalid email address', 400);
-            }
-
-            // Validate phone
-            if ($field === 'phone' && !validatePhone($data[$field])) {
-                sendErrorResponse('Invalid phone number', 400);
-            }
-
-            // Validate language
-            if ($field === 'default_language' && !in_array($data[$field], ['de', 'en'])) {
-                sendErrorResponse('Invalid language. Must be "de" or "en"', 400);
-            }
-
-            $updates[] = "$field = ?";
-            $params[] = $type === 'i' ? (int)$data[$field] : trim($data[$field]);
-            $types .= $type;
-        }
-    }
+    // Validation and field handling are shared with handleCreateSalon so the
+    // two cannot drift -- a field accepted on create but silently dropped on
+    // edit is exactly the bug this replaced.
+    ['updates' => $updates, 'params' => $params, 'types' => $types] =
+        collectSalonUpdates($conn, $data, (int)$salonId);
 
     if (empty($updates)) {
         sendErrorResponse('No fields to update', 400);
