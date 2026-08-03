@@ -301,8 +301,10 @@ function handleCreateSalon($conn, $currentUser, $data) {
             // person can own several salons, which is what the many-to-many
             // coiffure_user_salons table is for. Attach them and skip the
             // invitation -- they already have a password.
-            $checkStmt = $conn->prepare(
-                "SELECT user_id, role, full_name FROM coiffure_users WHERE email = ?"
+            $checkStmt = prepareOrFail(
+                $conn,
+                "SELECT user_id, role, full_name FROM coiffure_users WHERE email = ?",
+                'owner lookup'
             );
             $checkStmt->bind_param("s", $ownerEmail);
             $checkStmt->execute();
@@ -318,14 +320,14 @@ function handleCreateSalon($conn, $currentUser, $data) {
                     );
                 }
 
-                $link = $conn->prepare(
-                    "INSERT IGNORE INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)"
+                $link = prepareOrFail(
+                    $conn,
+                    "INSERT IGNORE INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)",
+                    'owner salon link'
                 );
-                if ($link) {
-                    $link->bind_param("ii", $existingOwner['user_id'], $newSalonId);
-                    $link->execute();
-                    $link->close();
-                }
+                $link->bind_param("ii", $existingOwner['user_id'], $newSalonId);
+                $link->execute();
+                $link->close();
 
                 $ownerLinked = [
                     'user_id'   => (int)$existingOwner['user_id'],
@@ -349,7 +351,11 @@ function handleCreateSalon($conn, $currentUser, $data) {
             $initialPassword = $data['initial_password'];
 
             // Check if username already exists
-            $checkStmt = $conn->prepare("SELECT user_id FROM coiffure_users WHERE username = ?");
+            $checkStmt = prepareOrFail(
+                $conn,
+                "SELECT user_id FROM coiffure_users WHERE username = ?",
+                'tablet username check'
+            );
             $checkStmt->bind_param("s", $tabletUsername);
             $checkStmt->execute();
             if ($checkStmt->get_result()->num_rows > 0) {
@@ -363,10 +369,12 @@ function handleCreateSalon($conn, $currentUser, $data) {
             $tabletEmail = $tabletUsername . '@kiosk.local'; // Dummy email for tablets
             $tabletFullName = $salonName . ' - Kiosk';
 
-            $stmt = $conn->prepare(
+            $stmt = prepareOrFail(
+                $conn,
                 "INSERT INTO coiffure_users
                 (username, email, password_hash, full_name, role, is_active, force_password_change, created_at)
-                VALUES (?, ?, ?, ?, 'customer_facing_tablet_user', 1, 1, NOW())"
+                VALUES (?, ?, ?, ?, 'customer_facing_tablet_user', 1, 1, NOW())",
+                'tablet account insert'
             );
             $stmt->bind_param("ssss", $tabletUsername, $tabletEmail, $passwordHash, $tabletFullName);
 
@@ -378,7 +386,11 @@ function handleCreateSalon($conn, $currentUser, $data) {
             $stmt->close();
 
             // Link tablet to salon
-            $stmt = $conn->prepare("INSERT INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)");
+            $stmt = prepareOrFail(
+                $conn,
+                "INSERT INTO coiffure_user_salons (user_id, salon_id) VALUES (?, ?)",
+                'tablet salon link'
+            );
             $stmt->bind_param("ii", $tabletUserId, $newSalonId);
             $stmt->execute();
             $stmt->close();
