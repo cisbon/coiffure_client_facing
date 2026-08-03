@@ -237,6 +237,26 @@ function sendJsonResponse($data, $statusCode = 200) {
 }
 
 /**
+ * Prepare a statement, or throw with the reason.
+ *
+ * getDbConnection() sets mysqli_report(MYSQLI_REPORT_OFF), so a failed
+ * prepare() returns false rather than throwing. Calling ->bind_param() on that
+ * false is a fatal "Call to a member function bind_param() on false" -- which
+ * says nothing about the actual problem, while mysqli knew all along that it
+ * was, say, an unknown column. This keeps that reason.
+ *
+ * @param string $label Which statement, so the message is self-locating.
+ * @throws RuntimeException
+ */
+function prepareOrFail($conn, $sql, $label) {
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new RuntimeException(sprintf('%s failed to prepare: %s', $label, $conn->error));
+    }
+    return $stmt;
+}
+
+/**
  * Send error response
  * @param string $message Error message
  * @param int $statusCode HTTP status code
