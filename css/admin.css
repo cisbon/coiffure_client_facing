@@ -494,6 +494,20 @@ button { font: inherit; color: inherit; }
 .field-label { font-size: 0.85rem; font-weight: 600; color: var(--slate-700); }
 .field-label .req { color: var(--danger-500); margin-left: 2px; }
 .field-hint { font-size: 0.78rem; color: var(--text-muted); }
+/* A value that is shown but not editable -- e.g. the salon a new user will be
+   assigned to, which a salon role does not get to choose. Sized like an input
+   so it lines up with the fields beside it. */
+.field-static {
+    min-height: var(--tap);
+    display: flex; align-items: center;
+    padding: 0 var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
 .field-error { font-size: 0.8rem; color: var(--danger-600); font-weight: 500; display: flex; gap: 5px; }
 
 .input, .select, .textarea {

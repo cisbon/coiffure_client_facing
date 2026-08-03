@@ -71,6 +71,19 @@ export class Permissions {
         return permissions.some((p) => this.can(p));
     }
 
+    /**
+     * Salon ids where this user holds the permission, ignoring the current
+     * scope. Used where the question is "which salons may I do this in?"
+     * rather than "may I do this here?" -- e.g. whether to offer a salon
+     * chooser at all.
+     *
+     * @returns {string[]} salon ids as strings, matching permissions_by_salon
+     */
+    salonsWith(permission) {
+        return Object.keys(this.bySalon)
+            .filter((salonId) => (this.bySalon[salonId] || []).includes(permission));
+    }
+
     is(...roles) {
         return roles.includes(this.role);
     }

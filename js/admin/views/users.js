@@ -506,8 +506,32 @@ function openUserModal(userId, ctx) {
     const isNew = !user;
     const roles = assignableRoles(ctx.permissions);
 
-    const salonOptions = ctx.salons.map((s) =>
-        `<option value="${s.salon_id}" ${String(user?.salon_id) === String(s.salon_id) ? 'selected' : ''}>${esc(s.salon_name)}</option>`
+    // The salon field follows the permission, not the role: you may place a
+    // user in any salon where you hold manage_users. With one such salon there
+    // is nothing to choose, so it is shown read-only -- a dropdown defaulting
+    // to "Kein Salon" invited people to create a user belonging to nobody.
+    // With several, the choice is real and is offered. The server re-checks
+    // both the permission and the salon, so this is presentation only.
+    const manageableIds = ctx.permissions.salonsWith('manage_users');
+    const manageableSalons = ctx.salons.filter(
+        (s) => manageableIds.includes(String(s.salon_id))
+    );
+    const canChooseSalon = manageableSalons.length > 1;
+
+    // Editing keeps the user's own salon; creating defaults to the one in the
+    // top bar, falling back to the only salon they manage.
+    const assignedSalonId = user?.salon_id
+        ?? (manageableIds.includes(String(ctx.salonId))
+            ? ctx.salonId
+            : (manageableSalons[0]?.salon_id ?? null));
+    const assignedSalonName =
+        ctx.salons.find((s) => String(s.salon_id) === String(assignedSalonId))?.salon_name
+        || user?.salon_name
+        || ctx.salon?.salon_name
+        || '—';
+
+    const salonOptions = manageableSalons.map((s) =>
+        `<option value="${s.salon_id}" ${String(assignedSalonId) === String(s.salon_id) ? 'selected' : ''}>${esc(s.salon_name)}</option>`
     ).join('');
 
     const form = el(`
@@ -544,14 +568,22 @@ function openUserModal(userId, ctx) {
                             ).join('')}
                         </select>
                     </div>
+                    ${canChooseSalon ? `
                     <div class="field">
                         <label class="field-label" for="salon_id">${esc(t('admin.users.salon'))}</label>
                         <select class="select" id="salon_id" name="salon_id">
-                            <option value="">${esc(t('admin.users.no_salon'))}</option>
+                            ${ctx.permissions.isPlatform
+                                ? `<option value="" ${assignedSalonId ? '' : 'selected'}>${esc(t('admin.users.no_salon'))}</option>`
+                                : ''}
                             ${salonOptions}
                         </select>
                         <span class="field-hint">${esc(t('admin.users.salon_hint'))}</span>
-                    </div>
+                    </div>` : `
+                    <div class="field">
+                        <span class="field-label">${esc(t('admin.users.salon'))}</span>
+                        <p class="field-static">${esc(assignedSalonName)}</p>
+                        <span class="field-hint">${esc(t('admin.users.salon_fixed_hint'))}</span>
+                    </div>`}
                     <div class="field">
                         <label class="field-label" for="password">
                             ${esc(isNew ? t('admin.users.password') : t('admin.users.password_optional'))}
@@ -662,9 +694,19 @@ async function submitUser(form, user, close, button, ctx) {
     if (!values.full_name) errors.full_name = t('admin.validation.required');
     if (!values.role) errors.role = t('admin.validation.required');
 
+    // The dropdown is only rendered when there is more than one salon to
+    // choose from; otherwise the single manageable salon is used, which is
+    // also what the server assigns.
+    const manageableIds = ctx.permissions.salonsWith('manage_users');
+    const salonId = form.elements.salon_id
+        ? (form.elements.salon_id.value || null)
+        : (user?.salon_id
+            ?? (manageableIds.includes(String(ctx.salonId)) ? ctx.salonId : manageableIds[0])
+            ?? null);
+
     // Salon-bound roles need a salon; platform roles must not have one.
     const needsSalon = ['customer_admin', 'customer_admin_delegate', 'customer_facing_tablet_user'];
-    if (needsSalon.includes(values.role) && !values.salon_id) {
+    if (needsSalon.includes(values.role) && !salonId) {
         errors.salon_id = t('admin.validation.salon_required');
     }
 
@@ -678,7 +720,7 @@ async function submitUser(form, user, close, button, ctx) {
         full_name: values.full_name,
         phone: values.phone || null,
         role: values.role,
-        salon_id: values.salon_id || null,
+        salon_id: salonId,
         is_active: values.is_active === '1',
     };
     if (!user) payload.username = values.username;
@@ -698,10 +740,10 @@ async function submitUser(form, user, close, button, ctx) {
         }
 
         // Grants live in their own table, so they are a second call.
-        if (values.role === 'customer_admin_delegate' && userId && values.salon_id) {
+        if (values.role === 'customer_admin_delegate' && userId && salonId) {
             try {
                 await apiPost(
-                    `user-invite.php?action=permissions&salon_id=${encodeURIComponent(values.salon_id)}`,
+                    `user-invite.php?action=permissions&salon_id=${encodeURIComponent(salonId)}`,
                     { user_id: userId, permissions },
                     { salonScope: false }
                 );

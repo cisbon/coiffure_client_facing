@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/permissions.php';
 
 // Set CORS headers
 setCorsHeaders();
@@ -234,8 +235,24 @@ function handleCreateUser($conn, $currentUser, $data) {
     $salonId = isset($data['salon_id']) ? (int)$data['salon_id'] : null;
     $isActive = isset($data['is_active']) ? (bool)$data['is_active'] : true;
 
+    // A salon role never picks the salon -- it is always the one they
+    // administer, so the dialog does not offer the choice and the value is
+    // filled in here rather than trusted from the request.
+    // Fill in the salon ONLY when the request did not name one -- that is the
+    // single-salon case, where the dialog shows it read-only and sends
+    // nothing. A salon that was named explicitly is left exactly as sent, so
+    // an unauthorised one is refused below rather than quietly swapped for a
+    // different salon than the caller asked for.
+    if (!$salonId && in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'], true)) {
+        $manageable = array_values(array_filter(
+            getAccessibleSalonIds($conn, $currentUser),
+            static fn($id) => hasPermission($conn, $currentUser, 'manage_users', (int)$id)
+        ));
+        $salonId = !empty($manageable) ? (int)$manageable[0] : null;
+    }
+
     // Validate role permissions
-    validateUserCreationPermissions($currentUser, $role, $salonId);
+    validateUserCreationPermissions($conn, $currentUser, $role, $salonId);
 
     // Validate email
     if (!validateEmail($email)) {
@@ -542,7 +559,7 @@ function handleDeleteUser($conn, $currentUser, $userId) {
 /**
  * Validate permissions for creating a user
  */
-function validateUserCreationPermissions($currentUser, $newUserRole, $newUserSalonId) {
+function validateUserCreationPermissions($conn, $currentUser, $newUserRole, $newUserSalonId) {
     // admin can create any user
     if ($currentUser['role'] === 'admin') {
         return;
@@ -556,11 +573,26 @@ function validateUserCreationPermissions($currentUser, $newUserRole, $newUserSal
         return;
     }
 
-    // customer_admin can only create users for their salon
-    if ($currentUser['role'] === 'customer_admin') {
-        if ($newUserSalonId != $currentUser['salon_id']) {
+    // Managing users is a permission, not a role. A salon owner holds
+    // manage_users for their salons by virtue of being the owner, and a
+    // delegate holds it only where it has been granted -- so both go through
+    // the same check and neither gets a special case.
+    $isSalonRole = in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'], true);
+    if ($isSalonRole) {
+        // Every salon they administer, not just users.salon_id -- that legacy
+        // column holds one salon, so a multi-salon owner could not add anyone
+        // to their second salon.
+        $accessible = getAccessibleSalonIds($conn, $currentUser);
+        if (!$newUserSalonId || !in_array((int)$newUserSalonId, $accessible, true)) {
             sendErrorResponse('Forbidden. Can only create users for your own salon.', 403);
         }
+
+        // ...and manage_users must be held for that specific salon, so a
+        // delegate granted it in one salon cannot use it in another.
+        if (!hasPermission($conn, $currentUser, 'manage_users', (int)$newUserSalonId)) {
+            sendErrorResponse('Forbidden. Insufficient permissions to create users.', 403);
+        }
+
         // 'customer_user' was renamed to 'customer_facing_tablet_user' by
         // migration 003, so the old value is no longer a valid enum member --
         // allowing it here meant a customer_admin could not create the tablet
@@ -571,7 +603,6 @@ function validateUserCreationPermissions($currentUser, $newUserRole, $newUserSal
         return;
     }
 
-    // customer_admin_delegate and customer_user cannot create users
     sendErrorResponse('Forbidden. Insufficient permissions to create users.', 403);
 }
 

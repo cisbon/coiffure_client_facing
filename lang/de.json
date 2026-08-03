@@ -442,7 +442,8 @@
       "revoke_title": "Einladung zurückziehen?",
       "revoke_message": "Die Einladung für {email} wird ungültig. Der Link funktioniert danach nicht mehr.",
       "revoked": "Einladung zurückgezogen.",
-      "permissions_failed": "Das Konto wurde gespeichert, die Berechtigungen konnten aber nicht übernommen werden."
+      "permissions_failed": "Das Konto wurde gespeichert, die Berechtigungen konnten aber nicht übernommen werden.",
+      "salon_fixed_hint": "Neue Benutzer werden automatisch diesem Salon zugeordnet."
     },
     "customers": {
       "title": "Kunden",
