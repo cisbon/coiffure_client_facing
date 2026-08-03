@@ -443,7 +443,8 @@
       "revoke_message": "The invitation for {email} becomes invalid. The link will stop working.",
       "revoked": "Invitation revoked.",
       "permissions_failed": "The account was saved, but the permissions could not be applied.",
-      "salon_fixed_hint": "New users are automatically assigned to this salon."
+      "salon_fixed_hint": "New users are automatically assigned to this salon.",
+      "no_access": "No access"
     },
     "customers": {
       "title": "Customers",

@@ -79,10 +79,15 @@ function handleGetUsers($conn, $currentUser, $userId) {
 
     // Filter based on role
     if ($currentUser['role'] === 'customer_admin' || $currentUser['role'] === 'customer_admin_delegate') {
-        // Can only see users from their own salon
-        $query .= " AND u.salon_id = ?";
-        $params[] = $currentUser['salon_id'];
-        $types .= 'i';
+        // Every salon they are assigned to, not users.salon_id -- that legacy
+        // column holds one salon, so an owner of two saw only one salon's team.
+        $accessible = getAccessibleSalonIds($conn, $currentUser);
+        $in = salonInClause($accessible);
+        $query .= " AND u.salon_id IN {$in['sql']}";
+        foreach ($in['values'] as $value) {
+            $params[] = $value;
+            $types .= 'i';
+        }
     }
 
     // Apply optional filters from query parameters
@@ -188,7 +193,8 @@ function getSingleUser($conn, $currentUser, $userId) {
 
     // Check permissions to view this user
     if ($currentUser['role'] === 'customer_admin' || $currentUser['role'] === 'customer_admin_delegate') {
-        if ($user['salon_id'] != $currentUser['salon_id']) {
+        $accessible = getAccessibleSalonIds($conn, $currentUser);
+        if (!$user['salon_id'] || !in_array((int)$user['salon_id'], $accessible, true)) {
             sendErrorResponse('Forbidden. Cannot view users from other salons.', 403);
         }
     }
@@ -361,7 +367,7 @@ function handleUpdateUser($conn, $currentUser, $userId, $data) {
     $stmt->close();
 
     // Check permissions
-    validateUserUpdatePermissions($currentUser, $existingUser);
+    validateUserUpdatePermissions($currentUser, $existingUser, $conn);
 
     // Build update query dynamically
     $updates = [];
@@ -516,7 +522,7 @@ function handleDeleteUser($conn, $currentUser, $userId) {
     $stmt->close();
 
     // Check permissions
-    validateUserUpdatePermissions($currentUser, $existingUser);
+    validateUserUpdatePermissions($currentUser, $existingUser, $conn);
 
     // Prevent deleting yourself
     if ($userId == $currentUser['user_id']) {
@@ -609,7 +615,7 @@ function validateUserCreationPermissions($conn, $currentUser, $newUserRole, $new
 /**
  * Validate permissions for updating a user
  */
-function validateUserUpdatePermissions($currentUser, $targetUser) {
+function validateUserUpdatePermissions($currentUser, $targetUser, $conn = null) {
     // admin can update any user
     if ($currentUser['role'] === 'admin') {
         return;
@@ -623,22 +629,42 @@ function validateUserUpdatePermissions($currentUser, $targetUser) {
         return;
     }
 
-    // customer_admin can only update users from their salon
-    if ($currentUser['role'] === 'customer_admin') {
-        if ($targetUser['salon_id'] != $currentUser['salon_id']) {
-            sendErrorResponse('Forbidden. Can only modify users from your own salon.', 403);
-        }
-        if ($targetUser['role'] === 'customer_admin' && $targetUser['user_id'] != $currentUser['user_id']) {
-            sendErrorResponse('Forbidden. Cannot modify other customer_admin users.', 403);
-        }
+    // Everyone may edit their own account.
+    if ($targetUser['user_id'] == $currentUser['user_id']) {
         return;
     }
 
-    // customer_admin_delegate can only update themselves
-    if ($currentUser['role'] === 'customer_admin_delegate') {
-        if ($targetUser['user_id'] != $currentUser['user_id']) {
-            sendErrorResponse('Forbidden. Can only modify your own account.', 403);
+    // Salon roles: the target must be in a salon they administer, and a salon
+    // role can never reach a platform account.
+    if (in_array($currentUser['role'], ['customer_admin', 'customer_admin_delegate'], true)) {
+        if (in_array($targetUser['role'], ['admin', 'admin_delegate'], true)) {
+            sendErrorResponse('Forbidden. Cannot modify platform users.', 403);
         }
+
+        if ($conn === null) {
+            sendErrorResponse('Forbidden. Insufficient permissions.', 403);
+        }
+
+        // Accessible salons, not users.salon_id -- that legacy column holds one
+        // salon, so an owner of two could not manage the second one's staff.
+        $accessible = getAccessibleSalonIds($conn, $currentUser);
+        $targetSalon = $targetUser['salon_id'] !== null ? (int)$targetUser['salon_id'] : 0;
+        if (!$targetSalon || !in_array($targetSalon, $accessible, true)) {
+            sendErrorResponse('Forbidden. Can only modify users from your own salon.', 403);
+        }
+
+        // Managing other people is a permission. An owner holds it by role; a
+        // delegate only where it was granted -- previously a delegate could
+        // edit nobody but themselves even with manage_users.
+        if (!hasPermission($conn, $currentUser, 'manage_users', $targetSalon)) {
+            sendErrorResponse('Forbidden. Insufficient permissions to modify users.', 403);
+        }
+
+        // Staff never edit the salon owner, and one owner never edits another.
+        if ($targetUser['role'] === 'customer_admin') {
+            sendErrorResponse('Forbidden. Cannot modify the salon owner.', 403);
+        }
+
         return;
     }
 
