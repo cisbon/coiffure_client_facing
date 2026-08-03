@@ -436,7 +436,7 @@ button { font: inherit; color: inherit; }
     flex-wrap: wrap;
 }
 /* Covers both a bare <h2> and a <div> wrapping a title plus a .card-hint. */
-.card-header > :first-child { flex: 1 1 auto; min-width: 0; }
+.card-header > :first-child { min-width: 0; }
 .card-header h2, .card-header h3 { flex: 1; min-width: 0; }
 .card-body { padding: var(--sp-6); }
 .card-footer {
