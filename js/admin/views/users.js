@@ -61,6 +61,28 @@ function manageableSalonIds(ctx) {
     return Object.keys(bySalon).filter((id) => (bySalon[id] || []).includes('manage_users'));
 }
 
+/**
+ * May this user edit that one? Mirrors validateUserUpdatePermissions() in
+ * api/user-management.php.
+ *
+ * The server is the authority -- this only decides whether to offer the
+ * buttons, so that nobody is invited to click Edit and collect a 403.
+ */
+function canEditUser(ctx, target) {
+    const me = ctx.permissions;
+
+    if (me.isAdmin) return true;
+    if (me.is('admin_delegate')) return target.role !== 'admin';
+
+    // Everyone may edit their own account.
+    if (Number(target.user_id) === Number(ctx.user.user_id)) return true;
+
+    // A salon role never reaches a platform account or the salon owner, and
+    // needs manage_users in the target's salon.
+    if (['admin', 'admin_delegate', 'customer_admin'].includes(target.role)) return false;
+    return manageableSalonIds(ctx).includes(String(target.salon_id));
+}
+
 let users = [];
 let invitations = [];
 
@@ -193,12 +215,17 @@ function buildTable(ctx) {
                 label: '',
                 className: 'cell-actions',
                 cardHidden: true,
-                render: (u) => `
+                render: (u) => {
+                    if (!canEditUser(ctx, u)) {
+                        return `<span class="cell-muted text-xs">${esc(t('admin.users.no_access'))}</span>`;
+                    }
+                    return `
                     <button type="button" class="btn btn-ghost btn-sm" data-edit="${u.user_id}">${esc(t('admin.common.edit'))}</button>
                     ${Number(u.user_id) === Number(ctx.user.user_id)
                         ? ''
                         : `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger-600)" data-delete="${u.user_id}">${esc(t('admin.common.deactivate'))}</button>`}
-                `,
+                `;
+                },
             },
         ],
     });
@@ -691,16 +718,32 @@ function buildUserModal(userId, ctx) {
     roleSelect.addEventListener('change', syncPermissionBlock);
     syncPermissionBlock();
 
-    // Pre-tick the delegate's existing grants.
-    if (user?.role === 'customer_admin_delegate' && !ctx.isAllSalons && ctx.salonId) {
-        loadUserPermissions(user.user_id, form, ctx);
+    // Pre-tick the delegate's existing grants, against the salon shown in the
+    // dialog rather than the one in the top bar -- an administrator viewing
+    // "Alle Salons" has no salon in scope, so the boxes used to come up empty
+    // and saving would have wiped the grants they could not see.
+    const permissionSalonId = () => (form.elements.salon_id
+        ? form.elements.salon_id.value
+        : assignedSalonId);
+
+    if (user?.role === 'customer_admin_delegate') {
+        const salonForPermissions = permissionSalonId();
+        if (salonForPermissions) {
+            loadUserPermissions(user.user_id, form, salonForPermissions);
+        }
+        // Re-read when the salon changes, so the boxes always describe the
+        // salon that is actually selected.
+        form.elements.salon_id?.addEventListener('change', () => {
+            const next = permissionSalonId();
+            if (next) loadUserPermissions(user.user_id, form, next);
+        });
     }
 }
 
-async function loadUserPermissions(userId, form, ctx) {
+async function loadUserPermissions(userId, form, salonId) {
     try {
         const data = await apiGet(
-            `user-invite.php?action=permissions&user_id=${userId}&salon_id=${encodeURIComponent(ctx.salonId)}`,
+            `user-invite.php?action=permissions&user_id=${userId}&salon_id=${encodeURIComponent(salonId)}`,
             { salonScope: false }
         );
         const granted = data.permissions || [];

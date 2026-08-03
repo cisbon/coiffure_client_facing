@@ -386,7 +386,17 @@ function handleSetPermissions(mysqli $conn, int $salonId, array $user, array $in
         sendErrorResponse('Dieser Benutzer gehört nicht zu diesem Salon.', 404);
     }
     if ($target['role'] !== 'customer_admin_delegate') {
+        // A salon owner holds every salon permission by role, and a platform
+        // account is not salon-scoped at all -- neither has granular rights to
+        // edit. This is also what stops staff editing the owner.
         sendErrorResponse('Berechtigungen lassen sich nur für Salon-Mitarbeiter setzen.', 400);
+    }
+
+    // manage_users is the right to manage OTHER people. Without this, a
+    // delegate who holds it could hand themselves change_settings and walk
+    // straight past the permission model.
+    if ($userId === (int)$user['user_id']) {
+        sendErrorResponse('Eigene Berechtigungen können nicht geändert werden.', 403);
     }
 
     $requested = array_values(array_intersect((array)($input['permissions'] ?? []), SALON_PERMISSIONS));
