@@ -233,8 +233,10 @@
         .kiosk-fs { position: fixed; inset: 0; z-index: 45; background: #000; display: none; }
         .kiosk-fs:not(.hidden) { display: block; }
         .kiosk-fs-media { position: absolute; inset: 0; width: 100%; height: 100%; }
-        #kiosk-camera-video.kiosk-fs-media { object-fit: cover; transform: scaleX(-1); } /* mirror like a selfie cam */
-        #kiosk-preview-image.kiosk-fs-media { object-fit: cover; }
+        #kiosk-camera-video.kiosk-fs-media,
+        #brow-camera-video.kiosk-fs-media { object-fit: cover; transform: scaleX(-1); } /* mirror like a selfie cam */
+        #kiosk-preview-image.kiosk-fs-media,
+        #brow-preview-image.kiosk-fs-media { object-fit: cover; }
         .kiosk-countdown { position: absolute; top: calc(80px + env(safe-area-inset-top)); left: 20px; z-index: 3;
             width: 68px; height: 68px; border-radius: 9999px; background: rgba(0,0,0,0.45); color: #fff;
             font-size: 34px; font-weight: 800; display: flex; align-items: center; justify-content: center;
@@ -272,7 +274,7 @@
         .kiosk-result-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.85); text-align: center; margin-bottom: 6px; }
         .kiosk-result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 560px; margin: 0 auto; width: 100%; }
         .kiosk-result-actions .kiosk-cam-btn { width: 100%; min-width: 0; }
-        #kiosk-color-row.hidden { display: none; }
+        #kiosk-color-row.hidden, #brow-color-row.hidden { display: none; }
         /* Error banner below the top bar; display driven by the .hidden class only
            (never an inline display, which would keep it stuck open). */
         .kiosk-error { position: absolute; top: calc(84px + env(safe-area-inset-top)); left: 0; right: 0; z-index: 4;
@@ -523,6 +525,9 @@
             </button>
             <button type="button" class="nav-item" data-screen="ai" onclick="navGo('ai')">
                 <span class="nav-ico">✨</span><span class="nav-label">AI Hairstyle</span>
+            </button>
+            <button type="button" class="nav-item" data-screen="brows" onclick="navGo('brows')">
+                <span class="nav-ico">👁️</span><span class="nav-label">AI Eyebrows</span>
             </button>
         </nav>
 
@@ -945,17 +950,17 @@
                 <div id="kiosk-progress" class="fixed top-0 left-0 right-0 bg-white shadow-md z-[47] py-4 px-4">
                     <div class="max-w-2xl mx-auto">
                         <div class="flex items-center justify-center gap-2">
-                            <div id="progress-step-1" class="flex items-center">
+                            <div id="kiosk-progress-step-1" class="flex items-center">
                                 <div class="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm">1</div>
                                 <span class="ml-2 text-sm font-semibold text-gray-700 hidden sm:inline" data-i18n="kiosk.step_photo">Photo</span>
                             </div>
-                            <div class="w-12 h-1 bg-gray-300" id="progress-line-1"></div>
-                            <div id="progress-step-2" class="flex items-center opacity-50">
+                            <div class="w-12 h-1 bg-gray-300" id="kiosk-progress-line-1"></div>
+                            <div id="kiosk-progress-step-2" class="flex items-center opacity-50">
                                 <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">2</div>
                                 <span class="ml-2 text-sm font-semibold text-gray-600 hidden sm:inline" data-i18n="kiosk.step_style">Style</span>
                             </div>
-                            <div class="w-12 h-1 bg-gray-300" id="progress-line-2"></div>
-                            <div id="progress-step-3" class="flex items-center opacity-50">
+                            <div class="w-12 h-1 bg-gray-300" id="kiosk-progress-line-2"></div>
+                            <div id="kiosk-progress-step-3" class="flex items-center opacity-50">
                                 <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">3</div>
                                 <span class="ml-2 text-sm font-semibold text-gray-600 hidden sm:inline" data-i18n="kiosk.step_result">Result</span>
                             </div>
@@ -1312,6 +1317,391 @@
                 </div>
             </div>
             <!-- ==================== END FULLSCREEN AI CONSULTATION POPUP ==================== -->
+
+            <!-- ==================== FULLSCREEN AI EYEBROW POPUP ==================== -->
+            <!-- Same workflow and design as the hairstyle kiosk above; the styles
+                 offered are eyebrow shapes instead of haircuts. -->
+            <div id="brow-popup" class="hidden fixed inset-0 bg-white z-50">
+                <!-- Language switch (Top Left) -->
+                <div class="lang-switcher" data-lang-switcher style="position:fixed;top:12px;right:76px;z-index:51"></div>
+                <!-- Close Button (Top Right) -->
+                <button onclick="closeBrowPopup()" class="fixed top-2 right-4 z-50 w-12 h-12 bg-gray-800 hover:bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+
+                <!-- Progress Indicator (Top) -->
+                <div id="brow-progress" class="fixed top-0 left-0 right-0 bg-white shadow-md z-[47] py-4 px-4">
+                    <div class="max-w-2xl mx-auto">
+                        <div class="flex items-center justify-center gap-2">
+                            <div id="brow-progress-step-1" class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm">1</div>
+                                <span class="ml-2 text-sm font-semibold text-gray-700 hidden sm:inline" data-i18n="kiosk.step_photo">Photo</span>
+                            </div>
+                            <div class="w-12 h-1 bg-gray-300" id="brow-progress-line-1"></div>
+                            <div id="brow-progress-step-2" class="flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">2</div>
+                                <span class="ml-2 text-sm font-semibold text-gray-600 hidden sm:inline" data-i18n="kiosk.step_style">Style</span>
+                            </div>
+                            <div class="w-12 h-1 bg-gray-300" id="brow-progress-line-2"></div>
+                            <div id="brow-progress-step-3" class="flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm">3</div>
+                                <span class="ml-2 text-sm font-semibold text-gray-600 hidden sm:inline" data-i18n="kiosk.step_result">Result</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fullscreen camera (iOS-camera-like); only the top bar stays visible -->
+                <div id="brow-camera-fs" class="kiosk-fs hidden">
+                    <video id="brow-camera-video" class="kiosk-fs-media" autoplay playsinline muted></video>
+                    <canvas id="brow-camera-canvas" class="hidden"></canvas>
+                    <div id="brow-countdown" class="kiosk-countdown hidden"></div>
+                    <div class="kiosk-cam-controls">
+                        <button type="button" onclick="browCloseCamera()" class="kiosk-cam-btn kiosk-cam-btn-secondary" data-i18n="kiosk.cancel">Cancel</button>
+                        <button type="button" onclick="browCapturePhoto()" class="kiosk-shutter" aria-label="Capture"></button>
+                        <span class="kiosk-cam-spacer"></span>
+                    </div>
+                </div>
+
+                <!-- Fullscreen captured/uploaded photo preview -->
+                <div id="brow-photo-fs" class="kiosk-fs hidden">
+                    <img id="brow-preview-image" class="kiosk-fs-media" alt="Your Photo">
+                    <div class="kiosk-cam-controls">
+                        <button type="button" onclick="browRetakePhoto()" class="kiosk-cam-btn kiosk-cam-btn-secondary" data-i18n="kiosk.retake_photo">Retake Photo</button>
+                        <span class="kiosk-cam-spacer"></span>
+                        <button type="button" onclick="browGoToStyleSelection()" class="kiosk-cam-btn kiosk-cam-btn-primary" data-i18n="kiosk.continue">Continue →</button>
+                    </div>
+                </div>
+
+                <!-- ========== STEP 1: PHOTO CAPTURE (options) ========== -->
+                <div id="brow-step-photo" class="kiosk-step-fit flex items-center justify-center px-4 overflow-hidden">
+                    <div class="max-w-lg w-full text-center space-y-6">
+                        <div class="text-6xl mb-2">📸</div>
+                        <h2 class="text-3xl font-bold text-gray-800" data-i18n="kiosk.photo_title">Take Your Photo</h2>
+                        <p class="text-gray-600 text-lg" data-i18n="brow.photo_subtitle">Let's start by capturing your current brows</p>
+
+                        <div id="brow-photo-options" class="space-y-4 mt-6">
+                            <button onclick="browOpenCamera()" class="w-full py-6 px-6 bg-purple-600 text-white text-xl font-semibold rounded-xl hover:bg-purple-700 transition-all shadow-lg flex items-center justify-center gap-3">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span data-i18n="kiosk.take_photo">Take Photo</span>
+                            </button>
+                            <button onclick="document.getElementById('brow-image-input').click()" class="w-full py-6 px-6 bg-gray-600 text-white text-xl font-semibold rounded-xl hover:bg-gray-700 transition-all shadow-lg flex items-center justify-center gap-3">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                <span data-i18n="kiosk.upload_photo">Upload Photo</span>
+                            </button>
+                            <input type="file" id="brow-image-input" accept="image/*" class="hidden" onchange="browHandleImageSelect(event)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== STEP 2: EYEBROW STYLE SELECTION ========== -->
+                <div id="brow-step-style" class="hidden kiosk-step-fit flex flex-col px-4 overflow-hidden">
+                    <div class="max-w-4xl w-full mx-auto h-full flex flex-col min-h-0">
+                        <div class="text-center mb-2 flex-none">
+                            <h2 class="text-2xl font-bold text-gray-800" data-i18n="brow.style_title">Choose Your Brow Style</h2>
+                        </div>
+
+                        <!-- Mode Selector -->
+                        <div class="flex gap-2 mb-4 p-2 bg-gray-100 rounded-xl overflow-x-auto flex-shrink-0">
+                            <button id="brow-mode-quick" onclick="browSwitchStyleMode('quick')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-purple-600 text-white" data-i18n="kiosk.mode_quick">
+                                Quick Styles
+                            </button>
+                            <button id="brow-mode-describe" onclick="browSwitchStyleMode('describe')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="kiosk.mode_describe">
+                                Describe
+                            </button>
+                            <button id="brow-mode-shapes" onclick="browSwitchStyleMode('shapes')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="brow.mode_shapes">
+                                Shapes
+                            </button>
+                            <button id="brow-mode-custom" onclick="browSwitchStyleMode('custom')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="kiosk.mode_custom">
+                                Custom
+                            </button>
+                        </div>
+
+                        <!-- Content Area: only this middle region scrolls (if ever needed) -->
+                        <div class="kiosk-scroll pb-2">
+                            <!-- Quick Styles Mode -->
+                            <div id="brow-quick-mode" class="space-y-4">
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <button onclick="browSelectStyle('natural')" class="py-6 px-4 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow">
+                                        <div class="text-4xl mb-2">🌿</div>
+                                        <div class="text-lg font-bold text-gray-800" data-i18n="brow.style_natural">Natural</div>
+                                        <div class="text-xs text-gray-600 mt-1" data-i18n="brow.style_natural_desc">Effortless</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('defined')" class="py-6 px-4 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow">
+                                        <div class="text-4xl mb-2">✏️</div>
+                                        <div class="text-lg font-bold text-gray-800" data-i18n="brow.style_defined">Defined</div>
+                                        <div class="text-xs text-gray-600 mt-1" data-i18n="brow.style_defined_desc">Polished</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('bold')" class="py-6 px-4 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow">
+                                        <div class="text-4xl mb-2">🖤</div>
+                                        <div class="text-lg font-bold text-gray-800" data-i18n="brow.style_bold">Bold</div>
+                                        <div class="text-xs text-gray-600 mt-1" data-i18n="brow.style_bold_desc">Statement</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('soft')" class="py-6 px-4 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow">
+                                        <div class="text-4xl mb-2">☁️</div>
+                                        <div class="text-lg font-bold text-gray-800" data-i18n="brow.style_soft">Soft</div>
+                                        <div class="text-xs text-gray-600 mt-1" data-i18n="brow.style_soft_desc">Gentle</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('glam')" class="py-6 px-4 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow">
+                                        <div class="text-4xl mb-2">💎</div>
+                                        <div class="text-lg font-bold text-gray-800" data-i18n="brow.style_glam">Glam</div>
+                                        <div class="text-xs text-gray-600 mt-1" data-i18n="brow.style_glam_desc">Evening</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('laminated')" class="py-6 px-4 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all shadow">
+                                        <div class="text-4xl mb-2">🪶</div>
+                                        <div class="text-lg font-bold text-gray-800" data-i18n="brow.style_laminated">Laminated</div>
+                                        <div class="text-xs text-gray-600 mt-1" data-i18n="brow.style_laminated_desc">Fluffy</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Describe Mode -->
+                            <div id="brow-describe-mode" class="hidden space-y-4">
+                                <p class="text-gray-600 text-center" data-i18n="brow.describe_hint">Describe the eyebrows you want</p>
+                                <textarea id="brow-style-description" rows="4" class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg" data-i18n-placeholder="brow.describe_placeholder" placeholder="e.g., Softly arched brows, a little fuller with a light brown tint..."></textarea>
+                                <button onclick="browSelectCustomDescription()" class="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg">
+                                    <span data-i18n="kiosk.generate">Generate →</span>
+                                </button>
+                            </div>
+
+                            <!-- Shapes Mode -->
+                            <div id="brow-shapes-mode" class="hidden space-y-4">
+                                <!-- Gender Toggle -->
+                                <div class="flex gap-3 mb-4">
+                                    <button onclick="browSelectGender('women')" id="brow-gender-women" class="flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-purple-600 text-white" data-i18n="brow.shapes_women">
+                                        Women's Brows
+                                    </button>
+                                    <button onclick="browSelectGender('men')" id="brow-gender-men" class="flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300" data-i18n="brow.shapes_men">
+                                        Men's Brows
+                                    </button>
+                                </div>
+
+                                <!-- Women's Brow Shapes -->
+                                <div id="brow-women-shapes" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <button onclick="browSelectStyle('arched')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_arched">Classic Arch</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('soft_angled')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_soft_angled">Soft Angled</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('rounded')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_rounded">Rounded</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('straight')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_straight">Straight</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('s_shaped')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_s_shaped">S-Shaped</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('high_arch')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_high_arch">High Arch</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('tapered')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_tapered">Tapered</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('feathered')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_feathered">Feathered</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('thick_full')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_thick_full">Thick & Full</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('thin_slim')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_thin_slim">Slim</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('microbladed')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_microbladed">Microbladed</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('ombre')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_ombre">Ombré Powder</div>
+                                    </button>
+                                </div>
+
+                                <!-- Men's Brow Shapes -->
+                                <div id="brow-men-shapes" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <button onclick="browSelectStyle('m_tidy')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_tidy">Natural Tidy</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_straight')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_straight">Straight</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_soft_arch')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_soft_arch">Soft Arch</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_defined')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_defined">Defined</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_thick')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_thick">Thick & Full</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_tapered')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_tapered">Tapered</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_angled')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_angled">Angled</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_textured')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_textured">Textured</div>
+                                    </button>
+                                    <button onclick="browSelectStyle('m_groomed_short')" class="py-4 px-3 border-2 border-gray-300 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                        <div class="font-semibold" data-i18n="brow.shape_m_groomed_short">Trimmed Short</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Custom Builder Mode -->
+                            <div id="brow-custom-mode" class="hidden space-y-4">
+                                <!-- Thickness -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="brow.custom_thickness">Brow Thickness</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="browSelectOption('thickness', 'thin')" id="brow-thickness-thin" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.thickness_thin">Thin</div>
+                                        </button>
+                                        <button onclick="browSelectOption('thickness', 'medium')" id="brow-thickness-medium" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.thickness_medium">Medium</div>
+                                        </button>
+                                        <button onclick="browSelectOption('thickness', 'thick')" id="brow-thickness-thick" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.thickness_thick">Thick</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Shape -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="brow.custom_shape">Shape</label>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <button onclick="browSelectOption('shape', 'arched')" id="brow-shape-arched" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.shape_arched">Classic Arch</div>
+                                        </button>
+                                        <button onclick="browSelectOption('shape', 'straight')" id="brow-shape-straight" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.shape_straight">Straight</div>
+                                        </button>
+                                        <button onclick="browSelectOption('shape', 'rounded')" id="brow-shape-rounded" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.shape_rounded">Rounded</div>
+                                        </button>
+                                        <button onclick="browSelectOption('shape', 'angled')" id="brow-shape-angled" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.shape_angled">Angled</div>
+                                        </button>
+                                        <button onclick="browSelectOption('shape', 's_shaped')" id="brow-shape-s_shaped" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.shape_s_shaped">S-Shaped</div>
+                                        </button>
+                                        <button onclick="browSelectOption('shape', 'feathered')" id="brow-shape-feathered" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.shape_feathered">Feathered</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Arch height -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="brow.custom_arch">Arch Height</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="browSelectOption('arch', 'low')" id="brow-arch-low" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.arch_low">Low</div>
+                                        </button>
+                                        <button onclick="browSelectOption('arch', 'medium')" id="brow-arch-medium" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.arch_medium">Medium</div>
+                                        </button>
+                                        <button onclick="browSelectOption('arch', 'high')" id="brow-arch-high" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.arch_high">High</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Colour -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="brow.custom_color">Brow Colour</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="browSelectOption('color', 'natural')" id="brow-color-natural" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.color_natural">Natural</div>
+                                        </button>
+                                        <button onclick="browSelectOption('color', 'lighter')" id="brow-color-lighter" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.color_lighter">Lighter</div>
+                                        </button>
+                                        <button onclick="browSelectOption('color', 'darker')" id="brow-color-darker" class="brow-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all">
+                                            <div class="font-semibold" data-i18n="brow.color_darker">Darker</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Generate Button -->
+                                <button onclick="browGenerateCustomStyle()" id="brow-custom-generate" class="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg disabled:opacity-50" disabled>
+                                    <span data-i18n="kiosk.generate">Generate →</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Back Button (pinned footer, always visible) -->
+                        <div class="flex-none pt-3">
+                            <button onclick="browGoBackToPhoto()" class="w-full py-3 px-8 bg-gray-200 text-gray-700 text-base font-semibold rounded-xl hover:bg-gray-300 transition-all">
+                                <span data-i18n="kiosk.back">← Back to Photo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== STEP 3: GENERATING ========== -->
+                <div id="brow-step-generating" class="hidden kiosk-step-fit flex items-center justify-center px-4 overflow-hidden">
+                    <div class="max-w-lg w-full text-center space-y-6">
+                        <!-- Large Spinner -->
+                        <svg class="spinner mx-auto h-24 w-24 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+
+                        <h2 class="text-3xl font-bold text-gray-800 mt-8" data-i18n="brow.generating_title">Shaping Your New Brows...</h2>
+                        <p class="text-gray-600 text-lg" data-i18n="kiosk.generating_subtitle">This takes about 15-30 seconds</p>
+
+                        <!-- Progress dots animation -->
+                        <div class="flex justify-center gap-2 pt-4">
+                            <div class="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                            <div class="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            <div class="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== STEP 4: RESULTS ========== -->
+                <!-- Fullscreen result photo with overlaid controls (like the camera) -->
+                <div id="brow-step-results" class="hidden kiosk-fs">
+                    <div id="brow-result-image-container" class="kiosk-fs-media">
+                        <img id="brow-result-image" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="AI Generated Eyebrows">
+                    </div>
+
+                    <!-- Error banner (below the top bar; only shown on a real error) -->
+                    <div id="brow-error-message" class="kiosk-error hidden">
+                        <div class="p-4 bg-red-50 border-2 border-red-200 rounded-xl max-w-md text-center shadow-lg">
+                            <p class="text-red-600 font-semibold"></p>
+                        </div>
+                    </div>
+
+                    <!-- Bottom overlay controls -->
+                    <div class="kiosk-result-controls">
+                        <div id="brow-color-row">
+                            <p class="kiosk-result-label" data-i18n="brow.change_color">Nur Augenbrauenfarbe ändern</p>
+                            <div class="flex gap-2 overflow-x-auto justify-center pb-1">
+                                <button type="button" onclick="browChangeColor('blonde')" class="kiosk-color-chip" style="--sw:#d9b382"><span data-i18n="brow.color_blonde">Blond</span></button>
+                                <button type="button" onclick="browChangeColor('light brown')" class="kiosk-color-chip" style="--sw:#8a6547"><span data-i18n="brow.color_light_brown">Hellbraun</span></button>
+                                <button type="button" onclick="browChangeColor('medium brown')" class="kiosk-color-chip" style="--sw:#6b4423"><span data-i18n="brow.color_brown">Braun</span></button>
+                                <button type="button" onclick="browChangeColor('dark brown')" class="kiosk-color-chip" style="--sw:#40291a"><span data-i18n="brow.color_dark_brown">Dunkelbraun</span></button>
+                                <button type="button" onclick="browChangeColor('black')" class="kiosk-color-chip" style="--sw:#1c1c1c"><span data-i18n="brow.color_black">Schwarz</span></button>
+                                <button type="button" onclick="browChangeColor('taupe grey')" class="kiosk-color-chip" style="--sw:#8c8279"><span data-i18n="brow.color_taupe">Taupe</span></button>
+                            </div>
+                        </div>
+                        <div class="kiosk-result-actions">
+                            <button onclick="browTryDifferentStyle()" class="kiosk-cam-btn kiosk-cam-btn-primary" data-i18n="brow.try_different">Try Different Brows</button>
+                            <button onclick="browStartOver()" class="kiosk-cam-btn kiosk-cam-btn-secondary" data-i18n="kiosk.start_over">Start Over</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ==================== END FULLSCREEN AI EYEBROW POPUP ==================== -->
 
             <!-- Hidden compatibility containers -->
             <div id="guided-mode-container" class="hidden">
@@ -2185,8 +2575,9 @@
         let currentScreen = START_SCREEN;
 
         function showScreen(name) {
-            // 'ai' is an overlay, not a routed screen.
+            // The AI stylists are overlays, not routed screens.
             if (name === 'ai') { openKioskPopup(); return; }
+            if (name === 'brows') { openBrowPopup(); return; }
 
             // Hide the standalone screens
             ['screen-checkin', 'screen-browse'].forEach(id => {
@@ -2308,24 +2699,28 @@
             card.classList.remove('hidden');
         }
 
-        // Open fullscreen kiosk popup
-        function openKioskPopup() {
-            document.getElementById('kiosk-popup').classList.remove('hidden');
-            initKioskMode();
+        // ---- Fullscreen AI stylist popups (hairstyle, eyebrows, ...) ----
+        // Every stylist shares one flow; see the AI STYLIST ENGINE section.
+        function openStylistPopup(name) {
+            const stylist = aiStylists[name];
+            if (!stylist) { console.warn(`Unknown AI stylist: ${name}`); return; }
+            document.getElementById(`${stylist.config.prefix}-popup`).classList.remove('hidden');
+            stylist.reset();
             if (typeof updateLanguageButtons === 'function') updateLanguageButtons();
         }
 
-        // Close fullscreen kiosk popup
-        function closeKioskPopup() {
+        function closeStylistPopup(name) {
+            const stylist = aiStylists[name];
+            if (!stylist) return;
             // Always release the camera + cancel any auto-capture countdown.
-            if (typeof stopPhotoCountdown === 'function') stopPhotoCountdown();
-            if (typeof stopKioskStream === 'function') stopKioskStream();
-            const camFs = document.getElementById('kiosk-camera-fs');
-            const photoFs = document.getElementById('kiosk-photo-fs');
-            if (camFs) camFs.classList.add('hidden');
-            if (photoFs) photoFs.classList.add('hidden');
-            document.getElementById('kiosk-popup').classList.add('hidden');
+            stylist.teardown();
+            document.getElementById(`${stylist.config.prefix}-popup`).classList.add('hidden');
         }
+
+        function openKioskPopup() { openStylistPopup('hair'); }
+        function closeKioskPopup() { closeStylistPopup('hair'); }
+        function openBrowPopup() { openStylistPopup('brows'); }
+        function closeBrowPopup() { closeStylistPopup('brows'); }
 
         // ==================== MEMBERSHIP REGISTRATION ====================
 
@@ -4283,446 +4678,555 @@
 
         // ===== END WIZARD FUNCTIONS =====
 
-        // ==================== KIOSK MODE FUNCTIONS ====================
-        let kioskCameraStream = null;
-        let kioskSelectedStyle = null;
-        let kioskLastStylePrompt = null; // remembered so "change colour only" can re-run it
+        // ==================== AI STYLIST ENGINE ====================
+        // One flow drives every AI stylist (hairstyle, eyebrows, ...):
+        //   photo → style → generate → result.
+        // A stylist is described entirely by its entry in AI_STYLIST_CONFIGS
+        // below: a DOM id prefix plus its own style vocabulary. Adapting or
+        // adding a stylist means editing a config (and its markup), never this
+        // engine.
+        //
+        // Markup contract — a stylist's popup must use `<prefix>-` ids mirroring
+        // the hairstyle kiosk (kiosk-step-photo / brow-step-photo, ...):
+        //   -popup, -progress-step-1..3, -progress-line-1..2,
+        //   -camera-fs, -camera-video, -camera-canvas, -countdown,
+        //   -photo-fs, -preview-image, -photo-options, -image-input,
+        //   -step-photo, -step-style, -step-generating, -step-results,
+        //   -mode-<mode>, -<mode>-mode, -style-description, -custom-generate,
+        //   -gender-women / -gender-men (only when the config has genderGroups),
+        //   -result-image, -result-image-container, -error-message, -color-row.
 
-        // Initialize kiosk mode when AI consultation tab is shown
-        function initKioskMode() {
-            // Show photo step, hide all others
-            document.getElementById('kiosk-step-photo').classList.remove('hidden');
-            document.getElementById('kiosk-step-style').classList.add('hidden');
-            document.getElementById('kiosk-step-generating').classList.add('hidden');
-            document.getElementById('kiosk-step-results').classList.add('hidden');
+        // Tailwind class sets shared by every stylist, so both look identical.
+        const STYLIST_CLS = {
+            modeActive: 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-purple-600 text-white',
+            modeIdle: 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300',
+            genderActive: 'flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-purple-600 text-white',
+            genderIdle: 'flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300',
+            optionActive: 'px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all',
+            optionIdle: 'px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all',
+            generateReady: 'w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg',
+            generateBlocked: 'w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg disabled:opacity-50',
+            progressDone: 'w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm',
+            progressCurrent: 'w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm',
+            progressFuture: 'w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm',
+            progressLineDone: 'w-12 h-1 bg-green-600',
+            progressLineTodo: 'w-12 h-1 bg-gray-300'
+        };
 
-            // Update progress indicator
-            updateKioskProgress(1);
+        function createAIStylist(config) {
+            const el = suffix => document.getElementById(`${config.prefix}-${suffix}`);
+            const show = (node, visible) => { if (node) node.classList.toggle('hidden', !visible); };
+            const tr = (key, fallback) => (typeof i18n !== 'undefined' && i18n ? i18n.t(key) : fallback);
 
-            // Reset state
-            uploadedImage = null;
-            kioskSelectedStyle = null;
-            kioskLastStylePrompt = null;
+            const state = {
+                photo: null,           // data URI of the captured/uploaded photo
+                stream: null,          // live camera stream
+                countdownTimer: null,  // auto-capture countdown
+                selectedStyle: null,
+                lastStylePrompt: null, // remembered so "change colour only" can re-run it
+                custom: {}             // custom-builder selections, keyed by option type
+            };
 
-            // Close any fullscreen camera/preview overlays.
-            stopPhotoCountdown();
-            stopKioskStream();
-            document.getElementById('kiosk-camera-fs').classList.add('hidden');
-            document.getElementById('kiosk-photo-fs').classList.add('hidden');
-            document.getElementById('kiosk-photo-options').classList.remove('hidden');
-        }
-
-        function stopKioskStream() {
-            if (kioskCameraStream) {
-                kioskCameraStream.getTracks().forEach(t => t.stop());
-                kioskCameraStream = null;
-            }
-            const v = document.getElementById('kiosk-camera-video');
-            if (v) v.srcObject = null;
-        }
-
-        // Progress indicator management
-        function updateKioskProgress(step) {
-            // Reset all steps
-            for (let i = 1; i <= 3; i++) {
-                const stepEl = document.getElementById(`progress-step-${i}`);
-                const lineEl = document.getElementById(`progress-line-${i}`);
-
-                if (i < step) {
-                    // Completed steps
-                    stepEl.classList.remove('opacity-50');
-                    stepEl.querySelector('div').className = 'w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm';
-                    if (lineEl) lineEl.className = 'w-12 h-1 bg-green-600';
-                } else if (i === step) {
-                    // Current step
-                    stepEl.classList.remove('opacity-50');
-                    stepEl.querySelector('div').className = 'w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm';
-                    if (lineEl) lineEl.className = 'w-12 h-1 bg-gray-300';
-                } else {
-                    // Future steps
-                    stepEl.classList.add('opacity-50');
-                    stepEl.querySelector('div').className = 'w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold text-sm';
-                    if (lineEl) lineEl.className = 'w-12 h-1 bg-gray-300';
+            // ---------- Progress indicator ----------
+            function updateProgress(step) {
+                for (let i = 1; i <= 3; i++) {
+                    const stepEl = el(`progress-step-${i}`);
+                    const lineEl = el(`progress-line-${i}`);
+                    if (!stepEl) continue;
+                    const dot = stepEl.querySelector('div');
+                    if (i < step) {
+                        stepEl.classList.remove('opacity-50');
+                        dot.className = STYLIST_CLS.progressDone;
+                        if (lineEl) lineEl.className = STYLIST_CLS.progressLineDone;
+                    } else if (i === step) {
+                        stepEl.classList.remove('opacity-50');
+                        dot.className = STYLIST_CLS.progressCurrent;
+                        if (lineEl) lineEl.className = STYLIST_CLS.progressLineTodo;
+                    } else {
+                        stepEl.classList.add('opacity-50');
+                        dot.className = STYLIST_CLS.progressFuture;
+                        if (lineEl) lineEl.className = STYLIST_CLS.progressLineTodo;
+                    }
                 }
             }
-        }
 
-        // STEP 1: Photo Capture (fullscreen, iOS-camera-like with auto-capture)
-        let kioskCountdownTimer = null;
-
-        async function kioskOpenCamera() {
-            const cameraFs = document.getElementById('kiosk-camera-fs');
-            const video = document.getElementById('kiosk-camera-video');
-            try {
-                kioskCameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-                    audio: false
-                });
-                video.srcObject = kioskCameraStream;
-                document.getElementById('kiosk-photo-fs').classList.add('hidden');
-                cameraFs.classList.remove('hidden');
-                // Auto-capture after the configured delay, with an on-screen countdown.
-                startPhotoCountdown();
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-                alert('Could not access camera. Please ensure camera permissions are enabled.');
-            }
-        }
-
-        function startPhotoCountdown() {
-            stopPhotoCountdown(); // clear any prior timer/badge first
-            const badge = document.getElementById('kiosk-countdown');
-            let remaining = Math.max(1, autoPhotoSec || 5);
-            badge.textContent = remaining;
-            badge.classList.remove('hidden');
-            kioskCountdownTimer = setInterval(() => {
-                remaining -= 1;
-                if (remaining <= 0) {
-                    stopPhotoCountdown();
-                    kioskCapturePhoto();
-                    return;
+            // ---------- Camera / photo ----------
+            function stopStream() {
+                if (state.stream) {
+                    state.stream.getTracks().forEach(t => t.stop());
+                    state.stream = null;
                 }
+                const video = el('camera-video');
+                if (video) video.srcObject = null;
+            }
+
+            function startCountdown() {
+                stopCountdown(); // clear any prior timer/badge first
+                const badge = el('countdown');
+                let remaining = Math.max(1, autoPhotoSec || 5);
                 badge.textContent = remaining;
-            }, 1000);
-        }
-        function stopPhotoCountdown() {
-            if (kioskCountdownTimer) { clearInterval(kioskCountdownTimer); kioskCountdownTimer = null; }
-            const badge = document.getElementById('kiosk-countdown');
-            if (badge) badge.classList.add('hidden');
-        }
+                badge.classList.remove('hidden');
+                state.countdownTimer = setInterval(() => {
+                    remaining -= 1;
+                    if (remaining <= 0) {
+                        stopCountdown();
+                        capturePhoto();
+                        return;
+                    }
+                    badge.textContent = remaining;
+                }, 1000);
+            }
 
-        function kioskCloseCamera() {
-            stopPhotoCountdown();
-            stopKioskStream();
-            document.getElementById('kiosk-camera-fs').classList.add('hidden');
-            document.getElementById('kiosk-photo-options').classList.remove('hidden');
-        }
+            function stopCountdown() {
+                if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
+                const badge = el('countdown');
+                if (badge) badge.classList.add('hidden');
+            }
 
-        function kioskCapturePhoto() {
-            stopPhotoCountdown();
-            const video = document.getElementById('kiosk-camera-video');
-            const canvas = document.getElementById('kiosk-camera-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth || 1280;
-            canvas.height = video.videoHeight || 720;
-            // Mirror the capture so it matches the (mirrored) live preview.
-            ctx.save();
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            ctx.restore();
-
-            uploadedImage = canvas.toDataURL('image/jpeg', 0.9);
-            stopKioskStream();
-
-            document.getElementById('kiosk-camera-fs').classList.add('hidden');
-            document.getElementById('kiosk-preview-image').src = uploadedImage;
-            document.getElementById('kiosk-photo-fs').classList.remove('hidden');
-        }
-
-        function kioskHandleImageSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                uploadedImage = e.target.result;
-                document.getElementById('kiosk-photo-options').classList.add('hidden');
-                document.getElementById('kiosk-preview-image').src = uploadedImage;
-                // Uploaded photos are already correctly oriented (no mirror).
-                document.getElementById('kiosk-preview-image').style.transform = 'none';
-                document.getElementById('kiosk-photo-fs').classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function kioskRetakePhoto() {
-            uploadedImage = null;
-            document.getElementById('kiosk-preview-image').style.transform = '';
-            document.getElementById('kiosk-photo-fs').classList.add('hidden');
-            // Reopen the camera straight away (iOS-style retake).
-            kioskOpenCamera();
-        }
-
-        function kioskGoToStyleSelection() {
-            if (!uploadedImage) return;
-            document.getElementById('kiosk-photo-fs').classList.add('hidden');
-            document.getElementById('kiosk-step-photo').classList.add('hidden');
-            document.getElementById('kiosk-step-style').classList.remove('hidden');
-            updateKioskProgress(2);
-        }
-
-        // STEP 2: Style Selection Functions
-        let kioskCustomLength = null;
-        let kioskCustomTexture = null;
-        let kioskCustomBangs = null;
-        let kioskCustomColor = null;
-
-        function kioskGoBackToPhoto() {
-            // Show photo step, hide style step
-            document.getElementById('kiosk-step-style').classList.add('hidden');
-            document.getElementById('kiosk-step-photo').classList.remove('hidden');
-
-            // Update progress
-            updateKioskProgress(1);
-        }
-
-        // Style mode switching
-        function kioskSwitchStyleMode(mode) {
-            // Update mode buttons
-            ['quick', 'describe', 'haircuts', 'custom'].forEach(m => {
-                const btn = document.getElementById(`kiosk-mode-${m}`);
-                if (m === mode) {
-                    btn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-purple-600 text-white';
-                } else {
-                    btn.className = 'flex-1 px-4 py-3 rounded-lg font-semibold transition-all whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300';
+            async function openCamera() {
+                try {
+                    state.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    });
+                    el('camera-video').srcObject = state.stream;
+                    show(el('photo-fs'), false);
+                    show(el('camera-fs'), true);
+                    // Auto-capture after the configured delay, with an on-screen countdown.
+                    startCountdown();
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    alert(tr('kiosk.camera_error', 'Could not access camera. Please ensure camera permissions are enabled.'));
                 }
-            });
-
-            // Show/hide corresponding content
-            document.getElementById('kiosk-quick-mode').classList.add('hidden');
-            document.getElementById('kiosk-describe-mode').classList.add('hidden');
-            document.getElementById('kiosk-haircuts-mode').classList.add('hidden');
-            document.getElementById('kiosk-custom-mode').classList.add('hidden');
-
-            document.getElementById(`kiosk-${mode}-mode`).classList.remove('hidden');
-        }
-
-        // Gender selection for haircuts
-        function kioskSelectGender(gender) {
-            if (gender === 'women') {
-                document.getElementById('kiosk-gender-women').className = 'flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-purple-600 text-white';
-                document.getElementById('kiosk-gender-men').className = 'flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
-                document.getElementById('kiosk-women-haircuts').classList.remove('hidden');
-                document.getElementById('kiosk-men-haircuts').classList.add('hidden');
-            } else {
-                document.getElementById('kiosk-gender-men').className = 'flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-purple-600 text-white';
-                document.getElementById('kiosk-gender-women').className = 'flex-1 px-4 py-3 rounded-xl font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
-                document.getElementById('kiosk-men-haircuts').classList.remove('hidden');
-                document.getElementById('kiosk-women-haircuts').classList.add('hidden');
-            }
-        }
-
-        // Custom builder option selection
-        function kioskSelectOption(type, value) {
-            // Update state
-            if (type === 'length') kioskCustomLength = value;
-            if (type === 'texture') kioskCustomTexture = value;
-            if (type === 'bangs') kioskCustomBangs = value;
-            if (type === 'color') kioskCustomColor = value;
-
-            // Update button styles
-            document.querySelectorAll(`.kiosk-option-btn`).forEach(btn => {
-                if (btn.id === `kiosk-${type}-${value}`) {
-                    btn.className = 'kiosk-option-btn px-4 py-3 border-2 border-purple-600 bg-purple-50 rounded-lg transition-all';
-                } else if (btn.id.startsWith(`kiosk-${type}-`)) {
-                    btn.className = 'kiosk-option-btn px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-all';
-                }
-            });
-
-            // Enable generate button if length and texture are selected
-            const generateBtn = document.getElementById('kiosk-custom-generate');
-            if (kioskCustomLength && kioskCustomTexture) {
-                generateBtn.disabled = false;
-                generateBtn.className = 'w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-lg font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg';
-            }
-        }
-
-        // Generate from custom description
-        async function kioskSelectCustomDescription() {
-            const description = document.getElementById('kiosk-style-description').value.trim();
-            if (!description) return;
-
-            // Hide style step, show generating step
-            document.getElementById('kiosk-step-style').classList.add('hidden');
-            document.getElementById('kiosk-step-generating').classList.remove('hidden');
-
-            // Update progress
-            updateKioskProgress(3);
-
-            // Perform AI consultation
-            await kioskPerformAIConsultation(uploadedImage, description);
-        }
-
-        // Generate from custom builder
-        async function kioskGenerateCustomStyle() {
-            if (!kioskCustomLength || !kioskCustomTexture) return;
-
-            // Build prompt
-            let stylePrompt = `${kioskCustomLength} ${kioskCustomTexture} hairstyle`;
-
-            if (kioskCustomBangs) {
-                if (kioskCustomBangs === 'yes') stylePrompt += ', with full bangs';
-                else if (kioskCustomBangs === 'side') stylePrompt += ', with side-swept bangs';
             }
 
-            if (kioskCustomColor) {
-                if (kioskCustomColor === 'highlights') stylePrompt += ', with highlights';
-                else if (kioskCustomColor === 'bold') stylePrompt += ', with bold vibrant color';
+            function closeCamera() {
+                stopCountdown();
+                stopStream();
+                show(el('camera-fs'), false);
+                show(el('photo-options'), true);
             }
 
-            // Hide style step, show generating step
-            document.getElementById('kiosk-step-style').classList.add('hidden');
-            document.getElementById('kiosk-step-generating').classList.remove('hidden');
+            function capturePhoto() {
+                stopCountdown();
+                const video = el('camera-video');
+                const canvas = el('camera-canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
+                // Mirror the capture so it matches the (mirrored) live preview.
+                ctx.save();
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
 
-            // Update progress
-            updateKioskProgress(3);
+                state.photo = canvas.toDataURL('image/jpeg', 0.9);
+                stopStream();
 
-            // Perform AI consultation
-            await kioskPerformAIConsultation(uploadedImage, stylePrompt);
-        }
+                show(el('camera-fs'), false);
+                el('preview-image').src = state.photo;
+                show(el('photo-fs'), true);
+            }
 
-        // Quick style selection (with all haircuts)
-        async function kioskSelectStyle(styleName) {
-            kioskSelectedStyle = styleName;
-
-            // Complete style descriptions (including all haircuts)
-            const styleDescriptions = {
-                // General styles
-                'business': 'professional business hairstyle, neat and polished, executive style',
-                'casual': 'casual everyday hairstyle, relaxed and comfortable, natural look',
-                'trendy': 'trendy modern hairstyle, fashionable and contemporary, Instagram-worthy',
-                'classic': 'classic timeless hairstyle, elegant and sophisticated, traditional style',
-                'edgy': 'edgy bold hairstyle, daring and unique, statement-making look',
-                'natural': 'natural effortless hairstyle, easy-going and low-maintenance',
-
-                // Women's haircuts
-                'pixie': 'pixie cut hairstyle, short and chic, feminine and modern',
-                'bob': 'classic bob haircut, chin-length, sleek and polished',
-                'lob': 'long bob (lob) hairstyle, shoulder-length, versatile and trendy',
-                'shag': 'shag haircut with layers, textured and effortless, rock-inspired',
-                'layers': 'long layered hairstyle, flowing layers, voluminous and feminine',
-                'butterfly': 'butterfly cut with face-framing layers, soft and romantic',
-                'blunt': 'blunt cut hairstyle, one-length, sharp and modern',
-                'updo': 'updo hairstyle with bun, elegant and sophisticated, formal style',
-                'wolf_cut': 'wolf cut hairstyle, shaggy layers with volume, edgy and trendy',
-
-                // Men's haircuts
-                'buzz_cut': 'buzz cut, very short all-over, low-maintenance and clean',
-                'crew_cut': 'crew cut, short tapered sides, classic military style',
-                'fade': 'fade haircut, gradual taper from short to long, modern and sharp',
-                'undercut': 'undercut hairstyle, short sides with longer top, versatile and bold',
-                'pompadour': 'pompadour hairstyle, voluminous top swept back, classic vintage style',
-                'quiff': 'quiff hairstyle, textured top with volume, modern British style',
-                'side_part': 'side part haircut, classic taper with defined part, professional gentleman style',
-                'mullet': 'mullet haircut, short in front and sides with long back, retro bold style',
-                'man_bun': 'man bun hairstyle, long hair tied back, relaxed and trendy',
-                'french_crop': 'French crop, short textured fringe, clean and modern European style',
-                'slick_back': 'slick back hairstyle, combed back smoothly, sophisticated and polished',
-                'textured_crop': 'textured crop, short with messy texture on top, casual modern style'
-            };
-
-            const stylePrompt = styleDescriptions[styleName];
-
-            // Hide style step, show generating step
-            document.getElementById('kiosk-step-style').classList.add('hidden');
-            document.getElementById('kiosk-step-generating').classList.remove('hidden');
-
-            // Update progress
-            updateKioskProgress(3);
-
-            // Perform AI consultation
-            await kioskPerformAIConsultation(uploadedImage, stylePrompt);
-        }
-
-        // STEP 3 & 4: AI Generation and Results
-        async function kioskPerformAIConsultation(imageBase64, stylePrompt) {
-            // Remember the style so the customer can re-run it with a new colour.
-            kioskLastStylePrompt = stylePrompt;
-            // Debug logging
-            console.log('=== KIOSK AI CONSULTATION DEBUG ===');
-            console.log('Image Base64 exists:', !!imageBase64);
-            console.log('Image Base64 length:', imageBase64 ? imageBase64.length : 0);
-            console.log('Image Base64 preview:', imageBase64 ? imageBase64.substring(0, 50) + '...' : 'null');
-            console.log('Style Prompt:', stylePrompt);
-            console.log('Style Prompt length:', stylePrompt ? stylePrompt.length : 0);
-            console.log('API URL:', `${API_BASE_URL}/ai-consultation.php`);
-            console.log('Session Token exists:', !!sessionToken);
-
-            try {
-                const requestBody = {
-                    image_base64: imageBase64,  // Changed from 'image' to 'image_base64'
-                    style_prompt: stylePrompt
+            function handleImageSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    state.photo = e.target.result;
+                    show(el('photo-options'), false);
+                    el('preview-image').src = state.photo;
+                    // Uploaded photos are already correctly oriented (no mirror).
+                    el('preview-image').style.transform = 'none';
+                    show(el('photo-fs'), true);
                 };
+                reader.readAsDataURL(file);
+            }
 
-                console.log('Request body:', JSON.stringify(requestBody).substring(0, 200) + '...');
+            function retakePhoto() {
+                state.photo = null;
+                el('preview-image').style.transform = '';
+                show(el('photo-fs'), false);
+                // Reopen the camera straight away (iOS-style retake).
+                openCamera();
+            }
 
-                const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                        // Removed Authorization header - not needed for this endpoint
-                    },
-                    body: JSON.stringify(requestBody)
+            // ---------- Step navigation ----------
+            function goToStyleSelection() {
+                if (!state.photo) return;
+                show(el('photo-fs'), false);
+                show(el('step-photo'), false);
+                show(el('step-style'), true);
+                updateProgress(2);
+            }
+
+            function goBackToPhoto() {
+                show(el('step-style'), false);
+                show(el('step-photo'), true);
+                updateProgress(1);
+            }
+
+            // ---------- Style selection ----------
+            function switchStyleMode(mode) {
+                config.modes.forEach(m => {
+                    const btn = el(`mode-${m}`);
+                    if (btn) btn.className = (m === mode) ? STYLIST_CLS.modeActive : STYLIST_CLS.modeIdle;
+                    show(el(`${m}-mode`), m === mode);
+                });
+            }
+
+            function selectGender(gender) {
+                if (!config.genderGroups) return;
+                Object.entries(config.genderGroups).forEach(([key, groupSuffix]) => {
+                    const btn = el(`gender-${key}`);
+                    if (btn) btn.className = (key === gender) ? STYLIST_CLS.genderActive : STYLIST_CLS.genderIdle;
+                    show(el(groupSuffix), key === gender);
+                });
+            }
+
+            // ---------- Custom builder ----------
+            function selectOption(type, value) {
+                state.custom[type] = value;
+                document.querySelectorAll(`.${config.optionClass}`).forEach(btn => {
+                    if (btn.id === `${config.prefix}-${type}-${value}`) {
+                        btn.className = `${config.optionClass} ${STYLIST_CLS.optionActive}`;
+                    } else if (btn.id.startsWith(`${config.prefix}-${type}-`)) {
+                        btn.className = `${config.optionClass} ${STYLIST_CLS.optionIdle}`;
+                    }
+                });
+                refreshCustomGenerateButton();
+            }
+
+            function customBuilderReady() {
+                return (config.requiredCustomOptions || []).every(type => !!state.custom[type]);
+            }
+
+            function refreshCustomGenerateButton() {
+                const btn = el('custom-generate');
+                if (!btn) return;
+                const ready = customBuilderReady();
+                btn.disabled = !ready;
+                btn.className = ready ? STYLIST_CLS.generateReady : STYLIST_CLS.generateBlocked;
+            }
+
+            function resetCustomBuilder() {
+                state.custom = {};
+                document.querySelectorAll(`.${config.optionClass}`).forEach(btn => {
+                    btn.className = `${config.optionClass} ${STYLIST_CLS.optionIdle}`;
+                });
+                refreshCustomGenerateButton();
+            }
+
+            // ---------- Generation ----------
+            function enterGeneratingStep() {
+                show(el('step-style'), false);
+                show(el('step-results'), false);
+                show(el('error-message'), false);
+                show(el('step-generating'), true);
+                updateProgress(3);
+            }
+
+            async function selectStyle(styleName) {
+                const stylePrompt = config.styles[styleName];
+                if (!stylePrompt) { console.warn(`Unknown style "${styleName}" for stylist "${config.prefix}"`); return; }
+                state.selectedStyle = styleName;
+                enterGeneratingStep();
+                await generate(stylePrompt);
+            }
+
+            async function selectCustomDescription() {
+                const description = el('style-description').value.trim();
+                if (!description) return;
+                enterGeneratingStep();
+                await generate(description);
+            }
+
+            async function generateCustomStyle() {
+                if (!customBuilderReady()) return;
+                const stylePrompt = config.buildCustomPrompt(state.custom);
+                if (!stylePrompt) return;
+                enterGeneratingStep();
+                await generate(stylePrompt);
+            }
+
+            // Single point of contact with the AI endpoint for every stylist.
+            async function generate(stylePrompt) {
+                // Remember the style so the customer can re-run it with a new colour.
+                state.lastStylePrompt = stylePrompt;
+                console.log(`=== AI STYLIST (${config.consultationType}) ===`, {
+                    hasImage: !!state.photo,
+                    imageLength: state.photo ? state.photo.length : 0,
+                    stylePrompt
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response ok:', response.ok);
+                try {
+                    const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image_base64: state.photo,
+                            style_prompt: stylePrompt,
+                            consultation_type: config.consultationType
+                        })
+                    });
 
-                const result = await response.json();
-                console.log('Response result:', result);
+                    const result = await response.json();
+                    console.log('AI stylist response:', response.status, result);
 
-                if (result.success && result.generated_image) {
-                    // Show results
-                    document.getElementById('kiosk-result-image').src = result.generated_image;
+                    if (!result.success || !result.generated_image) {
+                        throw new Error(result.message || result.error || 'Failed to generate image');
+                    }
 
-                    // Hide generating, show results
-                    document.getElementById('kiosk-step-generating').classList.add('hidden');
-                    document.getElementById('kiosk-step-results').classList.remove('hidden');
-                    document.getElementById('kiosk-result-image-container').classList.remove('hidden');
-                    document.getElementById('kiosk-error-message').classList.add('hidden');
-                    document.getElementById('kiosk-color-row').classList.remove('hidden');
-                } else {
-                    // Show error
-                    console.error('API returned error:', result);
-                    throw new Error(result.message || 'Failed to generate image');
+                    el('result-image').src = result.generated_image;
+                    show(el('step-generating'), false);
+                    show(el('step-results'), true);
+                    show(el('result-image-container'), true);
+                    show(el('error-message'), false);
+                    show(el('color-row'), true);
+                } catch (error) {
+                    console.error(`Error in AI stylist (${config.consultationType}):`, error);
+                    show(el('step-generating'), false);
+                    show(el('step-results'), true);
+                    show(el('result-image-container'), false);
+                    show(el('color-row'), false);
+
+                    const errorMsg = el('error-message');
+                    errorMsg.querySelector('p').textContent = error.message || tr(config.errorKey, config.errorFallback);
+                    show(errorMsg, true);
                 }
-            } catch (error) {
-                console.error('Error in kioskPerformAIConsultation:', error);
-
-                // Hide generating, show results with error
-                document.getElementById('kiosk-step-generating').classList.add('hidden');
-                document.getElementById('kiosk-step-results').classList.remove('hidden');
-                document.getElementById('kiosk-result-image-container').classList.add('hidden');
-                document.getElementById('kiosk-color-row').classList.add('hidden');
-
-                const errorMsg = document.getElementById('kiosk-error-message');
-                errorMsg.querySelector('p').textContent = error.message || 'Failed to generate hairstyle. Please try again.';
-                errorMsg.classList.remove('hidden');
             }
+
+            // ---------- Result actions ----------
+            function tryDifferentStyle() {
+                // Keep the photo, go back to style selection.
+                show(el('step-results'), false);
+                show(el('step-style'), true);
+                show(el('result-image-container'), true);
+                updateProgress(2);
+            }
+
+            function startOver() {
+                reset();
+            }
+
+            // Keep the current style, only change the colour, and re-generate.
+            async function changeColor(color) {
+                if (!state.photo) return;
+                const base = state.lastStylePrompt || config.fallbackStylePrompt;
+                enterGeneratingStep();
+                show(el('result-image-container'), true);
+                await generate(config.buildColorPrompt(base, color));
+                // Keep the ORIGINAL style so repeated colour swaps don't stack modifiers.
+                state.lastStylePrompt = base;
+            }
+
+            // ---------- Lifecycle ----------
+            function reset() {
+                show(el('step-photo'), true);
+                show(el('step-style'), false);
+                show(el('step-generating'), false);
+                show(el('step-results'), false);
+                updateProgress(1);
+
+                state.photo = null;
+                state.selectedStyle = null;
+                state.lastStylePrompt = null;
+                resetCustomBuilder();
+                // Never hand the next customer the previous one's inputs.
+                const description = el('style-description');
+                if (description) description.value = '';
+                const preview = el('preview-image');
+                if (preview) preview.style.transform = '';
+                switchStyleMode(config.modes[0]);
+                if (config.genderGroups) selectGender(Object.keys(config.genderGroups)[0]);
+
+                // Close any fullscreen camera/preview overlays.
+                stopCountdown();
+                stopStream();
+                show(el('camera-fs'), false);
+                show(el('photo-fs'), false);
+                show(el('photo-options'), true);
+            }
+
+            // Always release the camera + cancel any auto-capture countdown.
+            function teardown() {
+                stopCountdown();
+                stopStream();
+                show(el('camera-fs'), false);
+                show(el('photo-fs'), false);
+            }
+
+            return {
+                config, state, reset, teardown,
+                openCamera, closeCamera, capturePhoto, handleImageSelect, retakePhoto,
+                goToStyleSelection, goBackToPhoto, switchStyleMode, selectGender, selectOption,
+                selectStyle, selectCustomDescription, generateCustomStyle,
+                tryDifferentStyle, startOver, changeColor
+            };
         }
 
-        // STEP 4: Result Actions
-        function kioskTryDifferentStyle() {
-            // Keep photo, go back to style selection
-            document.getElementById('kiosk-step-results').classList.add('hidden');
-            document.getElementById('kiosk-step-style').classList.remove('hidden');
-            document.getElementById('kiosk-result-image-container').classList.remove('hidden');
+        // ==================== AI STYLIST CONFIGURATIONS ====================
+        // Everything that makes a stylist unique lives here.
+        const AI_STYLIST_CONFIGS = {
+            // ---------- Hairstyles ----------
+            hair: {
+                prefix: 'kiosk',
+                consultationType: 'hairstyle',
+                modes: ['quick', 'describe', 'haircuts', 'custom'],
+                optionClass: 'kiosk-option-btn',
+                genderGroups: { women: 'women-haircuts', men: 'men-haircuts' },
+                requiredCustomOptions: ['length', 'texture'],
+                fallbackStylePrompt: 'the same hairstyle',
+                errorKey: 'kiosk.error_generate',
+                errorFallback: 'Failed to generate hairstyle. Please try again.',
+                styles: {
+                    // General styles
+                    'business': 'professional business hairstyle, neat and polished, executive style',
+                    'casual': 'casual everyday hairstyle, relaxed and comfortable, natural look',
+                    'trendy': 'trendy modern hairstyle, fashionable and contemporary, Instagram-worthy',
+                    'classic': 'classic timeless hairstyle, elegant and sophisticated, traditional style',
+                    'edgy': 'edgy bold hairstyle, daring and unique, statement-making look',
+                    'natural': 'natural effortless hairstyle, easy-going and low-maintenance',
 
-            // Update progress
-            updateKioskProgress(2);
+                    // Women's haircuts
+                    'pixie': 'pixie cut hairstyle, short and chic, feminine and modern',
+                    'bob': 'classic bob haircut, chin-length, sleek and polished',
+                    'lob': 'long bob (lob) hairstyle, shoulder-length, versatile and trendy',
+                    'shag': 'shag haircut with layers, textured and effortless, rock-inspired',
+                    'layers': 'long layered hairstyle, flowing layers, voluminous and feminine',
+                    'butterfly': 'butterfly cut with face-framing layers, soft and romantic',
+                    'blunt': 'blunt cut hairstyle, one-length, sharp and modern',
+                    'updo': 'updo hairstyle with bun, elegant and sophisticated, formal style',
+                    'wolf_cut': 'wolf cut hairstyle, shaggy layers with volume, edgy and trendy',
+
+                    // Men's haircuts
+                    'buzz_cut': 'buzz cut, very short all-over, low-maintenance and clean',
+                    'crew_cut': 'crew cut, short tapered sides, classic military style',
+                    'fade': 'fade haircut, gradual taper from short to long, modern and sharp',
+                    'undercut': 'undercut hairstyle, short sides with longer top, versatile and bold',
+                    'pompadour': 'pompadour hairstyle, voluminous top swept back, classic vintage style',
+                    'quiff': 'quiff hairstyle, textured top with volume, modern British style',
+                    'side_part': 'side part haircut, classic taper with defined part, professional gentleman style',
+                    'mullet': 'mullet haircut, short in front and sides with long back, retro bold style',
+                    'man_bun': 'man bun hairstyle, long hair tied back, relaxed and trendy',
+                    'french_crop': 'French crop, short textured fringe, clean and modern European style',
+                    'slick_back': 'slick back hairstyle, combed back smoothly, sophisticated and polished',
+                    'textured_crop': 'textured crop, short with messy texture on top, casual modern style'
+                },
+                buildCustomPrompt(o) {
+                    let prompt = `${o.length} ${o.texture} hairstyle`;
+                    if (o.bangs === 'yes') prompt += ', with full bangs';
+                    else if (o.bangs === 'side') prompt += ', with side-swept bangs';
+                    if (o.color === 'highlights') prompt += ', with highlights';
+                    else if (o.color === 'bold') prompt += ', with bold vibrant color';
+                    return prompt;
+                },
+                buildColorPrompt(base, color) {
+                    return `${base}, but change only the hair colour to ${color}. Keep the same haircut, length and shape.`;
+                }
+            },
+
+            // ---------- Eyebrows ----------
+            brows: {
+                prefix: 'brow',
+                consultationType: 'eyebrows',
+                modes: ['quick', 'describe', 'shapes', 'custom'],
+                optionClass: 'brow-option-btn',
+                genderGroups: { women: 'women-shapes', men: 'men-shapes' },
+                requiredCustomOptions: ['thickness', 'shape'],
+                fallbackStylePrompt: 'the same eyebrow shape',
+                errorKey: 'brow.error_generate',
+                errorFallback: 'Failed to generate eyebrows. Please try again.',
+                styles: {
+                    // Quick looks
+                    'natural': 'natural looking eyebrows, softly groomed with the existing hair pattern, low-maintenance',
+                    'defined': 'defined eyebrows with clean tidy edges, neatly filled and polished',
+                    'bold': 'bold thick eyebrows, full and strong, statement-making',
+                    'soft': 'soft eyebrows with a gentle rounded curve, delicate and understated',
+                    'glam': 'glamorous eyebrows, sharply sculpted with a crisp arch and a clean shadow-powder finish',
+                    'laminated': 'laminated eyebrows, brushed upwards and fluffy, feathery textured finish',
+
+                    // Women's brow shapes
+                    'arched': 'classic arched eyebrows, a defined peak above the outer iris, elegant and balanced',
+                    'soft_angled': 'soft angled eyebrows, gentle rise to a rounded peak then a smooth taper',
+                    'rounded': 'rounded eyebrows, a soft continuous curve without a sharp peak, youthful and friendly',
+                    'straight': 'straight eyebrows, flat horizontal shape with barely any arch, modern Korean-style',
+                    's_shaped': 'S-shaped eyebrows, subtle wave from a full front to a fine tail, natural and expressive',
+                    'high_arch': 'high arched eyebrows, a pronounced lifted peak, dramatic and eye-opening',
+                    'tapered': 'tapered eyebrows, full at the inner corner narrowing to a fine tail',
+                    'feathered': 'feathered eyebrows, brushed-up hairs with a soft undefined edge, natural fluffy look',
+                    'thick_full': 'thick full eyebrows, dense and fluffy across the whole brow, natural bushy look',
+                    'thin_slim': 'slim eyebrows, fine and narrow with a delicate arch, understated',
+                    'microbladed': 'microbladed eyebrows, crisp hair-like strokes filling the shape, realistic and even',
+                    'ombre': 'ombré powder brows, soft light front fading into a deeper defined tail',
+
+                    // Men's brow shapes
+                    'm_tidy': "men's naturally tidy eyebrows, cleaned up between and below the brows, masculine and unobtrusive",
+                    'm_straight': "men's straight eyebrows, flat horizontal line with minimal arch, masculine",
+                    'm_soft_arch': "men's eyebrows with a subtle soft arch, groomed but natural",
+                    'm_defined': "men's defined eyebrows, clean sharp edges and an even shape, well-groomed",
+                    'm_thick': "men's thick full eyebrows, dense and strong, bold masculine look",
+                    'm_tapered': "men's tapered eyebrows, fuller at the inner corner narrowing towards the temple",
+                    'm_angled': "men's angled eyebrows, straight rise to a slight corner then a clean taper",
+                    'm_textured': "men's textured eyebrows, hairs brushed into place with a natural uneven edge",
+                    'm_groomed_short': "men's neatly trimmed short eyebrows, shortened hairs and a tidy outline"
+                },
+                buildCustomPrompt(o) {
+                    const shapes = {
+                        arched: 'classic arched',
+                        straight: 'straight',
+                        rounded: 'softly rounded',
+                        angled: 'angled',
+                        s_shaped: 'S-shaped',
+                        feathered: 'feathered brushed-up'
+                    };
+                    let prompt = `${o.thickness} ${shapes[o.shape] || o.shape} eyebrows`;
+                    if (o.arch) prompt += `, with a ${o.arch} arch`;
+                    if (o.color === 'lighter') prompt += ', tinted a shade lighter than the natural brow colour';
+                    else if (o.color === 'darker') prompt += ', tinted a shade darker than the natural brow colour';
+                    return prompt;
+                },
+                buildColorPrompt(base, color) {
+                    return `${base}, but change only the eyebrow colour to ${color}. Keep the same eyebrow shape, thickness and arch.`;
+                }
+            }
+        };
+
+        // Instantiate every configured stylist and wire up its inline handlers.
+        const aiStylists = {};
+        Object.entries(AI_STYLIST_CONFIGS).forEach(([name, cfg]) => {
+            aiStylists[name] = createAIStylist(cfg);
+            exposeStylistHandlers(cfg.prefix, aiStylists[name]);
+        });
+
+        // The markup calls prefixed globals (kioskOpenCamera(), browOpenCamera(),
+        // ...); map them onto the engine so both stylists stay in lockstep.
+        function exposeStylistHandlers(prefix, stylist) {
+            const handlers = {
+                OpenCamera: 'openCamera',
+                CloseCamera: 'closeCamera',
+                CapturePhoto: 'capturePhoto',
+                HandleImageSelect: 'handleImageSelect',
+                RetakePhoto: 'retakePhoto',
+                GoToStyleSelection: 'goToStyleSelection',
+                GoBackToPhoto: 'goBackToPhoto',
+                SwitchStyleMode: 'switchStyleMode',
+                SelectGender: 'selectGender',
+                SelectOption: 'selectOption',
+                SelectStyle: 'selectStyle',
+                SelectCustomDescription: 'selectCustomDescription',
+                GenerateCustomStyle: 'generateCustomStyle',
+                TryDifferentStyle: 'tryDifferentStyle',
+                StartOver: 'startOver',
+                ChangeColor: 'changeColor'
+            };
+            Object.entries(handlers).forEach(([suffix, method]) => {
+                window[prefix + suffix] = (...args) => stylist[method](...args);
+            });
         }
 
-        function kioskStartOver() {
-            // Reset everything and go to photo step
-            initKioskMode();
-        }
-
-        // Keep the current style, only change the hair colour, and re-generate.
-        async function kioskChangeColor(color) {
-            if (!uploadedImage) return;
-            const base = kioskLastStylePrompt || 'the same hairstyle';
-            const prompt = `${base}, but change only the hair colour to ${color}. Keep the same haircut, length and shape.`;
-            document.getElementById('kiosk-step-results').classList.add('hidden');
-            document.getElementById('kiosk-error-message').classList.add('hidden');
-            document.getElementById('kiosk-result-image-container').classList.remove('hidden');
-            document.getElementById('kiosk-step-generating').classList.remove('hidden');
-            updateKioskProgress(3);
-            await kioskPerformAIConsultation(uploadedImage, prompt);
-            // Keep the ORIGINAL style so repeated colour swaps don't stack modifiers.
-            kioskLastStylePrompt = base;
-        }
-
-        // ===== END KIOSK MODE FUNCTIONS =====
+        // ===== END AI STYLIST ENGINE =====
 
         // Shared function for both quick and wizard modes
         async function performAIConsultation(imageBase64, stylePrompt) {

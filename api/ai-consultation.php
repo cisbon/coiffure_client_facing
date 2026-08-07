@@ -1,7 +1,12 @@
 <?php
 /**
- * AI Virtual Hairstyle Consultation API Endpoint
- * Integrates with Open Router API for AI-powered hairstyle generation
+ * AI Virtual Styling Consultation API Endpoint
+ * Integrates with Open Router API for AI-powered style generation.
+ *
+ * Serves every AI stylist in the tablet app. The optional `consultation_type`
+ * field selects which transformation the model is asked for (see
+ * CONSULTATION_PROMPTS below); it defaults to 'hairstyle' so older clients that
+ * don't send the field keep working unchanged.
  */
 
 require_once __DIR__ . '/config.php';
@@ -62,8 +67,20 @@ if ($imageFile === null && $imageBase64 === null) {
     sendErrorResponse('Image is required (either as file upload or base64)', 400);
 }
 
+// Prompt template per stylist. Adding a stylist = adding one entry here plus a
+// matching config in the front-end AI stylist engine. {style} is replaced with
+// the customer's style request.
+const CONSULTATION_PROMPTS = [
+    'hairstyle' => "Generate a photo-realistic image of this same person with a new hairstyle: {style}\n\nKeep their face, skin tone, and features identical. Only change the hair.",
+    'eyebrows'  => "Generate a photo-realistic image of this same person with new eyebrows: {style}\n\nKeep their face, skin tone, hair, make-up and all other features identical. Only change the eyebrows, and keep the result natural and well-groomed.",
+];
+
 // Sanitize input
 $stylePrompt = sanitizeInput($requestData['style_prompt']);
+$consultationType = sanitizeInput($requestData['consultation_type'] ?? 'hairstyle');
+if (!isset(CONSULTATION_PROMPTS[$consultationType])) {
+    sendErrorResponse('Unknown consultation_type: ' . $consultationType, 400);
+}
 $salonId = $requestData['salon_id'] ?? DEFAULT_SALON_ID;
 $customerId = isset($requestData['customer_id']) ? (int)$requestData['customer_id'] : null;
 
@@ -194,12 +211,11 @@ if (!$isImageGenerationModel) {
     sendErrorResponse($errorMsg, 400);
 }
 
-// Create prompt for hairstyle transformation
-// Use simple, positive, action-oriented instructions
-$prompt = "Generate a photo-realistic image of this same person with a new hairstyle: {$stylePrompt}
+// Create the prompt for the requested transformation.
+// Use simple, positive, action-oriented instructions.
+$prompt = str_replace('{style}', $stylePrompt, CONSULTATION_PROMPTS[$consultationType]);
 
-Keep their face, skin tone, and features identical. Only change the hair.";
-
+error_log("Consultation Type: " . $consultationType);
 error_log("AI Prompt: " . $prompt);
 
 // Verify uploaded image data

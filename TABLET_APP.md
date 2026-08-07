@@ -7,7 +7,8 @@ removed — membership is now a status only, no downloadable card.
 
 - A sticky **left navigation rail** is always visible (icon rail, ~76px). A
   **burger** at the top expands it to show labels. Top→bottom the items are:
-  **Stöbern**, **Check-In**, **Registrieren**, **Social & WLAN**, **AI Hairstyle**.
+  **Stöbern**, **Check-In**, **Registrieren**, **Social & WLAN**, **AI Hairstyle**,
+  **AI Eyebrows**.
 - **Stöbern** (the digital magazine & shop) is the **start / idle screen**.
 - The **Social & WLAN** label reads just **Social** unless the salon configured
   a guest-WiFi name AND password in the admin dashboard.
@@ -19,6 +20,39 @@ removed — membership is now a status only, no downloadable card.
   **Continue**; the whole experience fits on one screen (no page scrolling). On
   the result the customer can **change only the hair colour** to re-run the same
   style in another colour.
+- **AI Eyebrows** is the same overlay and the same four-step flow
+  (photo → style → generating → result) with an eyebrow vocabulary: quick looks
+  (Natural, Defined, Bold, Soft, Glam, Laminated), free-text **Describe**,
+  **Shapes** (women's / men's brow shapes) and a **Custom** builder
+  (thickness · shape · arch height · colour). The result screen offers
+  **change only the brow colour**.
+
+### Adding or adapting an AI stylist
+
+Both stylists run on one engine — `createAIStylist()` in `index.html`
+(*AI STYLIST ENGINE* section). Nothing about the flow is duplicated; a stylist
+is just a config entry plus markup that follows the id contract:
+
+1. **`AI_STYLIST_CONFIGS`** (`index.html`) — add an entry with the DOM id
+   `prefix`, its `consultationType`, the `modes` it offers, its `styles` map
+   (style key → prompt text), `requiredCustomOptions`, and the two prompt
+   builders (`buildCustomPrompt`, `buildColorPrompt`). Changing the wording the
+   AI receives — for either stylist — happens here and nowhere else.
+2. **Markup** — copy the `#brow-popup` block and rename `brow-` to your prefix.
+   The engine expects `<prefix>-step-photo`, `-step-style`, `-step-generating`,
+   `-step-results`, `-camera-*`, `-progress-step-1..3`, `-mode-<mode>`,
+   `-<mode>-mode`, … (the full list is documented above the engine).
+3. **Nav rail + router** — add a `nav-item` with `data-screen="<name>"` and one
+   line in `showScreen()`.
+4. **Server prompt** — add an entry to `CONSULTATION_PROMPTS` in
+   `api/ai-consultation.php`, keyed by the config's `consultationType`. It
+   decides what the model is told to keep unchanged (hair only, brows only, …).
+5. **Translations** — add the stylist's namespace to `lang/de.json` **and**
+   `lang/en.json`; the generic photo/camera strings can be reused from `kiosk.*`.
+
+Inline `onclick` handlers are generated from the prefix
+(`browOpenCamera()` → `kioskOpenCamera()` → …), so no per-stylist glue code is
+needed beyond `open<X>Popup()` / `close<X>Popup()`.
 
 **Session robustness:** salon tablets get a long-lived (30-day) session with
 sliding renewal (`validateSession` extends it on use), so a kiosk used at least
