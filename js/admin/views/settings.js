@@ -14,14 +14,17 @@
  *   Social & QR     social-links.php (link CRUD + QR preview). Guest WiFi
  *                   lives on the Allgemein tab, with salon-branding.php.
  *   Öffnungszeiten  salon-settings.php?section=hours
+ *   KI-Stilberatung ai-usage.php (consumption, overage choice, and — for
+ *                   platform roles only — the limits themselves)
  */
 
 import { API_BASE_URL, apiGet, apiPost, apiDelete, apiRequest, getToken } from '../api.js';
 import {
     t, esc, el, modal, confirmDialog, pageHeader, subTabs, toastSuccess,
     toastError, toastApiError, showFormErrors, clearFormErrors, formValues,
-    buttonBusy, skeletonRows, createTable, boolBadge,
+    buttonBusy, skeletonRows, createTable, boolBadge, formatNumber, formatMoney,
 } from '../ui.js';
+import { usageBlock, usageState } from '../ai-usage.js';
 
 const TABS = [
     { id: 'general', labelKey: 'admin.settings.tab_general' },
@@ -30,6 +33,7 @@ const TABS = [
     { id: 'birthday', labelKey: 'admin.settings.tab_birthday' },
     { id: 'social', labelKey: 'admin.settings.tab_social' },
     { id: 'hours', labelKey: 'admin.settings.tab_hours' },
+    { id: 'ai', labelKey: 'admin.settings.tab_ai' },
 ];
 
 /**
@@ -102,6 +106,7 @@ async function renderSection(id, host, ctx) {
         else if (id === 'birthday') await renderBirthday(host, ctx);
         else if (id === 'social') await renderSocial(host, ctx);
         else if (id === 'hours') await renderHours(host, ctx);
+        else if (id === 'ai') await renderAi(host, ctx);
         else await renderGeneral(host, ctx);
     } catch (error) {
         host.innerHTML = '';
@@ -1165,4 +1170,269 @@ function showQrCode(linkId) {
     }
     // eslint-disable-next-line no-new
     new QRCode(target, { text: link.link_url, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.H });
+}
+
+/* ============================================================
+   KI-Stilberatung: consumption, overage choice, limits
+   (ai-usage.php — see api/ai_usage_helpers.php for the rules)
+   ============================================================ */
+
+/** Stylist keys the ledger knows about, for the per-feature breakdown. */
+const AI_TYPE_LABELS = {
+    hairstyle: 'admin.ai_usage.type_hairstyle',
+    eyebrows: 'admin.ai_usage.type_eyebrows',
+};
+
+async function renderAi(host, ctx) {
+    const data = await apiGet(
+        `ai-usage.php?salon_id=${encodeURIComponent(ctx.salonId)}&months=6`,
+        { salonScope: false }
+    );
+    const usage = data.usage || {};
+
+    host.innerHTML = '';
+    const stack = el('<div class="stack"></div>');
+
+    stack.appendChild(aiConsumptionCard(usage, data));
+    stack.appendChild(aiOverageCard(usage, data, ctx));
+    if (data.can_change_limits) stack.appendChild(aiLimitsCard(data.limits || {}, usage, ctx));
+    if (data.history?.length) stack.appendChild(aiHistoryCard(data.history));
+
+    host.appendChild(stack);
+}
+
+/** Where the salon stands right now. */
+function aiConsumptionCard(usage, data) {
+    const card = el(`
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2>${esc(t('admin.ai_usage.current_title'))}</h2>
+                    <p class="card-hint">${esc(t('admin.ai_usage.current_hint'))}</p>
+                </div>
+            </div>
+            <div class="card-body"></div>
+        </div>
+    `);
+
+    const body = card.querySelector('.card-body');
+    body.appendChild(usageBlock(usage));
+
+    // Which stylist is actually being used — useful when deciding whether the
+    // allowance is well spent.
+    if (data.by_type?.length) {
+        const split = el('<div class="row mt-4" style="gap:var(--sp-5)"></div>');
+        data.by_type.forEach((row) => {
+            const label = AI_TYPE_LABELS[row.consultation_type]
+                ? t(AI_TYPE_LABELS[row.consultation_type])
+                : row.consultation_type;
+            split.appendChild(el(`
+                <span class="text-sm text-muted">
+                    ${esc(label)}: <strong>${esc(formatNumber(row.images))}</strong>
+                </span>
+            `));
+        });
+        body.appendChild(split);
+    }
+
+    if (usageState(usage) === 'blocked') {
+        body.appendChild(el(`
+            <p class="text-sm mt-4" style="color:var(--danger-700)">
+                ${esc(t(`admin.ai_usage.blocked_help_${usage.block_reason || 'feature_disabled'}`))}
+            </p>
+        `));
+    }
+
+    return card;
+}
+
+/**
+ * The salon owner's own decision: stop at the monthly limit, or keep
+ * generating and pay per extra image. Deliberately a two-option radio rather
+ * than a checkbox — spending money should never be the quiet default.
+ */
+function aiOverageCard(usage, data, ctx) {
+    const price = formatMoney(usage.overage_price || 0, usage.currency || 'EUR');
+    const disabled = data.can_change_overage ? '' : 'disabled';
+
+    const form = el(`
+        <form id="ai-overage-form" novalidate>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>${esc(t('admin.ai_usage.overage_title'))}</h2>
+                        <p class="card-hint">${esc(t('admin.ai_usage.overage_hint'))}</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="stack-sm">
+                        <label class="check">
+                            <input type="radio" name="ai_overage_allowed" value="0" ${disabled}
+                                   ${usage.overage_allowed ? '' : 'checked'}>
+                            <span class="check-text">
+                                <span class="check-title">${esc(t('admin.ai_usage.overage_off'))}</span>
+                                <span class="check-desc">${esc(t('admin.ai_usage.overage_off_desc'))}</span>
+                            </span>
+                        </label>
+                        <label class="check">
+                            <input type="radio" name="ai_overage_allowed" value="1" ${disabled}
+                                   ${usage.overage_allowed ? 'checked' : ''}>
+                            <span class="check-text">
+                                <span class="check-title">${esc(t('admin.ai_usage.overage_on', { price }))}</span>
+                                <span class="check-desc">${esc(t('admin.ai_usage.overage_on_desc'))}</span>
+                            </span>
+                        </label>
+                    </div>
+                    ${usage.mode === 'trial'
+                        ? `<p class="text-sm text-muted mt-4">${esc(t('admin.ai_usage.overage_trial_note'))}</p>`
+                        : ''}
+                </div>
+                ${data.can_change_overage
+                    ? `<div class="card-footer">
+                           <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+                       </div>`
+                    : ''}
+            </div>
+        </form>
+    `);
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const button = form.querySelector('button[type="submit"]');
+        const reset = buttonBusy(button, t('admin.common.saving'));
+        try {
+            await apiPost(
+                `ai-usage.php?section=overage&salon_id=${encodeURIComponent(ctx.salonId)}`,
+                { ai_overage_allowed: form.elements.ai_overage_allowed.value === '1' },
+                { salonScope: false }
+            );
+            reset();
+            toastSuccess(t('admin.settings.saved'));
+            ctx.reload();
+        } catch (error) {
+            reset();
+            toastApiError(error);
+        }
+    });
+
+    return form;
+}
+
+/**
+ * The commercial terms. Only a platform role sees this card: these are the
+ * numbers the platform sells, not something a salon sets for itself.
+ */
+function aiLimitsCard(limits, usage, ctx) {
+    const form = el(`
+        <form id="ai-limits-form" novalidate>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>${esc(t('admin.ai_usage.limits_title'))}</h2>
+                        <p class="card-hint">${esc(t('admin.ai_usage.limits_hint'))}</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid form-grid-2">
+                        <div class="field">
+                            <label class="field-label" for="ai_trial_image_limit">${esc(t('admin.ai_usage.trial_limit'))}</label>
+                            <input class="input" type="number" id="ai_trial_image_limit" name="ai_trial_image_limit"
+                                   min="0" max="1000000" step="10" value="${esc(limits.ai_trial_image_limit ?? '')}"
+                                   placeholder="100">
+                            <span class="field-hint">${esc(t('admin.ai_usage.trial_limit_hint'))}</span>
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="ai_monthly_image_limit">${esc(t('admin.ai_usage.monthly_limit'))}</label>
+                            <input class="input" type="number" id="ai_monthly_image_limit" name="ai_monthly_image_limit"
+                                   min="0" max="1000000" step="10" value="${esc(limits.ai_monthly_image_limit ?? '')}"
+                                   placeholder="500">
+                            <span class="field-hint">${esc(t('admin.ai_usage.monthly_limit_hint'))}</span>
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="ai_overage_price">${esc(t('admin.ai_usage.price'))}</label>
+                            <input class="input" type="number" id="ai_overage_price" name="ai_overage_price"
+                                   min="0" max="100" step="0.0001" value="${esc(limits.ai_overage_price ?? 0.01)}">
+                            <span class="field-hint">${esc(t('admin.ai_usage.price_hint'))}</span>
+                        </div>
+                    </div>
+                    <label class="check mt-4">
+                        <input type="checkbox" name="ai_feature_enabled" ${limits.ai_feature_enabled ? 'checked' : ''}>
+                        <span class="check-text">
+                            <span class="check-title">${esc(t('admin.ai_usage.feature_enabled'))}</span>
+                            <span class="check-desc">${esc(t('admin.ai_usage.feature_enabled_desc'))}</span>
+                        </span>
+                    </label>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary">${esc(t('admin.common.save'))}</button>
+                </div>
+            </div>
+        </form>
+    `);
+
+    // An empty field means "leave this limit as it is" rather than "set it to
+    // zero", which would silently mean unlimited.
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const button = form.querySelector('button[type="submit"]');
+        const reset = buttonBusy(button, t('admin.common.saving'));
+
+        const payload = {
+            ai_feature_enabled: form.elements.ai_feature_enabled.checked,
+            ai_overage_price: Number(form.elements.ai_overage_price.value || 0),
+        };
+        const trial = form.elements.ai_trial_image_limit.value;
+        const monthly = form.elements.ai_monthly_image_limit.value;
+        if (trial !== '') payload.ai_trial_image_limit = Number(trial);
+        if (monthly !== '') payload.ai_monthly_image_limit = Number(monthly);
+
+        try {
+            await apiPost(
+                `ai-usage.php?section=limits&salon_id=${encodeURIComponent(ctx.salonId)}`,
+                payload,
+                { salonScope: false }
+            );
+            reset();
+            toastSuccess(t('admin.settings.saved'));
+            ctx.reload();
+        } catch (error) {
+            reset();
+            toastApiError(error);
+        }
+    });
+
+    return form;
+}
+
+/** The last months, so a salon can see whether this month is unusual. */
+function aiHistoryCard(history) {
+    const card = el(`
+        <div class="card">
+            <div class="card-header"><h2>${esc(t('admin.ai_usage.history_title'))}</h2></div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>${esc(t('admin.ai_usage.col_period'))}</th>
+                            <th>${esc(t('admin.ai_usage.col_images'))}</th>
+                            <th>${esc(t('admin.ai_usage.col_overage'))}</th>
+                            <th>${esc(t('admin.ai_usage.col_cost'))}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.map((row) => `
+                            <tr>
+                                <td>${esc(row.period_label)}</td>
+                                <td>${esc(formatNumber(row.images))}</td>
+                                <td>${esc(formatNumber(row.overage_images))}</td>
+                                <td>${esc(formatMoney(row.overage_cost, 'EUR'))}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `);
+
+    return card;
 }

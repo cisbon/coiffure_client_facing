@@ -79,6 +79,18 @@ CREATE TABLE IF NOT EXISTS coiffure_salons (
     campaign_spam_limit INT UNSIGNED NOT NULL DEFAULT 4,
     campaign_spam_window_days INT UNSIGNED NOT NULL DEFAULT 30,
 
+    -- AI stylist quotas and overage billing (migration 027).
+    -- A limit of 0 means unlimited. Trial salons (status = 'trial') spend the
+    -- lifetime ai_trial_image_limit and are cut off when it is used up;
+    -- everyone else gets ai_monthly_image_limit images per calendar month and
+    -- may continue past it only when the owner enabled ai_overage_allowed, at
+    -- ai_overage_price per extra image.
+    ai_feature_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    ai_trial_image_limit INT UNSIGNED NOT NULL DEFAULT 100,
+    ai_monthly_image_limit INT UNSIGNED NOT NULL DEFAULT 500,
+    ai_overage_allowed TINYINT(1) NOT NULL DEFAULT 0,
+    ai_overage_price DECIMAL(8,4) NOT NULL DEFAULT 0.0100,
+
     UNIQUE KEY unique_salon_subdomain (subdomain),
     INDEX idx_salon_active (is_active),
     INDEX idx_salon_status (status),
@@ -379,6 +391,42 @@ CREATE TABLE IF NOT EXISTS coiffure_ai_consultations (
     INDEX idx_consultation_customer (customer_id),
     INDEX idx_consultation_status (status),
     INDEX idx_consultation_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Table: coiffure_ai_image_usage  (migration 027)
+-- Description: Billing ledger for the AI stylists -- one row per successfully
+--              generated image. Separate from coiffure_ai_consultations
+--              (which also holds failures and base64 blobs and is pruned):
+--              this ledger is append-only and must survive. The price that
+--              applied at generation time is frozen on the row, so re-pricing
+--              a salon never rewrites past invoices.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS coiffure_ai_image_usage (
+    usage_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    salon_id INT UNSIGNED NOT NULL,
+    consultation_id INT UNSIGNED DEFAULT NULL,
+
+    -- Which stylist produced the image ('hairstyle', 'eyebrows', …).
+    consultation_type VARCHAR(30) NOT NULL DEFAULT 'hairstyle',
+
+    -- Billing period this image counts towards.
+    period_year SMALLINT UNSIGNED NOT NULL,
+    period_month TINYINT UNSIGNED NOT NULL,
+
+    quota_mode VARCHAR(20) NOT NULL DEFAULT 'subscription',  -- trial | subscription
+    billing_state VARCHAR(20) NOT NULL DEFAULT 'included',   -- included | overage
+    overage_price DECIMAL(8,4) NOT NULL DEFAULT 0.0000,      -- charged for THIS image
+    currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (salon_id) REFERENCES coiffure_salons(salon_id) ON DELETE CASCADE,
+    FOREIGN KEY (consultation_id) REFERENCES coiffure_ai_consultations(consultation_id) ON DELETE SET NULL,
+
+    INDEX idx_ai_usage_period (salon_id, period_year, period_month),
+    INDEX idx_ai_usage_created (salon_id, created_at),
+    INDEX idx_ai_usage_billing (salon_id, billing_state)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

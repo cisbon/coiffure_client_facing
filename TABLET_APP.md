@@ -27,6 +27,38 @@ removed — membership is now a status only, no downloadable card.
   (thickness · shape · arch height · colour). The result screen offers
   **change only the brow colour**.
 
+### AI image allowance
+
+Generated images cost money, so every salon is metered. The rules live in one
+pure function (`aiUsageEvaluate()` in `api/ai_usage_helpers.php`) and are
+enforced server-side in `api/ai-consultation.php` **before** anything is sent
+to OpenRouter — the tablet's own check is only there to explain the situation
+early.
+
+| Regime | Allowance | Past the limit |
+|--------|-----------|----------------|
+| Trial (`coiffure_salons.status = 'trial'`) | `ai_trial_image_limit` images for the whole trial (default 100) | Feature off. A trial is never billed. |
+| Subscription | `ai_monthly_image_limit` images per calendar month (default 500) | The owner's `ai_overage_allowed` decides: stop, or keep generating at `ai_overage_price` per image. |
+
+A limit of `0` means unlimited. `ai_feature_enabled` is the master switch, and
+a suspended or deactivated salon is blocked regardless.
+
+Only images that were actually delivered are counted — a failed generation
+costs the salon nothing. Each one is booked as a row in
+`coiffure_ai_image_usage` with the period and the price that applied at that
+moment, so re-pricing a salon never rewrites past invoices.
+
+When the allowance is gone the stylist popup shows one explanatory screen
+(`<prefix>-step-blocked`) instead of the photo step, with copy per block reason
+under `ai_limit.*` in the language files. The same screen appears if the limit
+is hit mid-flow: `api/ai-consultation.php` answers `403` with
+`code: "ai_limit_reached"` and the engine renders the reason rather than a
+technical error.
+
+Consumption and the overage choice live in the dashboard under
+**Einstellungen → KI-Stilberatung**, with a summary card on the Übersicht. See
+ADMIN_DASHBOARD.md.
+
 ### Adding or adapting an AI stylist
 
 Both stylists run on one engine — `createAIStylist()` in `index.html`
@@ -248,7 +280,11 @@ slider scrolls, horizontally. The old Trends/Tipps/Shop tab switcher was removed
 | `api/content.php` | Trends & Tipps content (reads `data/trends.json`) |
 | `api/products.php` | Shop catalogue (reads `data/products.json`) |
 | `data/trends.json`, `data/products.json` | Demo content & products |
-| `index.html` | Home, check-in, browse screens + screen router + idle timer |
+| `index.html` | Home, check-in, browse screens + screen router + idle timer + the AI stylists |
+| `migrations/027_ai_usage_limits.sql` + `api/apply_migration_027.php` | `coiffure_ai_image_usage` ledger + salon AI quota columns |
+| `api/ai_usage_helpers.php` | AI quota rules, usage accounting and overage pricing |
+| `api/ai-usage.php` | consumption read (public for the tablet, full for the dashboard) + quota settings |
+| `api/ai-consultation.php` | AI image generation, quota-checked and metered |
 | `api/customer.php`, `api/mailer.php` | Registration + welcome e-mail (wallet removed) |
 
 Removed: `api/WalletGenerator.php`, `api/wallet.php`, `wallet/`, and all
@@ -268,6 +304,7 @@ php api/apply_migration_012.php   # per-salon loyalty config + staff PIN
 php api/apply_migration_013.php   # checkin analytics / audit / lockout tables
 php api/apply_migration_014.php   # salon connections (multi-store brands)
 php api/apply_migration_015.php   # global settings (kiosk timeouts)
+php api/apply_migration_027.php   # AI image quotas + usage ledger
 
 # …or raw SQL
 mysql -u USER -p salonlyft < migrations/009_visits_checkin.sql
