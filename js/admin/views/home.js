@@ -15,6 +15,7 @@ import {
     sparkline, cssVar, mergeChartOptions, emptyState, skeletonCards, initials,
     confirmDialog, buttonBusy,
 } from '../ui.js';
+import { usageBlock } from '../ai-usage.js';
 
 /** Chart.js instances, destroyed before each re-render so nothing leaks. */
 let charts = [];
@@ -63,6 +64,16 @@ export async function render(container, ctx) {
 
     host.innerHTML = '';
     host.appendChild(kpiRow(data, ctx));
+
+    // The AI allowance comes from its own endpoint (it is per salon, so the
+    // aggregated view has nothing to show) and is loaded without blocking the
+    // rest of the screen.
+    if (!ctx.isAllSalons) {
+        const aiHost = el('<div></div>');
+        host.appendChild(aiHost);
+        renderAiUsageCard(aiHost, ctx);
+    }
+
     host.appendChild(chartsRow(data, ctx));
 
     if (ctx.isAllSalons && data.salons?.length) {
@@ -204,6 +215,50 @@ function kpiCard({ label, value, icon, trend, trendNote, note, spark }) {
     }
 
     return card;
+}
+
+/* ============================================================
+   AI stylist allowance
+   ============================================================ */
+
+/**
+ * How much of the salon's AI image allowance is gone, and what the extras cost
+ * so far — the number an owner wants to see without hunting for it.
+ *
+ * Rendered into its own host and awaited nowhere: a slow or missing
+ * ai-usage.php must not delay the KPIs, and a salon on a database without
+ * migration 027 simply sees no card.
+ */
+async function renderAiUsageCard(host, ctx) {
+    let data;
+    try {
+        data = await apiGet(
+            `ai-usage.php?salon_id=${encodeURIComponent(ctx.salonId)}&months=1`,
+            { salonScope: false }
+        );
+    } catch (error) {
+        console.warn('AI usage card unavailable:', error);
+        return;
+    }
+
+    const usage = data.usage;
+    if (!usage || !usage.metered) return;
+
+    const card = el(`
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2>${esc(t('admin.ai_usage.card_title'))}</h2>
+                    <p class="card-hint">${esc(t('admin.ai_usage.card_hint'))}</p>
+                </div>
+                <a class="btn btn-ghost btn-sm" href="#/einstellungen?tab=ai">${esc(t('admin.ai_usage.card_action'))}</a>
+            </div>
+            <div class="card-body"></div>
+        </div>
+    `);
+
+    card.querySelector('.card-body').appendChild(usageBlock(usage));
+    host.replaceChildren(card);
 }
 
 /* ============================================================

@@ -109,11 +109,31 @@ referral reminder), and a log of everything sent. A spam limit (default four
 mails per 30 days) is enforced at review time, with a skip-or-send-anyway
 choice.
 
-**Einstellungen** — six sections: Allgemein (master data, logo, colours, WLAN),
-Tablet (greeting, background, idle timeout, which modules the kiosk offers),
-Treueprogramm (plus refer-a-friend), Geburtstag, Social & QR, Öffnungszeiten.
-Every field change is written to `coiffure_settings_audit` with its before and
-after value; anything whose column name contains "password" is masked.
+**Einstellungen** — seven sections: Allgemein (master data, logo, colours,
+WLAN), Tablet (greeting, background, idle timeout, which modules the kiosk
+offers), Treueprogramm (plus refer-a-friend), Geburtstag, Social & QR,
+Öffnungszeiten, KI-Stilberatung. Every field change is written to
+`coiffure_settings_audit` with its before and after value; anything whose column
+name contains "password" is masked.
+
+**KI-Stilberatung** — what the salon has spent of its AI image allowance, and
+the one AI decision that is genuinely the owner's:
+
+| Situation | What the salon sees |
+|---|---|
+| Inside the allowance | `200 / 500` · *Im Kontingent* · keine Zusatzkosten |
+| Allowance used up, extras declined | `500 / 500` · *Limit erreicht – Funktion deaktiviert* |
+| Past the allowance, extras allowed | `600 / 500` · *Zusatzbilder werden berechnet* · 2,15 € Zusatzkosten |
+
+The **Zusätzliche Bilder** card is a two-option radio, not a checkbox: stop at
+the limit (the salon can never be charged more than its subscription), or keep
+generating and pay `ai_overage_price` per extra image. During a trial the
+setting has no effect — a trial is never billed, it simply stops.
+
+The limits and the price themselves are a platform decision, so the **Limits und
+Preise** card only appears for a platform role. The rules are documented in
+TABLET_APP.md and implemented in `api/ai_usage_helpers.php`; the same numbers
+appear as a summary card on the Übersicht.
 
 **Protokoll** — the audit log, and a read-only GDPR consent trail. Consent
 cannot be edited here on purpose: a record that could be rewritten proves
@@ -173,6 +193,8 @@ plain textarea, and the QR preview says so. Nothing breaks.
 | `campaign_engine.php` | *(helper)* | recipients, spam limit, discount codes, sending |
 | `cron-campaigns.php` | `CRON_TOKEN` | scheduled and automatic sends |
 | `salon-settings.php` | `change_settings` | the settings sections |
+| `ai-usage.php` | `view_insights` / `change_settings` / platform | AI consumption, overage choice, limits |
+| `ai_usage_helpers.php` | *(helper)* | the AI quota rules, accounting and pricing |
 | `user-invite.php` | `manage_users` | invitations and granular grants |
 | `auth-set-password.php` | invitation token | accept an invitation |
 | `audit-log.php` | role-scoped | the audit log |
@@ -249,6 +271,7 @@ when you introduce a new one.
    php api/apply_migration_024.php    # audit widening, consent history
    php api/apply_migration_025.php    # customer notes and tags
    php api/apply_migration_026.php    # support impersonation
+   php api/apply_migration_027.php    # AI image quotas + usage ledger
    ```
 
    Each runner is idempotent — running it twice is safe and reports what it

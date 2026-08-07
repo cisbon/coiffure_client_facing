@@ -435,8 +435,10 @@ button { font: inherit; color: inherit; }
        title on a phone rather than push the card past the viewport. */
     flex-wrap: wrap;
 }
-/* Covers both a bare <h2> and a <div> wrapping a title plus a .card-hint. */
-.card-header > :first-child { min-width: 0; }
+/* Covers both a bare <h2> and a <div> wrapping a title plus a .card-hint --
+   either way the title block takes the free space so a header action stays
+   pinned to the right edge. */
+.card-header > :first-child { flex: 1; min-width: 0; }
 .card-header h2, .card-header h3 { flex: 1; min-width: 0; }
 .card-body { padding: var(--sp-6); }
 .card-footer {
@@ -937,10 +939,26 @@ button { font: inherit; color: inherit; }
 .divider { height: 1px; background: var(--border); margin: var(--sp-6) 0; border: 0; }
 
 .text-muted { color: var(--text-muted); }
+.text-subtle { color: var(--text-subtle); }
 .text-sm { font-size: 0.85rem; }
 .text-xs { font-size: 0.78rem; }
 .mt-0 { margin-top: 0; } .mt-2 { margin-top: var(--sp-2); } .mt-4 { margin-top: var(--sp-4); }
 .mt-6 { margin-top: var(--sp-6); } .mb-4 { margin-bottom: var(--sp-4); } .mb-6 { margin-bottom: var(--sp-6); }
+.stack-sm { display: grid; gap: var(--sp-2); }
+.row-between { justify-content: space-between; }
+
+/* Allowance meter — AI stylist consumption (js/admin/ai-usage.js).
+   The fill colour carries the same state as the badge beside it. */
+.meter {
+    height: 10px; border-radius: var(--r-full);
+    background: var(--slate-200); overflow: hidden;
+}
+.meter-fill {
+    height: 100%; border-radius: inherit;
+    background: var(--brand-500); transition: width 0.3s ease;
+}
+.meter-fill.meter-warning { background: var(--warning-500); }
+.meter-fill.meter-danger { background: var(--danger-500); }
 
 /* Language switcher (mirrors the tablet's flag dropdown) */
 .lang-switcher { position: relative; }

@@ -1261,6 +1261,19 @@
                     </div>
                 </div>
 
+                <!-- ========== QUOTA BLOCK ========== -->
+                <!-- Shown instead of the flow when the salon's AI image
+                     allowance is used up (see api/ai_usage_helpers.php). -->
+                <div id="kiosk-step-blocked" class="hidden kiosk-step-fit flex items-center justify-center px-4 overflow-hidden">
+                    <div class="max-w-lg w-full text-center space-y-5">
+                        <div class="text-6xl mb-2">🔒</div>
+                        <h2 class="text-3xl font-bold text-gray-800" data-i18n="ai_limit.title">KI-Stilberatung derzeit nicht verfügbar</h2>
+                        <p id="kiosk-blocked-text" class="text-gray-600 text-lg"></p>
+                        <p class="text-sm text-gray-400" data-i18n="ai_limit.staff_hint">Salon-Team: Details finden Sie im Admin-Dashboard.</p>
+                        <button onclick="closeKioskPopup()" class="w-full py-4 px-6 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all" data-i18n="ai_limit.close">Schließen</button>
+                    </div>
+                </div>
+
                 <!-- ========== STEP 3: GENERATING ========== -->
                 <div id="kiosk-step-generating" class="hidden kiosk-step-fit flex items-center justify-center px-4 overflow-hidden">
                     <div class="max-w-lg w-full text-center space-y-6">
@@ -1643,6 +1656,19 @@
                                 <span data-i18n="kiosk.back">← Back to Photo</span>
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ========== QUOTA BLOCK ========== -->
+                <!-- Shown instead of the flow when the salon's AI image
+                     allowance is used up (see api/ai_usage_helpers.php). -->
+                <div id="brow-step-blocked" class="hidden kiosk-step-fit flex items-center justify-center px-4 overflow-hidden">
+                    <div class="max-w-lg w-full text-center space-y-5">
+                        <div class="text-6xl mb-2">🔒</div>
+                        <h2 class="text-3xl font-bold text-gray-800" data-i18n="ai_limit.title">KI-Stilberatung derzeit nicht verfügbar</h2>
+                        <p id="brow-blocked-text" class="text-gray-600 text-lg"></p>
+                        <p class="text-sm text-gray-400" data-i18n="ai_limit.staff_hint">Salon-Team: Details finden Sie im Admin-Dashboard.</p>
+                        <button onclick="closeBrowPopup()" class="w-full py-4 px-6 bg-gray-200 text-gray-700 text-lg font-semibold rounded-xl hover:bg-gray-300 transition-all" data-i18n="ai_limit.close">Schließen</button>
                     </div>
                 </div>
 
@@ -2699,14 +2725,42 @@
             card.classList.remove('hidden');
         }
 
+        // ---- AI image allowance ----
+        // Salons are metered per generated image (trial allowance or monthly
+        // quota, see api/ai_usage_helpers.php). The server is the authority and
+        // rejects a generation it must not run; this read only lets the tablet
+        // explain the situation before the customer takes a photo.
+        let aiUsageState = null;
+
+        async function fetchAiUsage() {
+            try {
+                const salonId = typeof getActiveSalonId === 'function' ? getActiveSalonId() : '';
+                const response = await fetch(
+                    `${API_BASE_URL}/ai-usage.php?public=1&salon_id=${encodeURIComponent(salonId)}`
+                );
+                const result = await response.json();
+                aiUsageState = result.usage || null;
+            } catch (error) {
+                // Offline or the endpoint is unreachable: don't lock the salon
+                // out of a feature it may well be entitled to. The generation
+                // request itself is still checked server-side.
+                console.warn('AI usage check failed:', error);
+                aiUsageState = null;
+            }
+            return aiUsageState;
+        }
+
         // ---- Fullscreen AI stylist popups (hairstyle, eyebrows, ...) ----
         // Every stylist shares one flow; see the AI STYLIST ENGINE section.
-        function openStylistPopup(name) {
+        async function openStylistPopup(name) {
             const stylist = aiStylists[name];
             if (!stylist) { console.warn(`Unknown AI stylist: ${name}`); return; }
             document.getElementById(`${stylist.config.prefix}-popup`).classList.remove('hidden');
             stylist.reset();
             if (typeof updateLanguageButtons === 'function') updateLanguageButtons();
+
+            const usage = await fetchAiUsage();
+            if (usage && !usage.allowed) stylist.showBlocked(usage.block_reason);
         }
 
         function closeStylistPopup(name) {
@@ -4961,22 +5015,40 @@
                 });
 
                 try {
+                    const headers = { 'Content-Type': 'application/json' };
+                    // Lets the server bill the salon this tablet belongs to
+                    // instead of trusting the posted salon_id.
+                    if (typeof sessionToken !== 'undefined' && sessionToken) {
+                        headers['Authorization'] = `Bearer ${sessionToken}`;
+                    }
+
                     const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers,
                         body: JSON.stringify({
                             image_base64: state.photo,
                             style_prompt: stylePrompt,
-                            consultation_type: config.consultationType
+                            consultation_type: config.consultationType,
+                            salon_id: typeof getActiveSalonId === 'function' ? getActiveSalonId() : undefined
                         })
                     });
 
                     const result = await response.json();
                     console.log('AI stylist response:', response.status, result);
 
+                    // The salon's image allowance ran out — explain instead of
+                    // showing a technical error.
+                    if (result.code === 'ai_limit_reached') {
+                        aiUsageState = result.usage || aiUsageState;
+                        showBlocked(result.block_reason);
+                        return;
+                    }
+
                     if (!result.success || !result.generated_image) {
                         throw new Error(result.message || result.error || 'Failed to generate image');
                     }
+
+                    if (result.usage) aiUsageState = result.usage;
 
                     el('result-image').src = result.generated_image;
                     show(el('step-generating'), false);
@@ -4995,6 +5067,25 @@
                     errorMsg.querySelector('p').textContent = error.message || tr(config.errorKey, config.errorFallback);
                     show(errorMsg, true);
                 }
+            }
+
+            // ---------- Quota block ----------
+            // The salon's AI image allowance is metered server-side. When it is
+            // used up the whole flow is replaced by one explanatory screen
+            // rather than letting the customer take a photo that cannot be used.
+            function showBlocked(reason) {
+                stopCountdown();
+                stopStream();
+                ['step-photo', 'step-style', 'step-generating', 'step-results', 'camera-fs', 'photo-fs']
+                    .forEach(suffix => show(el(suffix), false));
+                show(el('progress'), false);
+
+                const text = el('blocked-text');
+                if (text) {
+                    const key = `ai_limit.reason_${reason || 'feature_disabled'}`;
+                    text.textContent = tr(key, 'This feature is currently unavailable.');
+                }
+                show(el('step-blocked'), true);
             }
 
             // ---------- Result actions ----------
@@ -5027,6 +5118,8 @@
                 show(el('step-style'), false);
                 show(el('step-generating'), false);
                 show(el('step-results'), false);
+                show(el('step-blocked'), false);
+                show(el('progress'), true);
                 updateProgress(1);
 
                 state.photo = null;
@@ -5058,7 +5151,7 @@
             }
 
             return {
-                config, state, reset, teardown,
+                config, state, reset, teardown, showBlocked,
                 openCamera, closeCamera, capturePhoto, handleImageSelect, retakePhoto,
                 goToStyleSelection, goBackToPhoto, switchStyleMode, selectGender, selectOption,
                 selectStyle, selectCustomDescription, generateCustomStyle,

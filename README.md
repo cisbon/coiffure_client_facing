@@ -106,7 +106,8 @@ coiffure/
 │       └── views/             # One module per sidebar item
 ├── lang/                       # de.json / en.json (German is the default)
 ├── scripts/
-│   └── check-translations.mjs # Fails if a used translation key is missing
+│   ├── check-translations.mjs # Fails if a used translation key is missing
+│   └── check-ai-quota.php     # Fails if an AI image quota rule changed
 ├── migrations/                 # NNN_name.sql, applied via api/apply_migration_NNN.php
 ├── set-password.html           # Invitation acceptance (choose your own password)
 ├── api/                        # Backend (deploy to clouedo.com/coiffure/api/)
@@ -116,7 +117,9 @@ coiffure/
 │   ├── permissions.php        # Permission matrix, salon scoping, admin audit
 │   ├── customer.php           # Customer onboarding endpoint
 │   ├── qr-generate.php        # QR code generation endpoint
-│   ├── ai-consultation.php    # AI consultation endpoint
+│   ├── ai-consultation.php    # AI consultation endpoint (quota-checked, metered)
+│   ├── ai-usage.php           # AI consumption, overage choice, per-salon limits
+│   ├── ai_usage_helpers.php   # AI quota rules, usage accounting, overage pricing
 │   ├── auth-login.php         # User login endpoint
 │   ├── auth-logout.php        # User logout endpoint
 │   ├── user-management.php    # User CRUD operations
@@ -692,16 +695,22 @@ If you're experiencing 500 errors, the `coiffure_audit_log` table may be missing
 
 ### Checks before committing
 
-There is no build step and no test runner, so two scripts stand in:
+There is no build step and no test runner, so a few scripts stand in:
 
 ```bash
 node scripts/check-translations.mjs        # de/en parity + every used key resolves
+php scripts/check-ai-quota.php             # AI image quota rules still hold
 php -l <changed file>                      # syntax
 node --check <changed file>                # syntax
 ```
 
 The translation check fails the moment a key is used but not defined, which
 would otherwise render a raw key like `admin.users.title` to a salon owner.
+
+The quota check walks every scenario the AI allowance promises (trial cut-off,
+monthly limit, paid overage, unlimited) against the real rules, so a change that
+would quietly bill a trial salon or let one past its limit fails loudly. It
+needs no database — the rules are a pure function.
 
 ## License
 

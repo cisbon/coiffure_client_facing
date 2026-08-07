@@ -90,6 +90,15 @@ const DYNAMIC_GROUPS = {
         'subscription_changed', 'birthday',
     ],
     'admin.whitelabel': ['primary_color', 'secondary_color', 'secure_tls', 'secure_ssl', 'secure_none'],
+    // Block reasons from aiUsageSnapshot() in api/ai_usage_helpers.php, used
+    // as `admin.ai_usage.state_${reason}` and `..._blocked_help_${reason}`.
+    'admin.ai_usage': [
+        'state_trial_limit_reached', 'state_monthly_limit_reached',
+        'state_feature_disabled', 'state_salon_suspended',
+        'blocked_help_trial_limit_reached', 'blocked_help_monthly_limit_reached',
+        'blocked_help_feature_disabled', 'blocked_help_salon_suspended',
+        'type_hairstyle', 'type_eyebrows',
+    ],
 };
 
 /* ============================================================

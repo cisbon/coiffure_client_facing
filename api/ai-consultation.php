@@ -10,6 +10,8 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/permissions.php';
+require_once __DIR__ . '/ai_usage_helpers.php';
 
 // Set CORS headers
 setCorsHeaders();
@@ -81,7 +83,6 @@ $consultationType = sanitizeInput($requestData['consultation_type'] ?? 'hairstyl
 if (!isset(CONSULTATION_PROMPTS[$consultationType])) {
     sendErrorResponse('Unknown consultation_type: ' . $consultationType, 400);
 }
-$salonId = $requestData['salon_id'] ?? DEFAULT_SALON_ID;
 $customerId = isset($requestData['customer_id']) ? (int)$requestData['customer_id'] : null;
 
 // Validate and process image
@@ -121,6 +122,49 @@ if ($imageFile !== null) {
 $conn = getDbConnection();
 if (!$conn) {
     sendErrorResponse('Database connection failed', 500);
+}
+
+// ------------------------------------------------------------------
+// Resolve the salon that pays for this image
+// ------------------------------------------------------------------
+// The endpoint stays unauthenticated (the kiosk runs without a customer
+// login), but images now cost money and are metered per salon, so a posted
+// salon_id must never be able to spend another salon's allowance. When the
+// tablet sends its session token the salon is taken from that session;
+// otherwise we fall back to the posted id, as before.
+$salonId = (int)($requestData['salon_id'] ?? DEFAULT_SALON_ID);
+$sessionUser = null;
+$sessionTokenValue = getSessionToken();
+if ($sessionTokenValue) {
+    $sessionUser = validateSession($conn, $sessionTokenValue);
+}
+if ($sessionUser) {
+    $accessible = getAccessibleSalonIds($conn, $sessionUser);
+    if (!empty($accessible) && !in_array($salonId, $accessible, true)) {
+        $salonId = $accessible[0];
+    }
+}
+if ($salonId < 1) {
+    $salonId = (int)DEFAULT_SALON_ID;
+}
+
+// ------------------------------------------------------------------
+// Quota check — before spending anything at OpenRouter
+// ------------------------------------------------------------------
+// The snapshot is taken now and reused after the generation to book the
+// image, so the decision that let this request through is the same one that
+// prices it.
+$quota = aiUsageSnapshot($conn, $salonId);
+if (!$quota['allowed']) {
+    error_log("AI consultation blocked for salon $salonId: " . $quota['block_reason']);
+    $conn->close();
+    sendJsonResponse([
+        'success' => false,
+        'error' => 'AI image limit reached',
+        'code' => 'ai_limit_reached',
+        'block_reason' => $quota['block_reason'],
+        'usage' => aiUsagePublicState($quota),
+    ], 403);
 }
 
 // Generate unique session ID
@@ -505,6 +549,15 @@ if (!$completeStmt->execute()) {
 }
 
 $completeStmt->close();
+
+// Book the delivered image against the salon's allowance. Only successful
+// generations are metered, and the pre-flight snapshot decides whether this
+// one is included or billed as overage.
+aiUsageRecord($conn, $salonId, $consultationId, $consultationType, $quota);
+
+// Re-read the quota so the tablet can react immediately when this image was
+// the last one the salon had.
+$quotaAfter = aiUsageSnapshot($conn, $salonId);
 $conn->close();
 
 // Return success response
@@ -518,5 +571,6 @@ sendJsonResponse([
     'generated_image_url' => $generatedImageUrl,
     'processing_time_ms' => $processingTime,
     'tokens_used' => $tokensUsed,
-    'model_used' => $aiModel
+    'model_used' => $aiModel,
+    'usage' => aiUsagePublicState($quotaAfter)
 ], 200);
