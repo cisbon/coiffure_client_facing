@@ -1283,6 +1283,18 @@ function aiOverageCard(usage, data, ctx) {
                             </span>
                         </label>
                     </div>
+
+                    <div class="field mt-4" id="ai-cap-field">
+                        <label class="field-label" for="ai_overage_monthly_cap">${esc(t('admin.ai_usage.cap'))}</label>
+                        <div class="row" style="gap:var(--sp-2)">
+                            <input class="input" type="number" id="ai_overage_monthly_cap"
+                                   name="ai_overage_monthly_cap" min="0" max="100000" step="0.50"
+                                   style="max-width:160px" ${disabled}
+                                   value="${esc(usage.overage_cap || '')}" placeholder="0.00">
+                            <span class="text-sm text-muted">${esc(usage.currency || 'EUR')}</span>
+                        </div>
+                        <span class="field-hint">${esc(t('admin.ai_usage.cap_hint'))}</span>
+                    </div>
                     ${usage.mode === 'trial'
                         ? `<p class="text-sm text-muted mt-4">${esc(t('admin.ai_usage.overage_trial_note'))}</p>`
                         : ''}
@@ -1296,6 +1308,20 @@ function aiOverageCard(usage, data, ctx) {
         </form>
     `);
 
+    // The budget only means anything once extras are switched on, so it greys
+    // out with the "stop at the limit" option rather than sitting there
+    // implying it does something.
+    const capField = form.querySelector('#ai-cap-field');
+    const capInput = form.querySelector('#ai_overage_monthly_cap');
+    const syncCapField = () => {
+        const on = form.elements.ai_overage_allowed.value === '1';
+        capField.style.opacity = on ? '' : '0.55';
+        if (data.can_change_overage) capInput.disabled = !on;
+    };
+    form.querySelectorAll('input[name="ai_overage_allowed"]')
+        .forEach((radio) => radio.addEventListener('change', syncCapField));
+    syncCapField();
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const button = form.querySelector('button[type="submit"]');
@@ -1303,7 +1329,11 @@ function aiOverageCard(usage, data, ctx) {
         try {
             await apiPost(
                 `ai-usage.php?section=overage&salon_id=${encodeURIComponent(ctx.salonId)}`,
-                { ai_overage_allowed: form.elements.ai_overage_allowed.value === '1' },
+                {
+                    ai_overage_allowed: form.elements.ai_overage_allowed.value === '1',
+                    // Empty reads as "no cap", the same as an explicit 0.
+                    ai_overage_monthly_cap: Number(capInput.value || 0),
+                },
                 { salonScope: false }
             );
             reset();

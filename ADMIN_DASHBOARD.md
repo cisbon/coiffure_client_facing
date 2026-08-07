@@ -123,12 +123,21 @@ the one AI decision that is genuinely the owner's:
 |---|---|
 | Inside the allowance | `200 / 500` · *Im Kontingent* · keine Zusatzkosten |
 | Allowance used up, extras declined | `500 / 500` · *Limit erreicht – Funktion deaktiviert* |
-| Past the allowance, extras allowed | `600 / 500` · *Zusatzbilder werden berechnet* · 2,15 € Zusatzkosten |
+| Past the allowance, extras allowed | `600 / 500` · *Zusatzbilder werden berechnet* · 12,00 € von 20,00 € Zusatzkosten |
+| Budget nearly spent | *Budget für Zusatzkosten fast ausgeschöpft* |
+| Budget spent | *Budget ausgeschöpft – Funktion deaktiviert* |
 
 The **Zusätzliche Bilder** card is a two-option radio, not a checkbox: stop at
 the limit (the salon can never be charged more than its subscription), or keep
 generating and pay `ai_overage_price` per extra image. During a trial the
 setting has no effect — a trial is never billed, it simply stops.
+
+Alongside it the owner sets a **Monatsbudget** for those extras. It is a hard
+ceiling, checked before each image, so the figure the owner types is the most
+they can ever be charged in a month; the stylists switch off for the rest of the
+month once it is reached. `0` means no budget limit. The field greys out with
+the "stop at the limit" option, since it only means something when extras are
+on.
 
 The limits and the price themselves are a platform decision, so the **Limits und
 Preise** card only appears for a platform role. The rules are documented in
@@ -272,6 +281,7 @@ when you introduce a new one.
    php api/apply_migration_025.php    # customer notes and tags
    php api/apply_migration_026.php    # support impersonation
    php api/apply_migration_027.php    # AI image quotas + usage ledger
+   php api/apply_migration_028.php    # monthly spend cap for AI overage
    ```
 
    Each runner is idempotent — running it twice is safe and reports what it

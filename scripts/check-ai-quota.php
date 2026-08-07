@@ -33,6 +33,7 @@ function cfg(array $over = []): array
         'monthly_limit' => 500,
         'overage_allowed' => false,
         'overage_price' => 0.01,
+        'overage_cap' => 0.0,
     ], $over);
 }
 
@@ -123,6 +124,101 @@ check('next image is billed', $s['next_image_billed'], true);
 scenario('Subscription: one below the limit -> still included');
 $s = aiUsageEvaluate(cfg(['overage_allowed' => true]), 499, $noOverage, 2026, 8);
 check('next image is free', $s['next_image_billed'], false);
+
+// ------------------------------------------------------------------
+// Monthly spend cap on extras (migration 028)
+// ------------------------------------------------------------------
+scenario('Cap: 12.00 of a 20.00 budget spent -> keeps generating');
+$s = aiUsageEvaluate(
+    cfg(['overage_allowed' => true, 'overage_cap' => 20.0]),
+    700,
+    ['count' => 1200, 'cost' => 12.0],
+    2026,
+    8
+);
+check('allowed', $s['allowed'], true);
+check('next image is billed', $s['next_image_billed'], true);
+check('capped', $s['overage_capped'], false);
+check('budget left', $s['overage_budget_left'], 8.0);
+
+scenario('Cap: budget exactly spent -> feature off for the month');
+$s = aiUsageEvaluate(
+    cfg(['overage_allowed' => true, 'overage_cap' => 20.0]),
+    2500,
+    ['count' => 2000, 'cost' => 20.0],
+    2026,
+    8
+);
+check('allowed', $s['allowed'], false);
+check('block reason', $s['block_reason'], 'overage_cap_reached');
+check('capped', $s['overage_capped'], true);
+check('budget left', $s['overage_budget_left'], 0.0);
+check('next image not billed', $s['next_image_billed'], false);
+
+scenario('Cap is a hard ceiling: the last affordable image is allowed...');
+$s = aiUsageEvaluate(
+    cfg(['overage_allowed' => true, 'overage_cap' => 20.0]),
+    2499,
+    ['count' => 1999, 'cost' => 19.99],
+    2026,
+    8
+);
+check('allowed (19.99 + 0.01 = 20.00, still within)', $s['allowed'], true);
+check('next image is billed', $s['next_image_billed'], true);
+
+scenario('...but the one that would exceed it is not');
+$s = aiUsageEvaluate(
+    cfg(['overage_allowed' => true, 'overage_cap' => 20.0, 'overage_price' => 0.02]),
+    2500,
+    ['count' => 1000, 'cost' => 19.99],
+    2026,
+    8
+);
+check('allowed (19.99 + 0.02 = 20.01, over)', $s['allowed'], false);
+check('block reason', $s['block_reason'], 'overage_cap_reached');
+
+scenario('Cap 0 means no cap');
+$s = aiUsageEvaluate(
+    cfg(['overage_allowed' => true, 'overage_cap' => 0.0]),
+    9999,
+    ['count' => 9000, 'cost' => 90.0],
+    2026,
+    8
+);
+check('allowed', $s['allowed'], true);
+check('capped', $s['overage_capped'], false);
+check('budget left is null', $s['overage_budget_left'], null);
+
+scenario('Cap reached but still inside the included allowance -> unaffected');
+$s = aiUsageEvaluate(
+    cfg(['overage_allowed' => true, 'overage_cap' => 1.0]),
+    200,
+    ['count' => 100, 'cost' => 1.0],
+    2026,
+    8
+);
+check('allowed', $s['allowed'], true);
+check('block reason', $s['block_reason'], null);
+
+scenario('Extras declined -> the plain limit message, not the cap one');
+$s = aiUsageEvaluate(
+    cfg(['overage_allowed' => false, 'overage_cap' => 20.0]),
+    500,
+    $noOverage,
+    2026,
+    8
+);
+check('block reason', $s['block_reason'], 'monthly_limit_reached');
+
+scenario('A cap never applies to a trial');
+$s = aiUsageEvaluate(
+    cfg(['status' => 'trial', 'overage_allowed' => true, 'overage_cap' => 20.0]),
+    100,
+    $noOverage,
+    2026,
+    8
+);
+check('block reason', $s['block_reason'], 'trial_limit_reached');
 
 // ------------------------------------------------------------------
 scenario('Master switch off beats everything');

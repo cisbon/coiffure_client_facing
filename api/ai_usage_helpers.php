@@ -54,16 +54,35 @@ function aiUsageReady(mysqli $conn): bool
 }
 
 /**
+ * The overage spend cap arrives with migration 028, one release after the rest.
+ * Its absence must not break a database that only ran 027, so it is selected
+ * only when present and reads as 0.00 (= no cap) otherwise — exactly how the
+ * feature behaved before the cap existed.
+ */
+function aiUsageCapReady(mysqli $conn): bool
+{
+    static $ready = null;
+    if ($ready !== null) {
+        return $ready;
+    }
+    $res = $conn->query("SHOW COLUMNS FROM coiffure_salons LIKE 'ai_overage_monthly_cap'");
+    $ready = $res && $res->num_rows > 0;
+    return $ready;
+}
+
+/**
  * The salon's commercial terms for the AI stylists.
  * Returns null when the salon does not exist.
  */
 function aiUsageConfig(mysqli $conn, int $salonId): ?array
 {
+    $capColumn = aiUsageCapReady($conn) ? 'ai_overage_monthly_cap' : '0.00 AS ai_overage_monthly_cap';
+
     $stmt = $conn->prepare(
-        'SELECT salon_id, salon_name, status, is_active, currency,
+        "SELECT salon_id, salon_name, status, is_active, currency,
                 ai_feature_enabled, ai_trial_image_limit, ai_monthly_image_limit,
-                ai_overage_allowed, ai_overage_price
-         FROM coiffure_salons WHERE salon_id = ?'
+                ai_overage_allowed, ai_overage_price, $capColumn
+         FROM coiffure_salons WHERE salon_id = ?"
     );
     if (!$stmt) {
         return null;
@@ -88,6 +107,7 @@ function aiUsageConfig(mysqli $conn, int $salonId): ?array
         'monthly_limit' => (int)($row['ai_monthly_image_limit'] ?? 0),
         'overage_allowed' => (int)($row['ai_overage_allowed'] ?? 0) === 1,
         'overage_price' => (float)($row['ai_overage_price'] ?? 0),
+        'overage_cap' => (float)($row['ai_overage_monthly_cap'] ?? 0),
     ];
 }
 
@@ -204,8 +224,19 @@ function aiUsageEvaluate(array $config, int $used, array $overage, int $year, in
     $unlimited = $limit === 0;
     $overLimit = !$unlimited && $used >= $limit;
 
+    // The owner's monthly ceiling on extras. 0.00 = no cap.
+    //
+    // Checked against what the NEXT image would cost, not what has already been
+    // spent, so the cap is never overshot: a 20.00 cap yields at most 20.00 of
+    // extras, never 20.01. The 0.0001 tolerance absorbs float noise from
+    // summing DECIMAL(8,4) prices, so landing exactly on the cap still counts
+    // as within it.
+    $cap = (float)($config['overage_cap'] ?? 0);
+    $spent = (float)$overage['cost'];
+    $capped = $cap > 0 && ($spent + $config['overage_price']) > $cap + 0.0001;
+
     // Trials are never billed, so overage only ever applies to a subscription.
-    $overageActive = $mode === 'subscription' && $config['overage_allowed'];
+    $overageActive = $mode === 'subscription' && $config['overage_allowed'] && !$capped;
     $nextImageBilled = $overLimit && $overageActive;
 
     $blockReason = null;
@@ -214,7 +245,16 @@ function aiUsageEvaluate(array $config, int $used, array $overage, int $year, in
     } elseif (!$config['is_active'] || $config['status'] === 'suspended') {
         $blockReason = 'salon_suspended';
     } elseif ($overLimit && !$overageActive) {
-        $blockReason = $mode === 'trial' ? 'trial_limit_reached' : 'monthly_limit_reached';
+        if ($mode === 'trial') {
+            $blockReason = 'trial_limit_reached';
+        } else {
+            // Distinguish "you chose to stop at the limit" from "you allowed
+            // extras and have spent your budget" — different situations, and
+            // only the second one is fixed by raising the cap.
+            $blockReason = ($config['overage_allowed'] && $capped)
+                ? 'overage_cap_reached'
+                : 'monthly_limit_reached';
+        }
     }
 
     return [
@@ -231,6 +271,9 @@ function aiUsageEvaluate(array $config, int $used, array $overage, int $year, in
         'overage_price' => round($config['overage_price'], 4),
         'overage_count' => $overage['count'],
         'overage_cost' => $overage['cost'],
+        'overage_cap' => round($cap, 2),
+        'overage_capped' => $capped,
+        'overage_budget_left' => $cap > 0 ? round(max(0, $cap - $spent), 2) : null,
         'next_image_billed' => $nextImageBilled,
         'currency' => $config['currency'],
         'feature_enabled' => $config['feature_enabled'],
@@ -258,6 +301,9 @@ function aiUsageUnmetered(int $year, int $month): array
         'overage_price' => 0.0,
         'overage_count' => 0,
         'overage_cost' => 0.0,
+        'overage_cap' => 0.0,
+        'overage_capped' => false,
+        'overage_budget_left' => null,
         'next_image_billed' => false,
         'currency' => 'EUR',
         'feature_enabled' => true,
