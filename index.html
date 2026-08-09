@@ -5015,25 +5015,38 @@
                 });
 
                 try {
-                    const headers = { 'Content-Type': 'application/json' };
-                    // Lets the server bill the salon this tablet belongs to
-                    // instead of trusting the posted salon_id.
-                    if (typeof sessionToken !== 'undefined' && sessionToken) {
-                        headers['Authorization'] = `Bearer ${sessionToken}`;
-                    }
-
                     const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
                         method: 'POST',
-                        headers,
+                        // Content-Type only. An Authorization header would add
+                        // itself to the CORS preflight, and some hosts strip or
+                        // reject it outright — the token travels in the body so
+                        // this request stays exactly as simple as it always was.
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             image_base64: state.photo,
                             style_prompt: stylePrompt,
                             consultation_type: config.consultationType,
-                            salon_id: typeof getActiveSalonId === 'function' ? getActiveSalonId() : undefined
+                            salon_id: typeof getActiveSalonId === 'function' ? getActiveSalonId() : undefined,
+                            // Lets the server bill the salon this tablet belongs
+                            // to rather than trusting the posted salon_id.
+                            session_token: typeof sessionToken !== 'undefined' ? sessionToken : undefined
                         })
                     });
 
-                    const result = await response.json();
+                    // Read the body as text first: when the API itself fails
+                    // (a PHP error page, a gateway timeout) the body is not
+                    // JSON, and response.json() would throw a parser message
+                    // that says nothing about what actually went wrong.
+                    const raw = await response.text();
+                    let result;
+                    try {
+                        result = JSON.parse(raw);
+                    } catch (parseError) {
+                        console.error('AI stylist: non-JSON response', response.status, raw.slice(0, 500));
+                        throw new Error(
+                            `${tr('kiosk.error_server', 'The styling service is not responding correctly.')} (HTTP ${response.status})`
+                        );
+                    }
                     console.log('AI stylist response:', response.status, result);
 
                     // The salon's image allowance ran out — explain instead of
@@ -5063,8 +5076,16 @@
                     show(el('result-image-container'), false);
                     show(el('color-row'), false);
 
+                    // A fetch that never completed rejects with a TypeError,
+                    // whose message ("Load failed" on Safari, "Failed to fetch"
+                    // on Chrome) means nothing to someone standing at a tablet.
+                    // Say what it actually is: the server could not be reached.
+                    const message = (error instanceof TypeError)
+                        ? tr('kiosk.error_network', 'No connection to the styling service. Please check the internet connection and try again.')
+                        : (error.message || tr(config.errorKey, config.errorFallback));
+
                     const errorMsg = el('error-message');
-                    errorMsg.querySelector('p').textContent = error.message || tr(config.errorKey, config.errorFallback);
+                    errorMsg.querySelector('p').textContent = message;
                     show(errorMsg, true);
                 }
             }

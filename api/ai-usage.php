@@ -27,15 +27,18 @@
  */
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/permissions.php';
-require_once __DIR__ . '/ai_usage_helpers.php';
 
+// CORS first: a failure in the requires below would otherwise produce a 500
+// with no CORS headers, which a browser can only report as a network error.
 setCorsHeaders();
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
+require_once __DIR__ . '/permissions.php';
+require_once __DIR__ . '/ai_usage_helpers.php';
 
 $conn = getDbConnection();
 if (!$conn) {

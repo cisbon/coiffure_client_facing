@@ -1521,7 +1521,9 @@
     "try_different": "Try Different Style",
     "start_over": "Start Over",
     "camera_error": "Could not access camera. Please ensure camera permissions are enabled.",
-    "error_generate": "Failed to generate hairstyle. Please try again."
+    "error_generate": "Failed to generate hairstyle. Please try again.",
+    "error_network": "No connection to the styling service. Please check the internet connection and try again.",
+    "error_server": "The styling service is not responding correctly."
   },
   "brow": {
     "photo_subtitle": "Let's start by capturing your current brows",
