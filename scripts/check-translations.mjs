@@ -94,9 +94,10 @@ const DYNAMIC_GROUPS = {
     // as `admin.ai_usage.state_${reason}` and `..._blocked_help_${reason}`.
     'admin.ai_usage': [
         'state_trial_limit_reached', 'state_monthly_limit_reached',
-        'state_feature_disabled', 'state_salon_suspended',
+        'state_overage_cap_reached', 'state_feature_disabled', 'state_salon_suspended',
         'blocked_help_trial_limit_reached', 'blocked_help_monthly_limit_reached',
-        'blocked_help_feature_disabled', 'blocked_help_salon_suspended',
+        'blocked_help_overage_cap_reached', 'blocked_help_feature_disabled',
+        'blocked_help_salon_suspended',
         'type_hairstyle', 'type_eyebrows',
     ],
 };

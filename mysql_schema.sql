@@ -79,17 +79,20 @@ CREATE TABLE IF NOT EXISTS coiffure_salons (
     campaign_spam_limit INT UNSIGNED NOT NULL DEFAULT 4,
     campaign_spam_window_days INT UNSIGNED NOT NULL DEFAULT 30,
 
-    -- AI stylist quotas and overage billing (migration 027).
+    -- AI stylist quotas and overage billing (migrations 027 + 028).
     -- A limit of 0 means unlimited. Trial salons (status = 'trial') spend the
     -- lifetime ai_trial_image_limit and are cut off when it is used up;
     -- everyone else gets ai_monthly_image_limit images per calendar month and
     -- may continue past it only when the owner enabled ai_overage_allowed, at
-    -- ai_overage_price per extra image.
+    -- ai_overage_price per extra image -- up to ai_overage_monthly_cap of
+    -- extras per month (0.00 = no cap), after which the feature switches off
+    -- for the rest of the month.
     ai_feature_enabled TINYINT(1) NOT NULL DEFAULT 1,
     ai_trial_image_limit INT UNSIGNED NOT NULL DEFAULT 100,
     ai_monthly_image_limit INT UNSIGNED NOT NULL DEFAULT 500,
     ai_overage_allowed TINYINT(1) NOT NULL DEFAULT 0,
     ai_overage_price DECIMAL(8,4) NOT NULL DEFAULT 0.0100,
+    ai_overage_monthly_cap DECIMAL(8,2) NOT NULL DEFAULT 0.00,
 
     UNIQUE KEY unique_salon_subdomain (subdomain),
     INDEX idx_salon_active (is_active),

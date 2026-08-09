@@ -137,10 +137,10 @@ switch ($section) {
 }
 
 /**
- * The salon owner's overage decision.
+ * The salon owner's overage decision, and the ceiling on it.
  *
- * Deliberately the only AI setting a salon can change itself: it is the one
- * that can cost them money, so it must be their explicit choice, while the
+ * Deliberately the only AI settings a salon can change itself: they are the
+ * ones that cost them money, so they must be their explicit choice, while the
  * limits and the price per image stay with the platform.
  */
 function saveOverageChoice(mysqli $conn, int $salonId, array $user, array $input): void
@@ -150,13 +150,31 @@ function saveOverageChoice(mysqli $conn, int $salonId, array $user, array $input
     }
 
     $allowed = !empty($input['ai_overage_allowed']) ? 1 : 0;
+    $capSupported = aiUsageCapReady($conn);
 
-    $stmt = prepareOrFail(
-        $conn,
-        'UPDATE coiffure_salons SET ai_overage_allowed = ? WHERE salon_id = ?',
-        'ai overage update'
-    );
-    $stmt->bind_param('ii', $allowed, $salonId);
+    // 0 = no cap. The upper bound is a sanity rail against a stray keypress
+    // turning into a budget nobody meant to approve.
+    $cap = null;
+    if ($capSupported && array_key_exists('ai_overage_monthly_cap', $input)) {
+        $cap = round(max(0, min(100000, (float)$input['ai_overage_monthly_cap'])), 2);
+    }
+
+    if ($cap !== null) {
+        $stmt = prepareOrFail(
+            $conn,
+            'UPDATE coiffure_salons SET ai_overage_allowed = ?, ai_overage_monthly_cap = ? WHERE salon_id = ?',
+            'ai overage update'
+        );
+        $stmt->bind_param('idi', $allowed, $cap, $salonId);
+    } else {
+        $stmt = prepareOrFail(
+            $conn,
+            'UPDATE coiffure_salons SET ai_overage_allowed = ? WHERE salon_id = ?',
+            'ai overage update'
+        );
+        $stmt->bind_param('ii', $allowed, $salonId);
+    }
+
     if (!$stmt->execute()) {
         $stmt->close();
         sendErrorResponse('Failed to save the setting.', 500);
@@ -168,7 +186,8 @@ function saveOverageChoice(mysqli $conn, int $salonId, array $user, array $input
         'salon',
         $salonId,
         'update',
-        'AI overage ' . ($allowed ? 'enabled' : 'disabled'),
+        'AI overage ' . ($allowed ? 'enabled' : 'disabled')
+            . ($cap !== null ? sprintf(', monthly cap %.2f', $cap) : ''),
         'user:' . ($user['user_id'] ?? '?')
     );
 

@@ -33,9 +33,19 @@ export function usageRatio(usage) {
 export function usageState(usage) {
     if (!usage) return 'ok';
     if (!usage.allowed) return 'blocked';
-    if (usage.over_limit && usage.overage_allowed) return 'overage';
+    if (usage.over_limit && usage.overage_allowed) {
+        // Already spending: warn once most of the budget is gone, so the
+        // shutdown is never a surprise.
+        return budgetRatio(usage) >= 0.8 ? 'warning' : 'overage';
+    }
     if (!usage.unlimited && usageRatio(usage) >= 0.8) return 'warning';
     return 'ok';
+}
+
+/** Fraction of the monthly overage budget spent, 0…1. No cap reads as 0. */
+export function budgetRatio(usage) {
+    if (!usage || !usage.overage_cap) return 0;
+    return Math.min(1, (usage.overage_cost || 0) / usage.overage_cap);
 }
 
 const STATE_TONE = { blocked: 'danger', overage: 'warning', warning: 'warning', ok: 'success' };
@@ -47,13 +57,30 @@ export function usageCountLabel(usage) {
     return `${formatNumber(usage.used)} / ${formatNumber(usage.limit)}`;
 }
 
-/** "no additional cost" or "2.15 € additional cost (15 images)". */
+/**
+ * "no additional cost", "2.15 € additional cost (15 images)", or — once the
+ * owner set a budget — "2.15 € of 20.00 € additional cost (15 images)", so the
+ * headroom is visible before it runs out rather than after.
+ */
 export function usageCostLabel(usage) {
-    if (!usage || !usage.overage_count) return t('admin.ai_usage.no_extra_cost');
-    return t('admin.ai_usage.extra_cost', {
-        amount: formatMoney(usage.overage_cost, usage.currency || 'EUR'),
+    const currency = usage?.currency || 'EUR';
+
+    if (!usage || !usage.overage_count) {
+        return usage?.overage_cap
+            ? t('admin.ai_usage.no_extra_cost_capped', {
+                cap: formatMoney(usage.overage_cap, currency),
+            })
+            : t('admin.ai_usage.no_extra_cost');
+    }
+
+    const params = {
+        amount: formatMoney(usage.overage_cost, currency),
         count: formatNumber(usage.overage_count),
-    });
+        cap: formatMoney(usage.overage_cap, currency),
+    };
+    return usage.overage_cap
+        ? t('admin.ai_usage.extra_cost_capped', params)
+        : t('admin.ai_usage.extra_cost', params);
 }
 
 /** The short status sentence shown next to the badge. */
@@ -64,7 +91,10 @@ export function usageStateLabel(usage) {
         case 'overage':
             return t('admin.ai_usage.state_overage');
         case 'warning':
-            return t('admin.ai_usage.state_warning');
+            // Two different things can be running out: the images, or the money.
+            return usage.over_limit && budgetRatio(usage) >= 0.8
+                ? t('admin.ai_usage.state_budget_warning')
+                : t('admin.ai_usage.state_warning');
         default:
             return usage && usage.unlimited
                 ? t('admin.ai_usage.state_unlimited')

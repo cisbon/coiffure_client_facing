@@ -708,9 +708,10 @@ The translation check fails the moment a key is used but not defined, which
 would otherwise render a raw key like `admin.users.title` to a salon owner.
 
 The quota check walks every scenario the AI allowance promises (trial cut-off,
-monthly limit, paid overage, unlimited) against the real rules, so a change that
-would quietly bill a trial salon or let one past its limit fails loudly. It
-needs no database — the rules are a pure function.
+monthly limit, paid overage, the owner's spend cap, unlimited) against the real
+rules, so a change that would quietly bill a trial salon, let one past its limit
+or overshoot its budget fails loudly. It needs no database — the rules are a
+pure function.
 
 ## License
 

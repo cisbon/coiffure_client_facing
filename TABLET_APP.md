@@ -38,10 +38,18 @@ early.
 | Regime | Allowance | Past the limit |
 |--------|-----------|----------------|
 | Trial (`coiffure_salons.status = 'trial'`) | `ai_trial_image_limit` images for the whole trial (default 100) | Feature off. A trial is never billed. |
-| Subscription | `ai_monthly_image_limit` images per calendar month (default 500) | The owner's `ai_overage_allowed` decides: stop, or keep generating at `ai_overage_price` per image. |
+| Subscription | `ai_monthly_image_limit` images per calendar month (default 500) | The owner's `ai_overage_allowed` decides: stop, or keep generating at `ai_overage_price` per image — up to `ai_overage_monthly_cap` of extras per month. |
 
 A limit of `0` means unlimited. `ai_feature_enabled` is the master switch, and
 a suspended or deactivated salon is blocked regardless.
+
+`ai_overage_monthly_cap` is the salon owner's ceiling on additional cost
+(`0.00` = no cap). It is checked against what the *next* image would cost, not
+what has already been spent, so it is a hard ceiling: a 20,00 € budget produces
+at most 20,00 € of extras, never 20,01 €. Once it is reached the stylists switch
+off for the rest of the month with the `overage_cap_reached` reason — kept
+distinct from `monthly_limit_reached` because only one of the two is fixed by
+raising the budget.
 
 Only images that were actually delivered are counted — a failed generation
 costs the salon nothing. Each one is booked as a row in
@@ -282,6 +290,7 @@ slider scrolls, horizontally. The old Trends/Tipps/Shop tab switcher was removed
 | `data/trends.json`, `data/products.json` | Demo content & products |
 | `index.html` | Home, check-in, browse screens + screen router + idle timer + the AI stylists |
 | `migrations/027_ai_usage_limits.sql` + `api/apply_migration_027.php` | `coiffure_ai_image_usage` ledger + salon AI quota columns |
+| `migrations/028_ai_overage_cap.sql` + `api/apply_migration_028.php` | `ai_overage_monthly_cap` (owner's ceiling on additional cost) |
 | `api/ai_usage_helpers.php` | AI quota rules, usage accounting and overage pricing |
 | `api/ai-usage.php` | consumption read (public for the tablet, full for the dashboard) + quota settings |
 | `api/ai-consultation.php` | AI image generation, quota-checked and metered |
@@ -305,6 +314,7 @@ php api/apply_migration_013.php   # checkin analytics / audit / lockout tables
 php api/apply_migration_014.php   # salon connections (multi-store brands)
 php api/apply_migration_015.php   # global settings (kiosk timeouts)
 php api/apply_migration_027.php   # AI image quotas + usage ledger
+php api/apply_migration_028.php   # monthly spend cap for AI overage
 
 # …or raw SQL
 mysql -u USER -p salonlyft < migrations/009_visits_checkin.sql
