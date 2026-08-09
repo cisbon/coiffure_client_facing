@@ -1522,7 +1522,8 @@
     "start_over": "Neu starten",
     "camera_error": "Kamera konnte nicht gestartet werden. Bitte erlauben Sie den Kamerazugriff.",
     "error_generate": "Frisur konnte nicht generiert werden. Bitte erneut versuchen.",
-    "error_network": "Keine Verbindung zum Styling-Dienst. Bitte prüfen Sie die Internetverbindung und versuchen Sie es erneut.",
+    "error_network": "Die Anfrage an den Styling-Dienst konnte nicht abgeschlossen werden. Bitte erneut versuchen.",
+    "error_timeout": "Der Styling-Dienst hat zu lange nicht geantwortet. Bitte erneut versuchen.",
     "error_server": "Der Styling-Dienst antwortet nicht korrekt."
   },
   "brow": {

@@ -1522,7 +1522,8 @@
     "start_over": "Start Over",
     "camera_error": "Could not access camera. Please ensure camera permissions are enabled.",
     "error_generate": "Failed to generate hairstyle. Please try again.",
-    "error_network": "No connection to the styling service. Please check the internet connection and try again.",
+    "error_network": "The request to the styling service could not be completed. Please try again.",
+    "error_timeout": "The styling service took too long to answer. Please try again.",
     "error_server": "The styling service is not responding correctly."
   },
   "brow": {

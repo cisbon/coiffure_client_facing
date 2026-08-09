@@ -88,6 +88,32 @@ CORS preflight, and some hosts strip or reject it. The tablet's session token
 travels in the JSON body instead, which is what lets the server bill the salon
 the tablet belongs to rather than trusting the posted `salon_id`.
 
+### When an AI stylist shows an error
+
+Every failure now names itself. Under the message on the result screen there is
+a small grey technical line — that line is the diagnosis, and it is what to read
+out or screenshot when reporting a problem.
+
+| Message | Detail line | What it means |
+|---|---|---|
+| Die Anfrage … konnte nicht abgeschlossen werden | `TypeError: Failed to fetch · <url>` | The request never reached the API. Almost always CORS or DNS, not the salon's internet: check that `ALLOWED_ORIGINS` in `api/.env` contains the tablet's origin (`https://coiffureai.com`), and that `OPTIONS <url>` answers 200 with `Access-Control-Allow-Origin`. |
+| Der Styling-Dienst hat zu lange nicht geantwortet | `AbortError after 90s · <url>` | The API accepted the request but never answered — usually OpenRouter or the host's execution limit. |
+| Der Styling-Dienst antwortet nicht korrekt | `HTTP 500 · <first line of the body>` | The API answered with something that is not JSON: a PHP error page, a gateway error. The detail carries the beginning of the real body. |
+| *(the API's own text)* | `HTTP 500` | The API answered properly and reported why — an OpenRouter refusal, a missing key, a model that cannot generate images. |
+| Frisur konnte nicht generiert werden | `HTTP 200` | A success response arrived with no image in it. |
+
+Checking CORS by hand:
+
+```bash
+curl -i -X OPTIONS https://clouedo.com/coiffure/api/ai-consultation.php \
+  -H 'Origin: https://coiffureai.com' -H 'Access-Control-Request-Method: POST'
+```
+
+A `200` **with** an `Access-Control-Allow-Origin` line is healthy. The header
+missing means `ALLOWED_ORIGINS` does not list the tablet's origin — the browser
+then blocks every response from this API, and the page can only report that the
+request did not complete.
+
 ### Adding or adapting an AI stylist
 
 Both stylists run on one engine — `createAIStylist()` in `index.html`

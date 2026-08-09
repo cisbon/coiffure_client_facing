@@ -280,6 +280,12 @@
         .kiosk-error { position: absolute; top: calc(84px + env(safe-area-inset-top)); left: 0; right: 0; z-index: 4;
             padding: 0 20px; justify-content: center; display: none; }
         .kiosk-error:not(.hidden) { display: flex; }
+        /* Technical detail under the message: what a salon reads out to support.
+           Quiet enough to ignore, present enough to diagnose. */
+        .kiosk-error-detail { margin-top: 8px; font-size: 11px; line-height: 1.35;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: #9ca3af; word-break: break-word; }
+        .kiosk-error-detail:empty { display: none; }
 
         /* Check-in / browse: large touch targets */
         .home-tile { -webkit-tap-highlight-color: transparent; }
@@ -1306,6 +1312,7 @@
                     <div id="kiosk-error-message" class="kiosk-error hidden">
                         <div class="p-4 bg-red-50 border-2 border-red-200 rounded-xl max-w-md text-center shadow-lg">
                             <p class="text-red-600 font-semibold"></p>
+                            <p class="kiosk-error-detail" data-error-detail></p>
                         </div>
                     </div>
 
@@ -1704,6 +1711,7 @@
                     <div id="brow-error-message" class="kiosk-error hidden">
                         <div class="p-4 bg-red-50 border-2 border-red-200 rounded-xl max-w-md text-center shadow-lg">
                             <p class="text-red-600 font-semibold"></p>
+                            <p class="kiosk-error-detail" data-error-detail></p>
                         </div>
                     </div>
 
@@ -4767,6 +4775,13 @@
             progressLineTodo: 'w-12 h-1 bg-gray-300'
         };
 
+        /**
+         * How long to wait for a generated image before giving up. The model
+         * needs 15-30s; anything past this is a stalled request, and a spinner
+         * that never stops is worse than an error.
+         */
+        const GENERATE_TIMEOUT_MS = 90000;
+
         function createAIStylist(config) {
             const el = suffix => document.getElementById(`${config.prefix}-${suffix}`);
             const show = (node, visible) => { if (node) node.classList.toggle('hidden', !visible); };
@@ -5008,20 +5023,33 @@
             async function generate(stylePrompt) {
                 // Remember the style so the customer can re-run it with a new colour.
                 state.lastStylePrompt = stylePrompt;
+                const endpoint = `${API_BASE_URL}/ai-consultation.php`;
                 console.log(`=== AI STYLIST (${config.consultationType}) ===`, {
+                    endpoint,
                     hasImage: !!state.photo,
                     imageLength: state.photo ? state.photo.length : 0,
                     stylePrompt
                 });
 
+                // Generating takes 15-30s; without a deadline a stalled request
+                // would leave the spinner turning forever.
+                const controller = new AbortController();
+                const deadline = setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
+
+                // ---- 1. Reach the server -------------------------------------
+                // Only the fetch itself is treated as a connection problem. A
+                // failure anywhere after this point is a server or app problem
+                // and must report its own message, not blame the network.
+                let response;
                 try {
-                    const response = await fetch(`${API_BASE_URL}/ai-consultation.php`, {
+                    response = await fetch(endpoint, {
                         method: 'POST',
                         // Content-Type only. An Authorization header would add
                         // itself to the CORS preflight, and some hosts strip or
                         // reject it outright — the token travels in the body so
                         // this request stays exactly as simple as it always was.
                         headers: { 'Content-Type': 'application/json' },
+                        signal: controller.signal,
                         body: JSON.stringify({
                             image_base64: state.photo,
                             style_prompt: stylePrompt,
@@ -5032,22 +5060,51 @@
                             session_token: typeof sessionToken !== 'undefined' ? sessionToken : undefined
                         })
                     });
+                } catch (networkError) {
+                    clearTimeout(deadline);
+                    const timedOut = networkError.name === 'AbortError';
+                    console.error(`AI stylist: request to ${endpoint} did not complete`, networkError);
+                    showGenerateError(
+                        timedOut
+                            ? tr('kiosk.error_timeout', 'The styling service took too long to answer.')
+                            : tr('kiosk.error_network', 'The request to the styling service could not be completed.'),
+                        // The browser hides the reason for a blocked cross-origin
+                        // request, so name the two things worth checking.
+                        timedOut
+                            ? `AbortError after ${Math.round(GENERATE_TIMEOUT_MS / 1000)}s · ${endpoint}`
+                            : `${networkError.name}: ${networkError.message} · ${endpoint}`
+                    );
+                    return;
+                }
+                clearTimeout(deadline);
 
-                    // Read the body as text first: when the API itself fails
-                    // (a PHP error page, a gateway timeout) the body is not
-                    // JSON, and response.json() would throw a parser message
-                    // that says nothing about what actually went wrong.
+                // ---- 2. Read the answer --------------------------------------
+                try {
+                    // Read as text first: when the API itself fails (a PHP error
+                    // page, a gateway timeout) the body is not JSON, and
+                    // response.json() would throw a parser message that says
+                    // nothing about what actually went wrong.
                     const raw = await response.text();
                     let result;
                     try {
                         result = JSON.parse(raw);
                     } catch (parseError) {
-                        console.error('AI stylist: non-JSON response', response.status, raw.slice(0, 500));
-                        throw new Error(
-                            `${tr('kiosk.error_server', 'The styling service is not responding correctly.')} (HTTP ${response.status})`
+                        console.error('AI stylist: non-JSON response', response.status, raw.slice(0, 1000));
+                        showGenerateError(
+                            tr('kiosk.error_server', 'The styling service is not responding correctly.'),
+                            `HTTP ${response.status} · ${(raw.trim().slice(0, 120) || 'empty response')}`
                         );
+                        return;
                     }
                     console.log('AI stylist response:', response.status, result);
+
+                    if (!result || typeof result !== 'object') {
+                        showGenerateError(
+                            tr('kiosk.error_server', 'The styling service is not responding correctly.'),
+                            `HTTP ${response.status} · unexpected payload`
+                        );
+                        return;
+                    }
 
                     // The salon's image allowance ran out — explain instead of
                     // showing a technical error.
@@ -5058,7 +5115,11 @@
                     }
 
                     if (!result.success || !result.generated_image) {
-                        throw new Error(result.message || result.error || 'Failed to generate image');
+                        showGenerateError(
+                            result.message || result.error || tr(config.errorKey, config.errorFallback),
+                            `HTTP ${response.status}`
+                        );
+                        return;
                     }
 
                     if (result.usage) aiUsageState = result.usage;
@@ -5070,24 +5131,32 @@
                     show(el('error-message'), false);
                     show(el('color-row'), true);
                 } catch (error) {
-                    console.error(`Error in AI stylist (${config.consultationType}):`, error);
-                    show(el('step-generating'), false);
-                    show(el('step-results'), true);
-                    show(el('result-image-container'), false);
-                    show(el('color-row'), false);
-
-                    // A fetch that never completed rejects with a TypeError,
-                    // whose message ("Load failed" on Safari, "Failed to fetch"
-                    // on Chrome) means nothing to someone standing at a tablet.
-                    // Say what it actually is: the server could not be reached.
-                    const message = (error instanceof TypeError)
-                        ? tr('kiosk.error_network', 'No connection to the styling service. Please check the internet connection and try again.')
-                        : (error.message || tr(config.errorKey, config.errorFallback));
-
-                    const errorMsg = el('error-message');
-                    errorMsg.querySelector('p').textContent = message;
-                    show(errorMsg, true);
+                    // Anything here is a bug in this page, not a network fault.
+                    console.error(`AI stylist (${config.consultationType}) failed after a valid response:`, error);
+                    showGenerateError(
+                        error.message || tr(config.errorKey, config.errorFallback),
+                        `${error.name} · HTTP ${response.status}`
+                    );
                 }
+            }
+
+            /**
+             * Show the result step carrying an error instead of an image.
+             * `detail` is the small technical line under it — the salon can read
+             * it out to support, and it is the difference between "it does not
+             * work" and a diagnosis.
+             */
+            function showGenerateError(message, detail) {
+                show(el('step-generating'), false);
+                show(el('step-results'), true);
+                show(el('result-image-container'), false);
+                show(el('color-row'), false);
+
+                const errorMsg = el('error-message');
+                errorMsg.querySelector('p').textContent = message;
+                const detailEl = errorMsg.querySelector('[data-error-detail]');
+                if (detailEl) detailEl.textContent = detail || '';
+                show(errorMsg, true);
             }
 
             // ---------- Quota block ----------
