@@ -190,7 +190,7 @@ if ($quota && !$quota['allowed']) {
     error_log("AI consultation blocked for salon $salonId: " . $quota['block_reason']);
     $conn->close();
     sendJsonResponse([
-        'success' => ,
+        'success' => false,
         'error' => 'AI image limit reached',
         'code' => 'ai_limit_reached',
         'block_reason' => $quota['block_reason'],
@@ -260,10 +260,9 @@ $imageGenerationModels = [
     'openai/gpt-5-image-mini',               // GPT-5 Image Mini - efficient
     'openai/gpt-5-image',                    // GPT-5 Image - highest quality
     'google/gemini-2.5-flash-image',         // Nano Banana - GA version
-    'google/gemini-2.5-flash-image-preview',  // Nano Banana - preview version
-    'google/gemini-2.5-flash-image-preview',  // Nano Banana - preview version
+    'google/gemini-2.5-flash-image-preview', // Nano Banana - preview version
     'qwen/qwen-image-3-pro',
-    'google/gemini-3.1-flash-lite-image'
+    'google/gemini-3.1-flash-lite-image',
 ];
 
 $isImageGenerationModel = false;
@@ -587,12 +586,13 @@ $completeStmt->close();
 // Book the delivered image against the salon's allowance. Only successful
 // generations are metered, and the pre-flight snapshot decides whether this
 // one is included or billed as overage.
-$quotaAfter = null;
+//
+// This is deliberately the only database work after the OpenRouter call. The
+// request has already been open for 15-30s by now, and every extra query here
+// is time spent inside whatever execution limit the host imposes; the tablet
+// re-reads the allowance when a stylist is opened anyway.
 if ($aiUsageAvailable) {
     aiUsageRecord($conn, $salonId, $consultationId, $consultationType, $quota);
-    // Re-read the quota so the tablet can react immediately when this image
-    // was the last one the salon had.
-    $quotaAfter = aiUsageSnapshot($conn, $salonId);
 }
 $conn->close();
 
@@ -608,5 +608,10 @@ sendJsonResponse([
     'processing_time_ms' => $processingTime,
     'tokens_used' => $tokensUsed,
     'model_used' => $aiModel,
-    'usage' => $quotaAfter ? aiUsagePublicState($quotaAfter) : null
+    // The pre-flight state plus the image just booked — accurate without a
+    // second round of counting queries.
+    'usage' => $quota ? array_merge(aiUsagePublicState($quota), [
+        'used' => (int)$quota['used'] + 1,
+        'remaining' => $quota['remaining'] === null ? null : max(0, (int)$quota['remaining'] - 1),
+    ]) : null
 ], 200);

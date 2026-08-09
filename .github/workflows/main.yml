@@ -7,7 +7,27 @@ jobs:
     steps:
     - name: 🚚 Get latest code
       uses: actions/checkout@v4
-    
+
+    # The sync below copies api/ straight onto the live server, so a PHP file
+    # that does not parse takes the API down the moment it is pushed -- and a
+    # parse error is fatal before any code runs, so the endpoint cannot even
+    # send its CORS headers: the tablet just reports that the request failed.
+    # This gate is what stops a broken merge from reaching production.
+    - name: 🧪 Check PHP syntax
+      run: |
+        set -e
+        fail=0
+        for f in $(find api -name '*.php'); do
+          php -l "$f" > /dev/null || { php -l "$f"; fail=1; }
+        done
+        exit $fail
+
+    - name: 🌍 Check translations
+      run: node scripts/check-translations.mjs
+
+    - name: 📐 Check AI quota rules
+      run: php scripts/check-ai-quota.php
+
     - name: 📂 Sync files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.6
       with:
