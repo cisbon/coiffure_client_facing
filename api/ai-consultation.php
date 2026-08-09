@@ -159,7 +159,7 @@ if (!$quota['allowed']) {
     error_log("AI consultation blocked for salon $salonId: " . $quota['block_reason']);
     $conn->close();
     sendJsonResponse([
-        'success' => false,
+        'success' => ,
         'error' => 'AI image limit reached',
         'code' => 'ai_limit_reached',
         'block_reason' => $quota['block_reason'],
@@ -229,7 +229,10 @@ $imageGenerationModels = [
     'openai/gpt-5-image-mini',               // GPT-5 Image Mini - efficient
     'openai/gpt-5-image',                    // GPT-5 Image - highest quality
     'google/gemini-2.5-flash-image',         // Nano Banana - GA version
-    'google/gemini-2.5-flash-image-preview'  // Nano Banana - preview version
+    'google/gemini-2.5-flash-image-preview',  // Nano Banana - preview version
+    'google/gemini-2.5-flash-image-preview',  // Nano Banana - preview version
+    'qwen/qwen-image-3-pro',
+    'google/gemini-3.1-flash-lite-image'
 ];
 
 $isImageGenerationModel = false;
