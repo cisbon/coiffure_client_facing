@@ -67,6 +67,27 @@ Consumption and the overage choice live in the dashboard under
 **Einstellungen → KI-Stilberatung**, with a summary card on the Übersicht. See
 ADMIN_DASHBOARD.md.
 
+Two rules keep this from taking the stylists down with it, both learned the hard
+way:
+
+- **`setCorsHeaders()` runs before the metering `require`s** in
+  `api/ai-consultation.php`. The tablet is on `coiffureai.com` and the API on
+  `clouedo.com`, so every call is cross-origin. A failure *above* that line —
+  a helper file that did not make it onto the server, a syntax error — returns a
+  500 with no CORS headers, which the browser cannot show to the page at all:
+  `fetch()` simply rejects and Safari reports `Load failed`, with nothing in the
+  response to explain it. The preflight fails the same way, so the POST is never
+  even sent. Any *new* helper an endpoint requires belongs below the CORS call.
+- **The metering helpers are optional at runtime.** `ai_usage_helpers.php` is
+  pulled in with a guarded `include_once`; if it is absent the endpoint logs it
+  and generates unmetered. Counting images is a business feature, generating
+  them is the product.
+
+The request deliberately carries no `Authorization` header: it would change the
+CORS preflight, and some hosts strip or reject it. The tablet's session token
+travels in the JSON body instead, which is what lets the server bill the salon
+the tablet belongs to rather than trusting the posted `salon_id`.
+
 ### Adding or adapting an AI stylist
 
 Both stylists run on one engine — `createAIStylist()` in `index.html`

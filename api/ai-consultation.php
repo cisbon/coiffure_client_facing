@@ -10,11 +10,37 @@
  */
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/permissions.php';
-require_once __DIR__ . '/ai_usage_helpers.php';
 
-// Set CORS headers
+// Set CORS headers FIRST, before anything that could fail.
+// A failure above this line (a helper that did not make it onto the server, a
+// syntax error, a bad permission) produces a 500 with no CORS headers at all,
+// which the browser cannot show to the page: fetch() just rejects and Safari
+// reports the useless "Load failed". With the headers already sent, every
+// later failure arrives as a readable JSON error instead.
 setCorsHeaders();
+
+// Handle the preflight before any other work.
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+/**
+ * Quota metering is a business feature; generating the image is the product.
+ * If the metering helpers are not on the server (a partial deploy, say), log it
+ * and run unmetered rather than taking the AI stylists down with them.
+ */
+$aiUsageAvailable = @include_once __DIR__ . '/ai_usage_helpers.php';
+if (!$aiUsageAvailable || !function_exists('aiUsageSnapshot')) {
+    error_log('ai-consultation: ai_usage_helpers.php unavailable — running without quota metering');
+    $aiUsageAvailable = false;
+}
+
+/** Only needed to map a session onto its salons; same defensive treatment. */
+$aiPermissionsAvailable = @include_once __DIR__ . '/permissions.php';
+if (!$aiPermissionsAvailable || !function_exists('getAccessibleSalonIds')) {
+    $aiPermissionsAvailable = false;
+}
 
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -128,14 +154,19 @@ if (!$conn) {
 // Resolve the salon that pays for this image
 // ------------------------------------------------------------------
 // The endpoint stays unauthenticated (the kiosk runs without a customer
-// login), but images now cost money and are metered per salon, so a posted
-// salon_id must never be able to spend another salon's allowance. When the
+// login), but images cost money and are metered per salon, so a posted
+// salon_id should not be able to spend another salon's allowance. When the
 // tablet sends its session token the salon is taken from that session;
 // otherwise we fall back to the posted id, as before.
+//
+// The token is read from the request body rather than an Authorization
+// header on purpose: an Authorization header changes the CORS preflight and
+// is stripped or rejected outright by some shared hosts, which would break
+// image generation for everyone to harden a low-risk, insider-only case.
 $salonId = (int)($requestData['salon_id'] ?? DEFAULT_SALON_ID);
 $sessionUser = null;
-$sessionTokenValue = getSessionToken();
-if ($sessionTokenValue) {
+$sessionTokenValue = $requestData['session_token'] ?? getSessionToken();
+if ($sessionTokenValue && $aiPermissionsAvailable) {
     $sessionUser = validateSession($conn, $sessionTokenValue);
 }
 if ($sessionUser) {
@@ -153,9 +184,9 @@ if ($salonId < 1) {
 // ------------------------------------------------------------------
 // The snapshot is taken now and reused after the generation to book the
 // image, so the decision that let this request through is the same one that
-// prices it.
-$quota = aiUsageSnapshot($conn, $salonId);
-if (!$quota['allowed']) {
+// prices it. Without the metering helpers there is no quota to check.
+$quota = $aiUsageAvailable ? aiUsageSnapshot($conn, $salonId) : null;
+if ($quota && !$quota['allowed']) {
     error_log("AI consultation blocked for salon $salonId: " . $quota['block_reason']);
     $conn->close();
     sendJsonResponse([
@@ -553,11 +584,13 @@ $completeStmt->close();
 // Book the delivered image against the salon's allowance. Only successful
 // generations are metered, and the pre-flight snapshot decides whether this
 // one is included or billed as overage.
-aiUsageRecord($conn, $salonId, $consultationId, $consultationType, $quota);
-
-// Re-read the quota so the tablet can react immediately when this image was
-// the last one the salon had.
-$quotaAfter = aiUsageSnapshot($conn, $salonId);
+$quotaAfter = null;
+if ($aiUsageAvailable) {
+    aiUsageRecord($conn, $salonId, $consultationId, $consultationType, $quota);
+    // Re-read the quota so the tablet can react immediately when this image
+    // was the last one the salon had.
+    $quotaAfter = aiUsageSnapshot($conn, $salonId);
+}
 $conn->close();
 
 // Return success response
@@ -572,5 +605,5 @@ sendJsonResponse([
     'processing_time_ms' => $processingTime,
     'tokens_used' => $tokensUsed,
     'model_used' => $aiModel,
-    'usage' => aiUsagePublicState($quotaAfter)
+    'usage' => $quotaAfter ? aiUsagePublicState($quotaAfter) : null
 ], 200);
